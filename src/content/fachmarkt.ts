@@ -10,6 +10,10 @@
  * `TODO(kunde)` markiert.
  */
 import type { FilialBanner } from '@/types/fachmarkt'
+// Aktionsmotiv „Jedes 7. Paket gratis" — Bildpfade, Rotton und Linkziel liegen
+// dort zentral, damit Startseiten-Slider und Angebote-Banner beim nächsten
+// Motivwechsel nicht auseinanderlaufen.
+import { AKTION_BANNER } from '@/content/aktion-banner'
 // Cta-Typ ist jetzt zentral in src/types/cta.ts (geteilt mit der Service-Seite).
 // Re-Export für Abwärtskompatibilität bestehender Importe aus diesem Modul.
 import type { Cta, CtaVariant } from '@/types/cta'
@@ -127,6 +131,25 @@ export const BESUCHS_ABLAUF = {
 // Phase 1: Mock-Daten mit identischem Typ. Phase 2: WordPress-CPT `filial_banner`.
 export const FILIAL_BANNER_MOCK: FilialBanner[] = [
   {
+    id: 3,
+    titel: 'Jedes 7. Paket gratis',
+    untertitel: 'Automatischer Rabatt im Warenkorb – für Laminat, Vinyl und Parkett',
+    // Bewusst das QUERFORMAT auch auf dem Handy: die Box ist auf allen Geräten
+    // 7:3, das Hochformat-Motiv würde darin zu einem Streifen schrumpfen.
+    // Kundenentscheidung — gleiche Fläche wie das vorige Banner hat Vorrang vor
+    // der Schriftgröße auf kleinen Displays.
+    bild: AKTION_BANNER.imageDesktop,
+    bildAlt: AKTION_BANNER.alt,
+    // Verhältnis 2,07 gegen eine 7:3-Box (2,33): links und rechts bleiben je
+    // knapp 6 % der Breite frei, gefüllt mit dem Rot des Motivs.
+    hintergrund: AKTION_BANNER.bgColor,
+    ctaLabel: AKTION_BANNER.linkLabel,
+    ctaUrl: AKTION_BANNER.href,
+    aktiv: true,
+    reihenfolge: 1,
+    gueltigBis: null,
+  },
+  {
     id: 1,
     titel: 'Aktuelle Filialangebote',
     untertitel: 'Ausgewählte Böden zum Sonderpreis – nur in der Filiale',
@@ -134,8 +157,10 @@ export const FILIAL_BANNER_MOCK: FilialBanner[] = [
     bildAlt: 'Summer SALE 2026 – Klick-Vinyl Pulse Nature zum Aktionspreis',
     ctaLabel: 'Angebote ansehen',
     ctaUrl: '/sale',
-    aktiv: true,
-    reihenfolge: 1,
+    // Ersetzt durch das Aktionsmotiv oben. Daten bleiben erhalten — zum
+    // Reaktivieren nur aktiv auf true setzen, wie beim Banner darunter.
+    aktiv: false,
+    reihenfolge: 2,
     gueltigBis: null,
   },
   {
@@ -149,7 +174,7 @@ export const FILIAL_BANNER_MOCK: FilialBanner[] = [
     // Vorerst ausgeblendet (Kundenwunsch). Daten bleiben erhalten — zum
     // Reaktivieren nur aktiv auf true setzen. activeBanners() filtert darauf.
     aktiv: false,
-    reihenfolge: 2,
+    reihenfolge: 3,
     gueltigBis: null,
   },
 ]

@@ -19,17 +19,33 @@ interface FilialAngeboteProps {
  * Bewusst OHNE Text-Overlay: die Aktionsmotive bringen Headline, Preise und
  * Rabatthinweise schon im Bild mit — eingeblendete Schrift hat sie verdeckt.
  * `titel`/`untertitel`/`ctaLabel` bleiben in den Daten (Alt-Text, CMS-Phase 2).
+ *
+ * Zwei Einpassungen, gesteuert über `banner.hintergrund`:
+ *  - gesetzt → `object-contain` auf dieser Farbe. Für Motive mit eingebrannter
+ *    Schrift, die nicht beschnitten werden dürfen. Die 7:3-Box bleibt, das
+ *    Motiv nimmt also keinen Millimeter mehr Platz ein als ein Foto-Banner;
+ *    passt sein Verhältnis nicht exakt, bleiben Ränder in der Motivfarbe.
+ *    Kein Hover-Zoom — der würde die eingebrannten Rändern wieder abschneiden.
+ *  - nicht gesetzt → `object-cover` wie bisher (Foto, Beschnitt unkritisch).
  */
 function Banner({ banner }: { banner: FilialBanner }) {
   const clickable = Boolean(banner.ctaUrl)
+  const contain = Boolean(banner.hintergrund)
   const inner = (
-    <div className="group relative aspect-[7/3] w-full overflow-hidden rounded-3xl">
+    <div
+      className="group relative aspect-[7/3] w-full overflow-hidden rounded-3xl"
+      style={banner.hintergrund ? { backgroundColor: banner.hintergrund } : undefined}
+    >
       <Image
         src={banner.bild}
         alt={banner.bildAlt || banner.titel}
         fill
         sizes="(max-width: 1024px) 100vw, 1200px"
-        className={`object-cover${clickable ? ' transition-transform duration-500 group-hover:scale-105' : ''}`}
+        className={
+          contain
+            ? 'object-contain'
+            : `object-cover${clickable ? ' transition-transform duration-500 group-hover:scale-105' : ''}`
+        }
       />
     </div>
   )
