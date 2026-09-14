@@ -9,9 +9,11 @@ interface SlideData {
   bgColor: string;
   image: string;
   imageAlt: string;
-  // object-position für das Desktop-Bild (object-cover). Verschiebt den
-  // sichtbaren Ausschnitt vertikal. Default "center center" (50% 50%).
+  // object-position für das Foto der Split-Slides (object-cover) — gilt auf
+  // Desktop UND Mobil. Verschiebt den sichtbaren Ausschnitt vertikal.
   // Kleinerer Y-Wert = zeigt mehr vom oberen Bildrand = Content rutscht optisch nach unten.
+  // Der X-Anteil wirkt nur auf Desktop; mobil ist die Breite bestimmend,
+  // sodass ausschließlich vertikal beschnitten wird.
   objectPosition?: string;
   // Wenn true: kleinere Schriftgrößen für Überschrift/Text/Datum (z. B. SummerSALE).
   smallText?: boolean;
@@ -19,16 +21,11 @@ interface SlideData {
   // und Button sind darin eingebrannt. Es wird kein HTML-Text gerendert, sonst
   // stünde alles doppelt da. Die gesamte Slide-Fläche wird zum Link auf
   // `buttonHref`, damit der gemalte Button klickbar ist.
-  // Damit die Slider-Höhe zwischen den Slides nicht springt, wird das Bild mit
-  // `object-contain` eingepasst; die entstehenden Ränder verschwinden, weil
-  // `bgColor` exakt dem Rot des Bildes entspricht.
+  // Das Bild wird mit `object-contain` eingepasst; da die Bühne (siehe
+  // STAGE_ASPECT_*) exakt sein Seitenverhältnis hat, entsteht dabei kein Rand.
   fullBleed?: boolean;
   // Eigenes Hochformat-Bild unterhalb von 1200px (nur bei `fullBleed`).
   mobileImage?: string;
-  // Seitenverhältnis von `mobileImage` als CSS-`aspect-ratio`, z. B. '3138 / 4133'.
-  // Muss zum Bild passen, sonst wird beschnitten. Inline-Style statt
-  // Tailwind-Klasse, weil der Wert aus den Daten kommt.
-  mobileAspectRatio?: string;
   heading?: string;
   subline?: string;
   bullets?: string[];
@@ -39,6 +36,27 @@ interface SlideData {
   buttonVariant?: 'light' | 'dark';
 }
 
+/* Gemeinsame Bühne für ALLE Slides.
+
+   Vorher hatte jeder Slide seine eigene Größe: der Full-Bleed-Banner wurde in
+   einen 800px hohen Kasten hinein-`contain`ed (Desktop) bzw. brachte mobil sein
+   Hochformat mit, während die Split-Slides mobil "Foto + Textblock" hoch waren.
+   Ergebnis: auf Desktop wirkte der Banner ~18% flacher, mobil sprang die Höhe
+   bei jedem Wechsel um mehrere hundert Pixel.
+
+   Deshalb gibt jetzt die Bühne die Größe vor und alle Slides füllen sie. Die
+   Verhältnisse sind die des Aktionsbanners aus `AKTION_BANNER` — es ist das
+   einzige Motiv, das nicht beschnitten werden darf, weil Headline, Text und
+   Button eingebrannt sind. Die Fotos der Split-Slides sind dagegen frei
+   skalierbar.
+
+   WICHTIG: Wechselt das Banner-Motiv, müssen diese beiden Werte auf die neuen
+   Bildmaße angepasst werden — sonst bekommt es wieder farbige Ränder.
+   Als Tailwind-Klassen statt Inline-Style, weil der Wechsel an einem
+   Breakpoint hängt. */
+const STAGE_ASPECT_DESKTOP = 'min-[1200px]:aspect-[8547/4134]'; // Querformat, ab 1200px
+const STAGE_ASPECT_MOBILE = 'aspect-[3138/4133]'; // Hochformat, darunter
+
 const slides: SlideData[] = [
   {
     id: 4,
@@ -48,7 +66,6 @@ const slides: SlideData[] = [
     fullBleed: true,
     image: AKTION_BANNER.imageDesktop,
     mobileImage: AKTION_BANNER.imageMobile,
-    mobileAspectRatio: AKTION_BANNER.mobileAspectRatio,
     imageAlt: AKTION_BANNER.alt,
     buttonLabel: AKTION_BANNER.linkLabel,
     buttonHref: AKTION_BANNER.href,
@@ -179,34 +196,38 @@ export default function HeroSlider() {
         aria-label="Hero Slider"
         aria-roledescription="carousel"
       >
-        {/* Main Slider Container
-            Desktop: Slides absolut gestapelt mit Fade-Transition, feste min-Höhe 600px.
-            Mobile: nur aktiver Slide wird gerendert (natürlicher Flow), damit das Bild
-            volle Breite bekommen kann und der Container mitwächst. */}
-        <div className="relative min-[1200px]:min-h-[800px]">
+        {/* Main Slider Container — die Bühne.
+            Ihre Höhe kommt aus dem Seitenverhältnis (STAGE_ASPECT_*), nicht aus
+            dem Inhalt. Alle Slides liegen absolut gestapelt darin und sind damit
+            zwangsläufig exakt gleich groß; beim Wechsel springt nichts.
+            `max-h-[85vh]` kappt nur den Tablet-Bereich, wo das Hochformat sonst
+            über 1200px hoch würde. Greift die Kappung, bleiben die Slides
+            weiterhin gleich hoch — der Banner bekommt dann seitlich Rand in
+            seiner eigenen Hintergrundfarbe. */}
+        <div className={`relative ${STAGE_ASPECT_MOBILE} max-h-[85vh] ${STAGE_ASPECT_DESKTOP} min-[1200px]:max-h-none`}>
           {slides.map((slide, index) => {
             const isActive = index === currentSlide;
             return (
             <div
               key={slide.id}
-              className={`${
+              className={`absolute inset-0 ${
                 isActive
                   ? 'block min-[1200px]:opacity-100 min-[1200px]:z-10'
                   : 'hidden min-[1200px]:block min-[1200px]:opacity-0 min-[1200px]:z-0'
-              } min-[1200px]:absolute min-[1200px]:inset-0 min-[1200px]:transition-opacity min-[1200px]:duration-500`}
+              } min-[1200px]:transition-opacity min-[1200px]:duration-500`}
               style={{ backgroundColor: slide.bgColor }}
             >
               {slide.fullBleed ? (
                 <>
-                  {/* Full-Bleed Desktop: Bild über die ganze Slide-Breite.
-                      `object-contain` hält das Bild vollständig sichtbar — bei
-                      `object-cover` würde der 800px hohe Container die Ränder
-                      des Querformats abschneiden und damit Headline und Badges
-                      anschneiden. */}
+                  {/* Full-Bleed Desktop: Bild füllt die Bühne exakt, weil
+                      STAGE_ASPECT_DESKTOP sein Seitenverhältnis hat.
+                      `object-contain` bleibt als Schutz: passt das Motiv einmal
+                      nicht mehr, wird es eingepasst statt angeschnitten —
+                      Headline, Badges und Button sind eingebrannt. */}
                   <a
                     href={slide.buttonHref}
                     aria-label={slide.buttonLabel}
-                    className="hidden min-[1200px]:block relative h-full min-h-[800px]"
+                    className="hidden min-[1200px]:block relative h-full"
                   >
                     <Image
                       src={slide.image}
@@ -219,16 +240,14 @@ export default function HeroSlider() {
                     />
                   </a>
 
-                  {/* Full-Bleed Mobile/Tablet: Hochformat-Bild in voller Breite.
-                      `max-h-[85vh]` verhindert, dass das Hochformat im
-                      Tablet-Bereich (bis 1199px) absurd hoch wird; greift die
-                      Begrenzung, letterboxt `object-contain` seitlich in der
-                      gleichen Rotfläche. */}
+                  {/* Full-Bleed Mobile/Tablet: Hochformat-Bild füllt die Bühne,
+                      deren Verhältnis STAGE_ASPECT_MOBILE vorgibt. Nur wenn die
+                      85vh-Kappung greift (Tablet), letterboxt `object-contain`
+                      seitlich in der gleichen Rotfläche. */}
                   <a
                     href={slide.buttonHref}
                     aria-label={slide.buttonLabel}
-                    className="min-[1200px]:hidden relative block w-full max-h-[85vh]"
-                    style={{ aspectRatio: slide.mobileAspectRatio }}
+                    className="min-[1200px]:hidden relative block h-full w-full"
                   >
                     <Image
                       src={slide.mobileImage ?? slide.image}
@@ -243,8 +262,8 @@ export default function HeroSlider() {
                 </>
               ) : (
                 <>
-              {/* Desktop-Layout: links Text, rechts Bild (948px) */}
-              <div className="hidden min-[1200px]:flex h-full min-h-[800px]">
+              {/* Desktop-Layout: links Text, rechts Bild — füllt die Bühne. */}
+              <div className="hidden min-[1200px]:flex h-full">
                 <div className="flex-1 min-w-0 flex flex-col justify-center px-16 py-12 text-white">
                   <h2 className={`font-bold mb-6 leading-tight ${
                     slide.smallText
@@ -313,44 +332,56 @@ export default function HeroSlider() {
                 </div>
               </div>
 
-              {/* Mobile/Tablet-Layout: Bild oben in voller Breite, Text unten.
-                  Container-Aspect passt zum Bild (948x724), sodass das Bild
-                  die ganze Breite füllt und der eingebettete Text komplett sichtbar bleibt. */}
-              <div className="min-[1200px]:hidden">
-                <div className="relative w-full aspect-[948/724]">
+              {/* Mobile/Tablet-Layout: Bild oben, Text unten — zusammen genau
+                  eine Bühnenhöhe.
+                  Der Textblock bekommt seine natürliche Höhe, das Bild nimmt
+                  per `flex-1 min-h-0` den Rest. So läuft nichts über, egal wie
+                  schmal das Gerät ist, und alle Slides bleiben gleich hoch.
+                  `object-cover`: das Foto füllt seine Fläche randlos aus. Der
+                  Beschnitt liegt vertikal, `objectPosition` steuert ihn — die
+                  Y-Werte sind so gewählt, dass Markenlogo und Preis-Badge im
+                  Bild sichtbar bleiben (siehe `objectPosition` in den Slides).
+                  Schriften und Abstände sind bewusst kompakter als vorher:
+                  vorher durfte der Text den Container beliebig hoch schieben,
+                  jetzt teilt er sich die feste Höhe mit dem Bild — je weniger
+                  er braucht, desto mehr Fläche bleibt dem Foto. */}
+              <div className="min-[1200px]:hidden flex h-full flex-col">
+                <div className="relative w-full flex-1 min-h-0">
                   <Image
                     src={slide.image}
                     alt={slide.imageAlt}
                     fill
-                    className="object-contain"
+                    className="object-cover"
+                    style={{ objectPosition: slide.objectPosition ?? 'center center' }}
                     sizes="100vw"
                     priority={index === 0}
                     loading={index === 0 ? 'eager' : 'lazy'}
                   />
                 </div>
-                <div className="flex flex-col items-start px-10 pt-8 pb-20 text-white">
-                  <h2 className="text-3xl font-bold mb-4 leading-tight">
+                {/* pb-10 hält die Dot-Navigation (bottom-4) vom Button frei. */}
+                <div className="flex flex-col items-start px-6 pt-4 pb-10 text-white">
+                  <h2 className="text-2xl font-bold mb-2 leading-tight">
                     {slide.heading}
                   </h2>
                   {slide.subline && (
-                    <p className="text-lg mb-4">{slide.subline}</p>
+                    <p className="text-sm mb-2">{slide.subline}</p>
                   )}
                   {slide.bullets && (
-                    <ul className="text-base mb-6 space-y-1.5">
+                    <ul className="text-xs leading-tight mb-3 space-y-1">
                       {slide.bullets.map((b) => (
                         <li key={b}>• {b}</li>
                       ))}
                     </ul>
                   )}
                   {slide.text && (
-                    <p className="text-lg mb-6 leading-snug">{slide.text}</p>
+                    <p className="text-sm mb-3 leading-snug">{slide.text}</p>
                   )}
                   {slide.dateText && (
-                    <p className="text-base mb-6">{slide.dateText}</p>
+                    <p className="text-xs mb-3">{slide.dateText}</p>
                   )}
                   <a
                     href={slide.buttonHref}
-                    className={`inline-flex items-center justify-center gap-2 px-6 py-2.5 font-semibold rounded-full transition-colors ${
+                    className={`inline-flex items-center justify-center gap-2 px-5 py-2 text-sm font-semibold rounded-full transition-colors ${
                       slide.buttonVariant === 'dark'
                         ? 'bg-dark text-white hover:bg-black'
                         : 'bg-white text-dark hover:bg-gray-100'
