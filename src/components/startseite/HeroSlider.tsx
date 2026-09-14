@@ -358,26 +358,37 @@ export default function HeroSlider() {
                     loading={index === 0 ? 'eager' : 'lazy'}
                   />
                 </div>
-                {/* pb-10 hält die Dot-Navigation (bottom-4) vom Button frei. */}
-                <div className="flex flex-col items-start px-6 pt-4 pb-10 text-white">
-                  <h2 className="text-2xl font-bold mb-2 leading-tight">
+                {/* Je kürzer dieser Block, desto mehr Fläche bleibt dem Foto
+                    darüber — beides teilt sich die feste Bühnenhöhe.
+                    Die Abstände sind deshalb so bemessen, dass auch der längste
+                    Slide (Subline + 4 Bullets) dem Foto die ~262px lässt, die
+                    es bei Handy-Breite für die volle Höhe braucht.
+                    pb-8 hält die Dot-Navigation (bottom-4) vom Button frei. */}
+                <div className="flex flex-col items-start px-5 pt-4 pb-8 text-white">
+                  <h2 className="text-2xl font-bold mb-1.5 leading-tight">
                     {slide.heading}
                   </h2>
                   {slide.subline && (
-                    <p className="text-sm mb-2">{slide.subline}</p>
+                    <p className="text-sm mb-1.5">{slide.subline}</p>
                   )}
+                  {/* Zweispaltig: vier Bullets untereinander kosteten zwei
+                      Zeilen mehr, die dem Foto gefehlt haben.
+                      `px-5` und `gap-x-2` statt großzügigerer Werte, damit der
+                      längste Eintrag ("Korkdämmung integriert", ~139px bei
+                      12px) in eine Spalte passt — bricht er um, ist die
+                      gewonnene Zeile wieder weg. */}
                   {slide.bullets && (
-                    <ul className="text-xs leading-tight mb-3 space-y-1">
+                    <ul className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs leading-tight mb-2">
                       {slide.bullets.map((b) => (
                         <li key={b}>• {b}</li>
                       ))}
                     </ul>
                   )}
                   {slide.text && (
-                    <p className="text-sm mb-3 leading-snug">{slide.text}</p>
+                    <p className="text-sm mb-2 leading-snug">{slide.text}</p>
                   )}
                   {slide.dateText && (
-                    <p className="text-xs mb-3">{slide.dateText}</p>
+                    <p className="text-xs mb-2">{slide.dateText}</p>
                   )}
                   <a
                     href={slide.buttonHref}
