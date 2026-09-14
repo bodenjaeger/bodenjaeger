@@ -21,8 +21,10 @@ export async function GET(request: Request) {
     const search = searchParams.get('search');
 
     // Handle sortBy parameter from CategoryPageClient (e.g., "price-asc", "title-desc")
+    // Fällt ein Aufruf ganz ohne Sortierung herein, gilt der Standard der
+    // Kategorieseiten: Bestseller zuerst (DEFAULT_SORT in CategoryPageClient).
     const sortBy = searchParams.get('sortBy');
-    let orderby = 'date';
+    let orderby = 'popularity';
     let order = 'desc';
 
     if (sortBy) {
@@ -32,7 +34,7 @@ export async function GET(request: Request) {
       order = direction; // asc, desc
     } else {
       // Fallback to separate orderby/order parameters
-      orderby = searchParams.get('orderby') || 'date';
+      orderby = searchParams.get('orderby') || 'popularity';
       order = searchParams.get('order') || 'desc';
     }
 

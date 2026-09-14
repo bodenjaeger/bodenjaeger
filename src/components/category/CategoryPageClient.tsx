@@ -20,6 +20,19 @@ interface CategoryPageClientProps {
   categoryImage?: CategoryImage | null;
 }
 
+/**
+ * Standard-Sortierung der Kategorieseiten: Bestseller zuerst.
+ *
+ * Steht bewusst als Konstante, weil der Wert an drei Stellen gebraucht wird —
+ * Initial-State, URL-Synchronisierung (der Default wird aus der URL
+ * weggelassen) und das Dropdown. Liefen die auseinander, stünde im Dropdown
+ * etwas anderes als tatsächlich sortiert wird.
+ *
+ * Gegenstück im Proxy: `src/app/api/store-api-test/route.ts` fällt auf
+ * denselben Wert zurück, wenn ein Aufruf gar keine Sortierung mitschickt.
+ */
+const DEFAULT_SORT = 'popularity-desc';
+
 export default function CategoryPageClient({ slug, categoryName, categoryDescription, categoryImage }: CategoryPageClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -30,7 +43,7 @@ export default function CategoryPageClient({ slug, categoryName, categoryDescrip
     const p = parseInt(searchParams.get('page') || '1', 10);
     return Number.isFinite(p) && p > 0 ? p : 1;
   })();
-  const initialSort = searchParams.get('sort') || 'date-desc';
+  const initialSort = searchParams.get('sort') || DEFAULT_SORT;
 
   const [products, setProducts] = useState<StoreApiProduct[]>([]);
   const [addonProductsMap, setAddonProductsMap] = useState<Map<number, StoreApiProduct>>(new Map());
@@ -49,7 +62,7 @@ export default function CategoryPageClient({ slug, categoryName, categoryDescrip
   useEffect(() => {
     const params = new URLSearchParams();
     if (currentPage > 1) params.set('page', String(currentPage));
-    if (sortBy !== 'date-desc') params.set('sort', sortBy);
+    if (sortBy !== DEFAULT_SORT) params.set('sort', sortBy);
     const query = params.toString();
     const targetUrl = query ? `${pathname}?${query}` : pathname;
     const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
@@ -154,11 +167,15 @@ export default function CategoryPageClient({ slug, categoryName, categoryDescrip
     return () => clearTimeout(debounceTimer);
   }, [searchQuery]);
 
-  // Prefetch next page for faster navigation
+  // Prefetch next page for faster navigation.
+  // Muss dieselbe Sortierung mitschicken wie fetchProducts, sonst wärmt der
+  // Prefetch einen Cache-Key, der beim Blättern nie abgerufen wird (der Proxy
+  // cacht pro Sortierung) — und lädt dabei auch noch die falschen Produkte vor.
   useEffect(() => {
     if (slug && currentPage < totalPages) {
       const nextPage = currentPage + 1;
-      const prefetchUrl = `/api/store-api-test?per_page=${productsPerPage}&page=${nextPage}&category=${encodeURIComponent(slug)}&orderby=date&order=desc`;
+      const [orderby, order] = sortBy.split('-');
+      const prefetchUrl = `/api/store-api-test?per_page=${productsPerPage}&page=${nextPage}&category=${encodeURIComponent(slug)}&orderby=${orderby}&order=${order}`;
 
       // Prefetch with a small delay to not interfere with current page loading
       const timeoutId = setTimeout(() => {
@@ -167,7 +184,7 @@ export default function CategoryPageClient({ slug, categoryName, categoryDescrip
 
       return () => clearTimeout(timeoutId);
     }
-  }, [slug, currentPage, totalPages, productsPerPage]);
+  }, [slug, currentPage, totalPages, productsPerPage, sortBy]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -310,13 +327,15 @@ export default function CategoryPageClient({ slug, categoryName, categoryDescrip
                 }}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
+                {/* Erste Option = DEFAULT_SORT, damit das Dropdown beim
+                    Seitenaufruf den tatsächlich sortierten Zustand zeigt. */}
+                <option value="popularity-desc">Beliebteste</option>
                 <option value="date-desc">Neueste zuerst</option>
                 <option value="date-asc">Älteste zuerst</option>
                 <option value="price-asc">Preis: Niedrig zu Hoch</option>
                 <option value="price-desc">Preis: Hoch zu Niedrig</option>
                 <option value="title-asc">Name: A-Z</option>
                 <option value="title-desc">Name: Z-A</option>
-                <option value="popularity-desc">Beliebteste</option>
               </select>
             </div>
           </div>
