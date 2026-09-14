@@ -134,15 +134,23 @@ export const FILIAL_BANNER_MOCK: FilialBanner[] = [
     id: 3,
     titel: 'Jedes 7. Paket gratis',
     untertitel: 'Automatischer Rabatt im Warenkorb – für Laminat, Vinyl und Parkett',
+    // Eigenes Motiv NUR für den Fachmarkt — deshalb hier der direkte Pfad
+    // statt AKTION_BANNER: das Bild trägt zusätzlich das TEPPICH-Badge und die
+    // Filial-Konditionen (sofortige Mitnahme, solange der Vorrat reicht,
+    // CV-/Teppichboden-Fußnote), die im Shop-Banner nicht stehen. Startseite
+    // und Fachmarkt zeigen hier also bewusst verschiedene Motive.
     // Bewusst das QUERFORMAT auch auf dem Handy: die Box ist auf allen Geräten
-    // 7:3, das Hochformat-Motiv würde darin zu einem Streifen schrumpfen.
-    // Kundenentscheidung — gleiche Fläche wie das vorige Banner hat Vorrang vor
-    // der Schriftgröße auf kleinen Displays.
-    bild: AKTION_BANNER.imageDesktop,
-    bildAlt: AKTION_BANNER.alt,
-    // Verhältnis 2,07 gegen eine 7:3-Box (2,33): links und rechts bleiben je
-    // knapp 6 % der Breite frei, gefüllt mit dem Rot des Motivs.
-    hintergrund: AKTION_BANNER.bgColor,
+    // 7:3, ein Hochformat-Motiv würde darin zu einem Streifen schrumpfen.
+    bild: '/images/sliderbilder/Jedes 7. Paket GRATIS 2026 - Fachmarktseite (1).jpg',
+    bildAlt:
+      'Jedes 7. Paket gratis — Sockelleiste und Dämmung kostenlos bei jedem Bodenkauf, für Laminat, Vinyl, Parkett und Teppich. Gültig bis zum 21.10.2026, nur solange der Vorrat reicht und bei sofortiger Mitnahme. Bei CV- und Teppichboden ist jeder 7. Quadratmeter gratis.',
+    // Verhältnis 2,25 gegen eine 7:3-Box (2,33): links und rechts bleiben je
+    // knapp 2 % der Breite frei, gefüllt mit dem Rot des Motivs.
+    // ACHTUNG: Der Rotton dieses JPGs ist #ed1b24 (Brand-Rot) und liegt damit
+    // eine Stelle neben dem Shop-PNG (#ed1c24 = AKTION_BANNER.bgColor). Hier
+    // also NICHT auf AKTION_BANNER zurückgreifen, sonst werden die Ränder
+    // sichtbar.
+    hintergrund: '#ed1b24',
     ctaLabel: AKTION_BANNER.linkLabel,
     ctaUrl: AKTION_BANNER.href,
     aktiv: true,
