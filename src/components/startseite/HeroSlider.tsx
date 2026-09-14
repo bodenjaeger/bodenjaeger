@@ -21,8 +21,9 @@ interface SlideData {
   // und Button sind darin eingebrannt. Es wird kein HTML-Text gerendert, sonst
   // stünde alles doppelt da. Die gesamte Slide-Fläche wird zum Link auf
   // `buttonHref`, damit der gemalte Button klickbar ist.
-  // Das Bild wird mit `object-contain` eingepasst; da die Bühne (siehe
-  // STAGE_ASPECT_*) exakt sein Seitenverhältnis hat, entsteht dabei kein Rand.
+  // Das Bild wird mit `object-contain` eingepasst. Ab 1200px hat die Bühne
+  // exakt sein Seitenverhältnis (STAGE_ASPECT_DESKTOP), dort entsteht kein
+  // Rand; darunter bleibt Rand, der in `bgColor` verschwindet.
   fullBleed?: boolean;
   // Eigenes Hochformat-Bild unterhalb von 1200px (nur bei `fullBleed`).
   mobileImage?: string;
@@ -44,18 +45,30 @@ interface SlideData {
    Ergebnis: auf Desktop wirkte der Banner ~18% flacher, mobil sprang die Höhe
    bei jedem Wechsel um mehrere hundert Pixel.
 
-   Deshalb gibt jetzt die Bühne die Größe vor und alle Slides füllen sie. Die
-   Verhältnisse sind die des Aktionsbanners aus `AKTION_BANNER` — es ist das
-   einzige Motiv, das nicht beschnitten werden darf, weil Headline, Text und
-   Button eingebrannt sind. Die Fotos der Split-Slides sind dagegen frei
-   skalierbar.
+   Deshalb gibt jetzt die Bühne die Größe vor und alle Slides füllen sie.
 
-   WICHTIG: Wechselt das Banner-Motiv, müssen diese beiden Werte auf die neuen
+   Wie hoch die Bühne ist, hängt vom Breakpoint ab:
+
+   - Ab 1200px vom Aktionsbanner: sein Querformat darf nicht beschnitten
+     werden, weil Headline, Text und Button eingebrannt sind.
+   - Darunter aus zwei Teilen — der vollen Höhe des Split-Fotos PLUS einem
+     festen Textbereich. Genau so bekommt das Foto sein eigenes
+     Seitenverhältnis und ist damit vollständig sichtbar, statt auf den Rest
+     gequetscht zu werden, den der Text übrig lässt. Und weil der Textbereich
+     bei jedem Slide gleich hoch ist, ist das Foto es zwangsläufig auch —
+     egal ob der Slide vier Bullets oder nur einen Fließtext hat.
+     Das Hochformat des Banners passt sich per `object-contain` ein; die
+     Ränder oben und unten verschwinden in seinem eigenen Rot.
+
+   WICHTIG: Wechselt das Banner-Motiv, muss STAGE_ASPECT_DESKTOP auf die neuen
    Bildmaße angepasst werden — sonst bekommt es wieder farbige Ränder.
-   Als Tailwind-Klassen statt Inline-Style, weil der Wechsel an einem
-   Breakpoint hängt. */
-const STAGE_ASPECT_DESKTOP = 'min-[1200px]:aspect-[8547/4134]'; // Querformat, ab 1200px
-const STAGE_ASPECT_MOBILE = 'aspect-[3138/4133]'; // Hochformat, darunter
+   Als Tailwind-Klassen statt Inline-Style, weil das an Breakpoints hängt. */
+const STAGE_ASPECT_DESKTOP = 'aspect-[8547/4134]'; // Aktionsbanner-Querformat, ab 1200px
+const STAGE_PHOTO_ASPECT_MOBILE = 'aspect-[948/724]'; // Split-Foto in voller Höhe
+/* Fester Textbereich unter dem Foto. Muss den längsten Slide fassen (Headline
+   + Subline + vier Bullets + Button ≈ 242px); der Rest bleibt als Freiraum, in
+   dem die Dot-Navigation sitzt. */
+const STAGE_TEXT_HEIGHT_MOBILE = 'h-[250px]';
 
 const slides: SlideData[] = [
   {
@@ -197,14 +210,25 @@ export default function HeroSlider() {
         aria-roledescription="carousel"
       >
         {/* Main Slider Container — die Bühne.
-            Ihre Höhe kommt aus dem Seitenverhältnis (STAGE_ASPECT_*), nicht aus
-            dem Inhalt. Alle Slides liegen absolut gestapelt darin und sind damit
+            Alle Slides liegen absolut gestapelt darin und sind damit
             zwangsläufig exakt gleich groß; beim Wechsel springt nichts.
-            `max-h-[85vh]` kappt nur den Tablet-Bereich, wo das Hochformat sonst
-            über 1200px hoch würde. Greift die Kappung, bleiben die Slides
-            weiterhin gleich hoch — der Banner bekommt dann seitlich Rand in
-            seiner eigenen Hintergrundfarbe. */}
-        <div className={`relative ${STAGE_ASPECT_MOBILE} max-h-[85vh] ${STAGE_ASPECT_DESKTOP} min-[1200px]:max-h-none`}>
+
+            Die Höhe geben die Spacer unten vor, nicht der Inhalt. Mobil sind es
+            zwei, die sich addieren: das Foto-Seitenverhältnis plus der feste
+            Textbereich. Ein einzelnes `aspect-ratio` könnte das nicht leisten —
+            der Foto-Anteil skaliert mit der Breite, der Text-Anteil nicht.
+
+            `max-h-[85vh]` kappt nur den Tablet-Bereich, wo das Foto bei großer
+            Breite sonst sehr hoch würde. Greift die Kappung, schrumpft das Foto
+            (der Textbereich ist `flex-shrink-0`) — bei allen Slides gleich, die
+            Höhen bleiben also identisch. */}
+        <div className="relative max-h-[85vh] min-[1200px]:max-h-none">
+          {/* Höhen-Spacer, rein geometrisch: nehmen keinen Platz neben den
+              Slides ein, weil die absolut darüber liegen. */}
+          <div aria-hidden className={`${STAGE_PHOTO_ASPECT_MOBILE} min-[1200px]:hidden`} />
+          <div aria-hidden className={`${STAGE_TEXT_HEIGHT_MOBILE} min-[1200px]:hidden`} />
+          <div aria-hidden className={`hidden min-[1200px]:block ${STAGE_ASPECT_DESKTOP}`} />
+
           {slides.map((slide, index) => {
             const isActive = index === currentSlide;
             return (
@@ -240,10 +264,12 @@ export default function HeroSlider() {
                     />
                   </a>
 
-                  {/* Full-Bleed Mobile/Tablet: Hochformat-Bild füllt die Bühne,
-                      deren Verhältnis STAGE_ASPECT_MOBILE vorgibt. Nur wenn die
-                      85vh-Kappung greift (Tablet), letterboxt `object-contain`
-                      seitlich in der gleichen Rotfläche. */}
+                  {/* Full-Bleed Mobile/Tablet: Hochformat-Bild in der Bühne,
+                      deren Höhe sich nach dem Split-Foto plus Textbereich
+                      richtet. `object-contain` passt das Motiv darin ein —
+                      die Ränder, die dabei oben und unten (bzw. seitlich, wenn
+                      die 85vh-Kappung greift) frei bleiben, verschwinden in
+                      der gleichen Rotfläche. */}
                   <a
                     href={slide.buttonHref}
                     aria-label={slide.buttonLabel}
@@ -334,19 +360,18 @@ export default function HeroSlider() {
 
               {/* Mobile/Tablet-Layout: Bild oben, Text unten — zusammen genau
                   eine Bühnenhöhe.
-                  Der Textblock bekommt seine natürliche Höhe, das Bild nimmt
-                  per `flex-1 min-h-0` den Rest. So läuft nichts über, egal wie
-                  schmal das Gerät ist, und alle Slides bleiben gleich hoch.
-                  `object-cover`: das Foto füllt seine Fläche randlos aus. Der
-                  Beschnitt liegt vertikal, `objectPosition` steuert ihn — die
-                  Y-Werte sind so gewählt, dass Markenlogo und Preis-Badge im
-                  Bild sichtbar bleiben (siehe `objectPosition` in den Slides).
-                  Schriften und Abstände sind bewusst kompakter als vorher:
-                  vorher durfte der Text den Container beliebig hoch schieben,
-                  jetzt teilt er sich die feste Höhe mit dem Bild — je weniger
-                  er braucht, desto mehr Fläche bleibt dem Foto. */}
+                  Das Foto bekommt SEIN eigenes Seitenverhältnis, nicht den
+                  Rest, den der Text übrig lässt — dieselben Werte, aus denen
+                  die Bühnenhöhe gebaut ist. Dadurch deckt es seine Fläche exakt
+                  ab: randlos gefüllt UND vollständig sichtbar, ohne Beschnitt.
+                  Weil darunter ein fester Textbereich steht, ist die Fotohöhe
+                  bei allen Split-Slides identisch, unabhängig von der
+                  Textmenge.
+                  `min-h-0` lässt das Foto schrumpfen, falls die 85vh-Kappung
+                  der Bühne greift (Tablet) — dann trifft es alle Slides
+                  gleichermaßen, und `objectPosition` bestimmt den Ausschnitt. */}
               <div className="min-[1200px]:hidden flex h-full flex-col">
-                <div className="relative w-full flex-1 min-h-0">
+                <div className={`relative w-full min-h-0 ${STAGE_PHOTO_ASPECT_MOBILE}`}>
                   <Image
                     src={slide.image}
                     alt={slide.imageAlt}
@@ -358,37 +383,32 @@ export default function HeroSlider() {
                     loading={index === 0 ? 'eager' : 'lazy'}
                   />
                 </div>
-                {/* Je kürzer dieser Block, desto mehr Fläche bleibt dem Foto
-                    darüber — beides teilt sich die feste Bühnenhöhe.
-                    Die Abstände sind deshalb so bemessen, dass auch der längste
-                    Slide (Subline + 4 Bullets) dem Foto die ~262px lässt, die
-                    es bei Handy-Breite für die volle Höhe braucht.
-                    pb-8 hält die Dot-Navigation (bottom-4) vom Button frei. */}
-                <div className="flex flex-col items-start px-5 pt-4 pb-8 text-white">
-                  <h2 className="text-2xl font-bold mb-1.5 leading-tight">
+                {/* Feste Höhe (STAGE_TEXT_HEIGHT_MOBILE) und `flex-shrink-0`:
+                    das ist der Gegenpart zum Foto-Seitenverhältnis darüber.
+                    Nur weil dieser Block bei jedem Slide gleich hoch ist, ist
+                    das Foto es auch. Was der Text nicht braucht, bleibt
+                    Freiraum — dort sitzt die Dot-Navigation.
+                    Bemessen am längsten Slide: Headline + Subline + vier
+                    Bullets + Button ≈ 242px. */}
+                <div className={`flex flex-col items-start px-5 pt-4 pb-10 text-white flex-shrink-0 ${STAGE_TEXT_HEIGHT_MOBILE}`}>
+                  <h2 className="text-2xl font-bold mb-2 leading-tight">
                     {slide.heading}
                   </h2>
                   {slide.subline && (
-                    <p className="text-sm mb-1.5">{slide.subline}</p>
+                    <p className="text-sm mb-2">{slide.subline}</p>
                   )}
-                  {/* Zweispaltig: vier Bullets untereinander kosteten zwei
-                      Zeilen mehr, die dem Foto gefehlt haben.
-                      `px-5` und `gap-x-2` statt großzügigerer Werte, damit der
-                      längste Eintrag ("Korkdämmung integriert", ~139px bei
-                      12px) in eine Spalte passt — bricht er um, ist die
-                      gewonnene Zeile wieder weg. */}
                   {slide.bullets && (
-                    <ul className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs leading-tight mb-2">
+                    <ul className="text-xs leading-tight mb-3 space-y-1">
                       {slide.bullets.map((b) => (
                         <li key={b}>• {b}</li>
                       ))}
                     </ul>
                   )}
                   {slide.text && (
-                    <p className="text-sm mb-2 leading-snug">{slide.text}</p>
+                    <p className="text-sm mb-3 leading-snug">{slide.text}</p>
                   )}
                   {slide.dateText && (
-                    <p className="text-xs mb-2">{slide.dateText}</p>
+                    <p className="text-xs mb-3">{slide.dateText}</p>
                   )}
                   <a
                     href={slide.buttonHref}
