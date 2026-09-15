@@ -24,6 +24,7 @@ import {
   VS_ALTBODEN_VERLEGEART,
   VS_BELAG_SONSTIGER,
   VS_BESTAETIGUNG,
+  VS_BODENART_BERATUNG,
   VS_BODENARTEN,
   VS_ERREICHBARKEIT,
   VS_FEHLER,
@@ -37,12 +38,13 @@ import {
   VS_STANDORT,
   VS_ZEITRAEUME,
   VS_ZEITRAUM_SPAETER,
+  type VsBodenartKey,
 } from '@/content/verlegeservice-anfrage'
 import { formatEntfernung, type AreaStatus } from '@/lib/servicegebiet'
 import {
   labelAltbodenBelag,
   labelAltbodenEntfernen,
-  labelBodenart,
+  labelBodenarten,
   labelFlaeche,
   labelVerlegeart,
   labelZeitraum,
@@ -104,7 +106,7 @@ const LEER: Entwurf = {
   qm: null,
   raeume: [],
   raumSonstiger: '',
-  bodenart: null,
+  bodenarten: [],
   zeitraum: null,
   zeitraumDetail: '',
   altbodenEntfernen: null,
@@ -177,7 +179,18 @@ export default function VerlegeserviceAnfrage() {
     trackFormView()
     try {
       const roh = sessionStorage.getItem(ENTWURF_KEY)
-      if (roh) setD({ ...LEER, ...(JSON.parse(roh) as Partial<Entwurf>) })
+      if (roh) {
+        const gesichert = JSON.parse(roh) as Partial<Entwurf>
+        // `bodenarten` erzwingen: Ein Entwurf, der noch vor der Umstellung auf
+        // Mehrfachauswahl entstanden ist, kennt das Feld nicht oder hat dort
+        // einen Einzelwert. Ohne Absicherung würde `.includes()` im Render
+        // scheitern und das Formular weiß bleiben.
+        setD({
+          ...LEER,
+          ...gesichert,
+          bodenarten: Array.isArray(gesichert.bodenarten) ? gesichert.bodenarten : [],
+        })
+      }
     } catch {
       // Kein sessionStorage (privater Modus) — dann eben ohne Entwurf.
     }
@@ -255,6 +268,27 @@ export default function VerlegeserviceAnfrage() {
     setzen('raeume', drin ? d.raeume.filter((r) => r !== raum) : [...d.raeume, raum])
   }
 
+  /**
+   * Mehrfachauswahl der Bodenarten. „Noch nicht entschieden – Beratung
+   * gewünscht" (VS_BODENART_BERATUNG) verträgt sich nicht mit einer konkreten
+   * Wahl, deshalb verdrängen sich beide gegenseitig statt sich zu addieren.
+   */
+  const bodenartUmschalten = (key: VsBodenartKey) => {
+    const drin = d.bodenarten.includes(key)
+    if (drin) {
+      setzen('bodenarten', d.bodenarten.filter((b) => b !== key))
+      return
+    }
+    if (key === VS_BODENART_BERATUNG) {
+      setzen('bodenarten', [key])
+      return
+    }
+    setzen('bodenarten', [
+      ...d.bodenarten.filter((b) => b !== VS_BODENART_BERATUNG),
+      key,
+    ])
+  }
+
   async function absenden() {
     const pruefung = pruefeKontakt(d)
     if (Object.keys(pruefung).length > 0) {
@@ -303,7 +337,7 @@ export default function VerlegeserviceAnfrage() {
           leadId: json.leadId,
           areaStatus: json.areaStatus,
           areaRange: d.flaecheStaffel,
-          floorType: d.bodenart,
+          floorType: d.bodenarten.join(',') || null,
           timeline: d.zeitraum,
         })
       }
@@ -425,7 +459,7 @@ export default function VerlegeserviceAnfrage() {
               </Frage>
 
               {braucheQm && (
-                <Frage text={VS_PROJEKT.qmFrage} pflicht fehler={fehler.qm}>
+                <Frage text={VS_PROJEKT.qmFrage} hinweis={VS_PROJEKT.qmHinweis} fehler={fehler.qm}>
                   <div className="flex items-center gap-3">
                     <input
                       id="vs-qm"
@@ -475,14 +509,19 @@ export default function VerlegeserviceAnfrage() {
                 </div>
               )}
 
-              <Frage text={VS_PROJEKT.bodenartFrage} pflicht fehler={fehler.bodenart}>
+              <Frage
+                text={VS_PROJEKT.bodenartFrage}
+                pflicht
+                hinweis={VS_PROJEKT.bodenartHinweis}
+                fehler={fehler.bodenarten}
+              >
                 <KartenRaster>
                   {VS_BODENARTEN.map((b) => (
-                    <EinzelKarte
+                    <MehrfachKarte
                       key={b.key}
                       label={b.label}
-                      aktiv={d.bodenart === b.key}
-                      onClick={() => setzen('bodenart', b.key)}
+                      aktiv={d.bodenarten.includes(b.key)}
+                      onClick={() => bodenartUmschalten(b.key)}
                     />
                   ))}
                 </KartenRaster>
@@ -520,7 +559,10 @@ export default function VerlegeserviceAnfrage() {
                   weiter(pruefeProjekt({ ...d, qm: braucheQm ? d.qm : null }), () =>
                     trackStepProject({
                       area_range: d.flaecheStaffel,
-                      floor_type: d.bodenart,
+                      // Mehrfachauswahl als kommaseparierte Keys — der
+                      // Parametername bleibt, damit bestehende Auswertungen
+                      // weiterlaufen.
+                      floor_type: d.bodenarten.join(',') || null,
                       timeline: d.zeitraum,
                       raum_anzahl: d.raeume.length,
                     }),
@@ -692,7 +734,7 @@ export default function VerlegeserviceAnfrage() {
                 />
               </Frage>
 
-              <Frage text={VS_KONTAKT.freitextUeberschrift}>
+              <Frage text={VS_KONTAKT.freitextUeberschrift} hinweis={VS_KONTAKT.freitextHinweis}>
                 <Textbereich
                   id="vs-freitext"
                   wert={d.freitext}
@@ -861,7 +903,7 @@ function Bestaetigung({ d, ergebnis }: { d: Entwurf; ergebnis: Ergebnis }) {
                     : null
                 }
               />
-              <Zeile bez="Gewünschte Bodenart" wert={labelBodenart(d.bodenart)} />
+              <Zeile bez="Gewünschte Bodenart" wert={labelBodenarten(d.bodenarten)} />
               <Zeile
                 bez="Gewünschter Zeitraum"
                 wert={

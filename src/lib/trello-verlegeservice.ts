@@ -15,7 +15,7 @@ import { formatEntfernung, type AreaStatus } from '@/lib/servicegebiet'
 import {
   labelAltbodenBelag,
   labelAltbodenEntfernen,
-  labelBodenart,
+  labelBodenarten,
   labelErreichbarkeit,
   labelFlaeche,
   labelKontaktart,
@@ -121,8 +121,8 @@ export function kartenBeschreibung(
   if (staffel) projekt.push(`Flächenstaffel: ${staffel}`)
   if (a.qm && a.qm > 0) projekt.push(`Genaue Fläche: ca. ${a.qm} m²`)
   if (a.raeume.length) projekt.push(`Räume: ${raeumeText(a)}`)
-  const bodenart = labelBodenart(a.bodenart)
-  if (bodenart) projekt.push(`Gewünschte Bodenart: ${bodenart}`)
+  const bodenarten = labelBodenarten(a.bodenarten)
+  if (bodenarten) projekt.push(`Gewünschte Bodenart: ${bodenarten}`)
   const zeitraum = labelZeitraum(a.zeitraum)
   if (zeitraum) {
     const detail = a.zeitraumDetail.trim()

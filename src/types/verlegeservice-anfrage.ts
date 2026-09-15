@@ -57,11 +57,15 @@ export interface VsAnfrage {
 
   // Schritt 2 — Projekt
   flaecheStaffel: VsFlaecheKey | null
-  /** Nur bei den vier konkreten Staffeln gesetzt, bei „unbekannt" null. */
+  /**
+   * Freiwillig. Bei „unbekannt" immer null, bei den vier konkreten Staffeln
+   * nur gesetzt, wenn der Interessent eine Zahl eingetragen hat.
+   */
   qm: number | null
   raeume: string[]
   raumSonstiger: string
-  bodenart: VsBodenartKey | null
+  /** Mehrfachauswahl; mindestens ein Eintrag ist Pflicht. */
+  bodenarten: VsBodenartKey[]
   zeitraum: VsZeitraumKey | null
   /** Freitext, nur bei Zeitraum „Später". */
   zeitraumDetail: string

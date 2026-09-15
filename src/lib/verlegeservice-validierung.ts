@@ -65,7 +65,7 @@ export function pruefeStandort(a: Pick<VsAnfrage, 'plz'>): Feldfehler {
 export function pruefeProjekt(
   a: Pick<
     VsAnfrage,
-    'flaecheStaffel' | 'qm' | 'raeume' | 'raumSonstiger' | 'bodenart' | 'zeitraum'
+    'flaecheStaffel' | 'qm' | 'raeume' | 'raumSonstiger' | 'bodenarten' | 'zeitraum'
   >,
 ): Feldfehler {
   const f: Feldfehler = {}
@@ -73,12 +73,17 @@ export function pruefeProjekt(
   const s = staffel(a.flaecheStaffel)
   if (!s) {
     f.flaecheStaffel = VS_FEHLER.flaechePflicht
-  } else if (s.min !== null && s.max !== null) {
-    // Bei den vier konkreten Staffeln ist die Quadratmeterzahl Pflicht und
-    // muss zur gewählten Staffel passen.
-    if (a.qm === null || a.qm === undefined || Number.isNaN(a.qm)) {
-      f.qm = VS_FEHLER.qmPflicht
-    } else if (!Number.isFinite(a.qm) || a.qm <= 0) {
+  } else if (
+    s.min !== null &&
+    s.max !== null &&
+    a.qm !== null &&
+    a.qm !== undefined &&
+    !Number.isNaN(a.qm)
+  ) {
+    // Die Quadratmeterzahl ist freiwillig — leer ist in Ordnung. Wird sie
+    // angegeben, muss sie aber plausibel sein und zur gewählten Staffel
+    // passen, sonst widerspricht die Anfrage sich selbst.
+    if (!Number.isFinite(a.qm) || a.qm <= 0) {
       f.qm = VS_FEHLER.qmZahl
     } else if (a.qm < s.min || a.qm > s.max) {
       f.qm = VS_FEHLER.qmStaffel(s.label)
@@ -94,7 +99,14 @@ export function pruefeProjekt(
     f.raumSonstiger = VS_FEHLER.raumSonstigerPflicht
   }
 
-  if (!istKey(VS_BODENARTEN, a.bodenart)) f.bodenart = VS_FEHLER.bodenartPflicht
+  // Mehrfachauswahl: mindestens ein gültiger Key muss dabei sein. Unbekannte
+  // Werte werden ignoriert, nicht als Fehler gemeldet — der Server bereinigt
+  // die Liste ohnehin.
+  const bodenarten = Array.isArray(a.bodenarten) ? a.bodenarten : []
+  if (!bodenarten.some((b) => istKey(VS_BODENARTEN, b))) {
+    f.bodenarten = VS_FEHLER.bodenartPflicht
+  }
+
   if (!istKey(VS_ZEITRAEUME, a.zeitraum)) f.zeitraum = VS_FEHLER.zeitraumPflicht
 
   return f
@@ -201,7 +213,17 @@ export function label(
 }
 
 export const labelFlaeche = (k: VsFlaecheKey | null) => label(VS_FLAECHE_STAFFELN, k)
-export const labelBodenart = (k: string | null) => label(VS_BODENARTEN, k)
+
+/**
+ * Labels der gewählten Bodenarten als ein Text, in der Reihenfolge der
+ * Optionsliste statt der Klickreihenfolge — so steht in Trello, in der Mail und
+ * in der Zusammenfassung immer dieselbe Abfolge.
+ */
+export const labelBodenarten = (keys: readonly string[] | null | undefined) => {
+  if (!keys?.length) return null
+  const gewaehlt = VS_BODENARTEN.filter((b) => keys.includes(b.key)).map((b) => b.label)
+  return gewaehlt.length ? gewaehlt.join(', ') : null
+}
 export const labelZeitraum = (k: string | null) => label(VS_ZEITRAEUME, k)
 export const labelAltbodenEntfernen = (k: string | null) => label(VS_ALTBODEN_ENTFERNEN, k)
 export const labelAltbodenBelag = (k: string | null) => label(VS_ALTBODEN_BELAG, k)

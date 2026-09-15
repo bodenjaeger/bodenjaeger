@@ -78,6 +78,13 @@ export const VS_BODENARTEN = [
   { key: 'beratung', label: 'Noch nicht entschieden – Beratung gewünscht' },
 ] as const
 export type VsBodenartKey = (typeof VS_BODENARTEN)[number]['key']
+/**
+ * Schließt die übrigen Bodenarten aus: „Noch nicht entschieden" zusammen mit
+ * „Laminat" anzukreuzen widerspricht sich, und das Team bekäme einen Lead, der
+ * beides behauptet. Deshalb verdrängen sich die Auswahl und diese Option
+ * gegenseitig.
+ */
+export const VS_BODENART_BERATUNG: VsBodenartKey = 'beratung'
 
 export const VS_ZEITRAEUME = [
   { key: 'asap', label: 'So schnell wie möglich' },
@@ -95,12 +102,17 @@ export const VS_PROJEKT = {
   ueberschrift: 'Erzähl uns kurz von deinem Projekt',
   flaecheFrage: 'Wie groß ist die zu verlegende Fläche ungefähr?',
   qmFrage: 'Wie viele Quadratmeter sind es ungefähr?',
+  // Kein Pflichtfeld: Die Staffel ist bereits gewählt, die genaue Zahl kennen
+  // viele Interessenten noch nicht. Wird sie angegeben, muss sie aber zur
+  // Staffel passen — siehe pruefeProjekt().
+  qmHinweis: 'Optional — eine grobe Schätzung genügt.',
   qmEinheit: 'm²',
   qmPlatzhalter: 'ca. …',
   raeumeFrage: 'Welche Räume sollen einen neuen Boden erhalten?',
   raeumeHinweis: 'Mehrfachauswahl möglich',
   raumSonstigerFrage: 'Welcher Raum?',
   bodenartFrage: 'Welche Bodenart möchtest du verlegen lassen?',
+  bodenartHinweis: 'Mehrfachauswahl möglich',
   zeitraumFrage: 'Wann soll die Verlegung stattfinden?',
   zeitraumSpaeterFrage: 'Gewünschter Zeitraum oder Termin',
   zeitraumSpaeterPlatzhalter: 'Zum Beispiel Oktober 2026 oder spätestens vor dem Einzug.',
@@ -184,12 +196,13 @@ export const VS_KONTAKT = {
   preisHinweis: 'Die Angabe ist freiwillig und hilft uns, deine Anfrage besser einzuordnen.',
 
   freitextUeberschrift: 'Gibt es noch etwas, das wir zu deinem Projekt wissen sollten?',
+  freitextHinweis: 'Optional',
   freitextPlatzhalter:
     'Zum Beispiel Fußbodenheizung, Treppe, Möbel in den Räumen, besondere Übergänge, ein Einzugstermin oder besondere Wünsche zur Ausführung.',
 
   uploadUeberschrift: 'Bilder oder Bauplan hochladen',
   uploadHinweis:
-    'Lade gerne Bilder der Räume, des vorhandenen Bodens oder einen Bauplan hoch. Das hilft uns bei der ersten Einschätzung deines Projekts.',
+    'Optional — lade gerne Bilder der Räume, des vorhandenen Bodens oder einen Bauplan hoch. Das hilft uns bei der ersten Einschätzung deines Projekts.',
   uploadButton: 'Dateien auswählen',
   uploadEntfernen: 'Entfernen',
 
@@ -237,13 +250,14 @@ export const VS_FEHLER = {
   plzPflicht: 'Bitte gib die Postleitzahl des Projekts an.',
   plzFormat: 'Eine Postleitzahl besteht aus fünf Ziffern.',
   flaechePflicht: 'Bitte wähle eine Flächenangabe.',
-  qmPflicht: 'Bitte gib die ungefähre Quadratmeterzahl an.',
+  // Kein `qmPflicht` mehr — die Quadratmeterzahl ist freiwillig. Die beiden
+  // folgenden Meldungen greifen nur, wenn tatsächlich etwas eingetragen wurde.
   qmZahl: 'Bitte gib nur Zahlen ein.',
   /** Staffel und eingegebene Fläche passen nicht zusammen. */
   qmStaffel: (label: string) => `Die Fläche passt nicht zur Auswahl „${label}".`,
   raeumePflicht: 'Bitte wähle mindestens einen Raum.',
   raumSonstigerPflicht: 'Bitte gib an, welcher Raum gemeint ist.',
-  bodenartPflicht: 'Bitte wähle die gewünschte Bodenart.',
+  bodenartPflicht: 'Bitte wähle mindestens eine Bodenart.',
   zeitraumPflicht: 'Bitte wähle einen Zeitraum.',
   altbodenPflicht: 'Bitte beantworte die Frage zum vorhandenen Boden.',
   belagPflicht: 'Bitte gib an, welcher Bodenbelag vorhanden ist.',

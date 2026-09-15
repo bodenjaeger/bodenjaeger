@@ -56,7 +56,13 @@ function normalisiere(rohdaten: Partial<VsAnfrage>): VsAnfrage {
         : null,
     raeume: Array.isArray(rohdaten.raeume) ? rohdaten.raeume.filter((r) => typeof r === 'string') : [],
     raumSonstiger: s(rohdaten.raumSonstiger).trim(),
-    bodenart: (rohdaten.bodenart ?? null) as VsAnfrage['bodenart'],
+    // Mehrfachauswahl: nur bekannte Keys übernehmen und Dubletten verwerfen —
+    // was hier hereinkommt, landet unverändert in Trello und im Tracking.
+    bodenarten: Array.isArray(rohdaten.bodenarten)
+      ? ([...new Set(rohdaten.bodenarten)].filter((b) =>
+          VS_BODENARTEN.some((o) => o.key === b),
+        ) as VsAnfrage['bodenarten'])
+      : [],
     zeitraum: (rohdaten.zeitraum ?? null) as VsAnfrage['zeitraum'],
     zeitraumDetail: s(rohdaten.zeitraumDetail).trim(),
     altbodenEntfernen: (rohdaten.altbodenEntfernen ?? null) as VsAnfrage['altbodenEntfernen'],
@@ -217,13 +223,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<VsAnfrage
   // Meta CAPI: nach der Zustellung, Fehler nur protokollieren. Tracking darf
   // eine erfolgreich zugestellte Anfrage nicht nachträglich kippen.
   const staffel = VS_FLAECHE_STAFFELN.find((s) => s.key === a.flaecheStaffel)
-  const bodenart = VS_BODENARTEN.find((b) => b.key === a.bodenart)
   const zeitraum = VS_ZEITRAEUME.find((z) => z.key === a.zeitraum)
   await sendeMetaLead({
     leadId,
     areaStatus,
     areaRange: staffel?.key ?? null,
-    floorType: bodenart?.key ?? null,
+    // Kommaseparierte Keys; der Parametername bleibt `floor_type`, damit
+    // bestehende Auswertungen weiterlaufen.
+    floorType: a.bodenarten.join(',') || null,
     timeline: zeitraum?.key ?? null,
     email: a.email,
     telefon: a.telefon,
