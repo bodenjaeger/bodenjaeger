@@ -32,4 +32,34 @@ export const AKTION_BANNER = {
   href: '/sale',
   /** Beschriftung des eingebrannten Buttons, dient als `aria-label` des Links. */
   linkLabel: 'Alle Aktionsböden entdecken',
+  /**
+   * Lage des eingebrannten Buttons in den PNGs, in Prozent der Bildfläche.
+   * Nachgemessen an der weißen Pille: Desktop 2326×321 px (von 8547×4134),
+   * Mobil 1360×183 px (von 3138×4133).
+   *
+   * Wozu: Der gemalte Button skaliert mit dem Bild. Auf Desktop trifft er
+   * die Größe der HTML-Buttons noch (51 vs. 48 px hoch), mobil fällt er auf
+   * rund 20 px Höhe mit ~8 px Schrift zusammen, während die HTML-Buttons der
+   * übrigen Slides 36 px hoch sind. Mit diesen Maßen lässt er sich übermalen
+   * und durch einen echten Button ersetzen.
+   *
+   * `cover` ist ein etwas größeres Rechteck um die Pille, das sonst nur
+   * flächiges Rot enthält (nachgemessen) — mit `bgColor` gefüllt verschwindet
+   * der gemalte Button darin unsichtbar.
+   * `left`/`centerY` sind linke Kante und vertikale Mitte der Pille; daran
+   * wird der HTML-Button ausgerichtet, damit er wie im Motiv an der Textkante
+   * sitzt.
+   *
+   * WICHTIG: Beim Motivwechsel neu messen.
+   */
+  buttonDesktop: {
+    cover: { left: 2.5, top: 77, width: 31, height: 12 },
+    left: 3.955,
+    centerY: 82.959,
+  },
+  buttonMobile: {
+    cover: { left: 3.5, top: 89, width: 47.5, height: 9.5 },
+    left: 5.609,
+    centerY: 93.842,
+  },
 } as const

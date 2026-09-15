@@ -27,6 +27,12 @@ interface SlideData {
   fullBleed?: boolean;
   // Eigenes Hochformat-Bild unterhalb von 1200px (nur bei `fullBleed`).
   mobileImage?: string;
+  // Nur bei `fullBleed`: Lage des eingebrannten Buttons im Bild. Ist sie
+  // gesetzt, wird der gemalte Button mit `bgColor` übermalt und an seiner
+  // Stelle ein echter HTML-Button gerendert — in derselben Größe wie auf den
+  // Split-Slides. Ohne das wäre er mobil nur rund 20px hoch.
+  paintedButtonDesktop?: PaintedButton;
+  paintedButtonMobile?: PaintedButton;
   heading?: string;
   subline?: string;
   bullets?: string[];
@@ -36,6 +42,34 @@ interface SlideData {
   buttonHref: string;
   buttonVariant?: 'light' | 'dark';
 }
+
+/* Lage des eingebrannten Buttons im Banner-PNG, in Prozent der BILDfläche
+   (nicht der Bühne). Werte und Messung: AKTION_BANNER.buttonDesktop/-Mobile. */
+interface PaintedButton {
+  /** Rechteck, das den gemalten Button übermalt. */
+  cover: { left: number; top: number; width: number; height: number };
+  /** Linke Kante der gemalten Pille. */
+  left: number;
+  /** Vertikale Mitte der gemalten Pille. */
+  centerY: number;
+}
+
+/* Buttongröße für ALLE Slides an einer Stelle.
+
+   Vorher brachte jeder Slide seine eigene mit: die Split-Slides als HTML, das
+   Aktionsbanner als ins PNG eingebrannte Grafik, die mit dem Bild skaliert.
+   Auf Desktop traf der gemalte Button die HTML-Größe noch knapp (51 statt
+   48px hoch), mobil fiel er auf rund 20px Höhe mit ~8px Schrift zusammen,
+   während die HTML-Buttons dort 36px hoch sind — beim Slidewechsel sprang also
+   die Buttongröße.
+
+   Deshalb rendert das Banner jetzt denselben HTML-Button wie die übrigen
+   Slides und der gemalte wird übermalt. Wer hier die Größe ändert, ändert sie
+   auf allen drei Slides. */
+const CTA_BASE =
+  'inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors';
+const CTA_SIZE_DESKTOP = 'px-8 py-3';
+const CTA_SIZE_MOBILE = 'px-5 py-2 text-sm';
 
 /* Gemeinsame Bühne für ALLE Slides.
 
@@ -82,6 +116,8 @@ const slides: SlideData[] = [
     imageAlt: AKTION_BANNER.alt,
     buttonLabel: AKTION_BANNER.linkLabel,
     buttonHref: AKTION_BANNER.href,
+    paintedButtonDesktop: AKTION_BANNER.buttonDesktop,
+    paintedButtonMobile: AKTION_BANNER.buttonMobile,
   },
   {
     id: 1,
@@ -114,6 +150,57 @@ const slides: SlideData[] = [
     buttonVariant: 'dark',
   },
 ];
+
+/* Ersetzt den ins PNG eingebrannten Button durch einen echten.
+
+   Zwei Teile: eine Fläche in `bgColor`, die den gemalten Button unsichtbar
+   übermalt — das Rechteck enthält nachgemessen außer der Pille nur flächiges
+   Rot —, und darauf der HTML-Button in derselben Größe wie auf den
+   Split-Slides, ausgerichtet an linker Kante und Mitte der gemalten Pille.
+
+   Der Button ist ein <span>, kein <a>: der ganze Slide ist bereits ein Link
+   (der gemalte Button war nicht klickbar), ein Link im Link wäre ungültig.
+   Das Hover-Verhalten kommt darum per `group-hover` vom umgebenden Link.
+
+   Alle Prozentwerte beziehen sich auf die Bildfläche — das umgebende Element
+   muss also deckungsgleich mit dem Bild sein, nicht mit der Bühne. */
+function PaintedButtonOverlay({
+  rect,
+  label,
+  coverColor,
+  sizeClasses,
+}: {
+  rect: PaintedButton;
+  label: string;
+  coverColor: string;
+  sizeClasses: string;
+}) {
+  return (
+    <>
+      <span
+        aria-hidden
+        className="absolute"
+        style={{
+          left: `${rect.cover.left}%`,
+          top: `${rect.cover.top}%`,
+          width: `${rect.cover.width}%`,
+          height: `${rect.cover.height}%`,
+          backgroundColor: coverColor,
+        }}
+      />
+      {/* `whitespace-nowrap`: absolut positioniert steht dem Button nur die
+          Restbreite rechts seiner linken Kante zur Verfügung — bricht die
+          Beschriftung dort um, wäre er zweizeilig statt gleich groß. */}
+      <span
+        className={`absolute -translate-y-1/2 whitespace-nowrap bg-white text-dark group-hover:bg-gray-100 ${CTA_BASE} ${sizeClasses}`}
+        style={{ left: `${rect.left}%`, top: `${rect.centerY}%` }}
+      >
+        {label}
+        <span aria-hidden>›</span>
+      </span>
+    </>
+  );
+}
 
 export default function HeroSlider() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -251,7 +338,7 @@ export default function HeroSlider() {
                   <a
                     href={slide.buttonHref}
                     aria-label={slide.buttonLabel}
-                    className="hidden min-[1200px]:block relative h-full"
+                    className="group hidden min-[1200px]:block relative h-full"
                   >
                     <Image
                       src={slide.image}
@@ -262,6 +349,18 @@ export default function HeroSlider() {
                       priority={index === 0}
                       loading={index === 0 ? 'eager' : 'lazy'}
                     />
+                    {/* Hier gelten die Prozentwerte direkt auf dem Link: ab
+                        1200px hat die Bühne exakt das Seitenverhältnis des
+                        Motivs (STAGE_ASPECT_DESKTOP), Bildfläche und Link sind
+                        also deckungsgleich. */}
+                    {slide.paintedButtonDesktop && (
+                      <PaintedButtonOverlay
+                        rect={slide.paintedButtonDesktop}
+                        label={slide.buttonLabel}
+                        coverColor={slide.bgColor}
+                        sizeClasses={CTA_SIZE_DESKTOP}
+                      />
+                    )}
                   </a>
 
                   {/* Full-Bleed Mobile/Tablet: Hochformat-Bild in der Bühne,
@@ -273,17 +372,43 @@ export default function HeroSlider() {
                   <a
                     href={slide.buttonHref}
                     aria-label={slide.buttonLabel}
-                    className="min-[1200px]:hidden relative block h-full w-full"
+                    className="group min-[1200px]:hidden flex h-full w-full items-center justify-center"
+                    style={{ containerType: 'size' }}
                   >
-                    <Image
-                      src={slide.mobileImage ?? slide.image}
-                      alt={slide.imageAlt}
-                      fill
-                      className="object-contain"
-                      sizes="100vw"
-                      priority={index === 0}
-                      loading={index === 0 ? 'eager' : 'lazy'}
-                    />
+                    {/* Bildfläche, nicht Bühne: unterhalb 1200px hat die Bühne
+                        ein anderes Seitenverhältnis als das Hochformat,
+                        `contain` lässt also Rand — auf dem Handy oben/unten,
+                        auf dem Tablet seitlich. Prozentwerte auf die Bühne
+                        bezogen würden den Button daneben setzen. Diese Box
+                        rechnet dieselbe Einpassung nach: Breite ist der
+                        kleinere Wert aus voller Breite und dem, was die
+                        Bühnenhöhe (100cqh) beim Seitenverhältnis des Motivs
+                        zulässt. Das Bild füllt sie damit exakt aus. */}
+                    <div
+                      className="relative"
+                      style={{
+                        aspectRatio: AKTION_BANNER.mobileAspectRatio,
+                        width: `min(100%, calc(100cqh * ${AKTION_BANNER.mobileAspectRatio}))`,
+                      }}
+                    >
+                      <Image
+                        src={slide.mobileImage ?? slide.image}
+                        alt={slide.imageAlt}
+                        fill
+                        className="object-contain"
+                        sizes="100vw"
+                        priority={index === 0}
+                        loading={index === 0 ? 'eager' : 'lazy'}
+                      />
+                      {slide.paintedButtonMobile && (
+                        <PaintedButtonOverlay
+                          rect={slide.paintedButtonMobile}
+                          label={slide.buttonLabel}
+                          coverColor={slide.bgColor}
+                          sizeClasses={CTA_SIZE_MOBILE}
+                        />
+                      )}
+                    </div>
                   </a>
                 </>
               ) : (
@@ -334,7 +459,7 @@ export default function HeroSlider() {
                   )}
                   <a
                     href={slide.buttonHref}
-                    className={`inline-flex items-center justify-center gap-2 w-fit px-8 py-3 font-semibold rounded-full transition-colors ${
+                    className={`${CTA_BASE} ${CTA_SIZE_DESKTOP} w-fit ${
                       slide.buttonVariant === 'dark'
                         ? 'bg-dark text-white hover:bg-black'
                         : 'bg-white text-dark hover:bg-gray-100'
@@ -412,7 +537,7 @@ export default function HeroSlider() {
                   )}
                   <a
                     href={slide.buttonHref}
-                    className={`inline-flex items-center justify-center gap-2 px-5 py-2 text-sm font-semibold rounded-full transition-colors ${
+                    className={`${CTA_BASE} ${CTA_SIZE_MOBILE} ${
                       slide.buttonVariant === 'dark'
                         ? 'bg-dark text-white hover:bg-black'
                         : 'bg-white text-dark hover:bg-gray-100'
