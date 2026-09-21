@@ -114,11 +114,7 @@ async function pruefeTurnstile(request: NextRequest, token?: string): Promise<bo
  * WordPress-Contact-Endpunkt. Der kann keine Anhänge — die Dateien liegen
  * ohnehin an der Trello-Karte, die Mail nennt nur ihre Anzahl.
  */
-async function sendeMail(
-  a: VsAnfrage,
-  leadId: string,
-  klartext: string,
-): Promise<boolean> {
+async function sendeMail(a: VsAnfrage, klartext: string): Promise<boolean> {
   const wpUrl = process.env.NEXT_PUBLIC_WORDPRESS_URL
   const secret = process.env.JAEGER_CONTACT_SECRET?.trim()
   if (!wpUrl || !secret) {
@@ -134,7 +130,12 @@ async function sendeMail(
         name: `${a.vorname} ${a.nachname}`.trim(),
         email: a.email,
         phone: a.telefon,
-        subject: `Verlegeservice-Anfrage ${leadId}`,
+        // Der Betreff steuert im WordPress-Endpunkt den Empfänger
+        // (Jaeger_Contact_Endpoint::ROUTING: 'verlegeservice' =>
+        // verkauf@bodenjaeger.de). Gebraucht wird deshalb exakt der Slug, nicht
+        // ein Freitext — jeder unbekannte Wert fällt auf info@bodenjaeger.de
+        // zurück. Die Lead-ID steht als erste Zeile im Klartext.
+        subject: 'verlegeservice',
         message: klartext,
       }),
     })
@@ -209,7 +210,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<VsAnfrage
   // Beide Kanäle parallel — der langsamere bestimmt die Laufzeit, nicht die Summe.
   const [trello, mailOk] = await Promise.all([
     leadNachTrello(a, trelloOpts),
-    sendeMail(a, leadId, klartext),
+    sendeMail(a, klartext),
   ])
 
   if (!trello.cardId && !mailOk) {
