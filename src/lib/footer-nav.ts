@@ -75,6 +75,13 @@ export interface FooterBadge {
    */
   src?: string
   /**
+   * Zweite, kleinere Zeile unter `label` — nur für Textbadges. Trennt die
+   * Marke von der Zahlungsart („PayPal" / „Später Bezahlen"), damit beides
+   * nicht als ein Fließtext in der schmalen Kachel umbricht. Fließt mit ins
+   * Screenreader-Label ein.
+   */
+  sublabel?: string
+  /**
    * false = vorbereitet, aber nicht gerendert. Genutzt für Zahlarten, die der
    * Checkout (noch) nicht anbietet — Footer und Checkout bleiben deckungsgleich.
    */
@@ -186,46 +193,70 @@ export const WIDERRUF_BUTTON = {
 // ── Trust-/Zahlungs-/Lieferzone ──────────────────────────────────────────────
 
 /**
- * Zahlungsarten.
+ * Zahlungsarten. Reihenfolge und Auswahl folgen der Designvorlage
+ * „Footer_2026" (Stand 23.09.2026, liegt nicht im Repo).
  *
- * Regel: Es wird ausschließlich dargestellt, was der Checkout tatsächlich
- * anbietet (src/app/checkout/page.tsx → PayPal, Klarna, Stripe mit
- * Visa/Mastercard/Amex/Apple Pay/Google Pay, Vorkasse per Banküberweisung).
- *
- * Die deaktivierten Einträge sind vorbereitet: Nach einer Checkout-Erweiterung
- * genügt `enabled: true` (und ggf. ein SVG unter public/images/zahlungslogos/).
- *
- * 8 aktive Badges → gehen im 2-/4-spaltigen Grid glatt auf, keine Zeile endet
- * mit einem einzelnen Badge.
+ * Harte Regel: Angezeigt wird nur, was der Checkout auch anbietet
+ * (src/app/checkout/page.tsx). Ein Logo für eine nicht wählbare Zahlart wäre
+ * eine falsche Werbeaussage.
+ * - Visa/Mastercard/Amex/Apple Pay laufen über die Stripe-Kachel
+ * - „PayPal Später Bezahlen" ist Teil der PayPal-Kachel (30 Tage Rechnungskauf)
+ * - „Ratenzahlung (Klarna)" ist Teil der Klarna-Kachel
+ * - Vorkasse = BACS
  */
 export const PAYMENT_BADGES: FooterBadge[] = [
   { label: 'Visa', src: '/images/zahlungslogos/visa.svg', enabled: true },
   { label: 'Mastercard', src: '/images/zahlungslogos/mastercard.svg', enabled: true },
-  { label: 'American Express', src: '/images/zahlungslogos/amex.svg', enabled: true },
-  { label: 'Apple Pay', src: '/images/zahlungslogos/apple-pay.svg', enabled: true },
-  { label: 'Google Pay', src: '/images/zahlungslogos/google-pay.svg', enabled: true },
   { label: 'PayPal', src: '/images/zahlungslogos/paypal.svg', enabled: true },
+  { label: 'Apple Pay', src: '/images/zahlungslogos/apple-pay.svg', enabled: true },
+  { label: 'American Express', src: '/images/zahlungslogos/amex.svg', enabled: true },
   { label: 'Klarna', src: '/images/zahlungslogos/klarna.svg', enabled: true },
+  { label: 'PayPal', sublabel: 'Später Bezahlen', enabled: true },
+  { label: 'Ratenzahlung', sublabel: '(Klarna)', enabled: true },
   { label: 'Vorkasse', enabled: true },
 
-  // Vorbereitet, aber nicht im Checkout verfügbar → nicht anzeigen.
-  { label: 'Amazon Pay', enabled: false },
-  { label: 'PayPal Später bezahlen', enabled: false },
+  // Google Pay: im Checkout über Stripe verfügbar, im Footer aber auf
+  // Kundenwunsch ausgeblendet — die Vorlage zeigt es nicht. Das SVG liegt
+  // bereit, `enabled: true` genügt zum Wiedereinblenden.
+  { label: 'Google Pay', src: '/images/zahlungslogos/google-pay.svg', enabled: false },
+
+  // Amazon Pay: steht in der Designvorlage, ist im Checkout aber NICHT
+  // implementiert (weder Gateway noch Auswahl). Erst einblenden, wenn die
+  // Zahlart dort tatsächlich wählbar ist. Das SVG liegt bereit.
+  { label: 'Amazon Pay', src: '/images/zahlungslogos/amazon-pay.svg', enabled: false },
+
+  // Vom Checkout nicht angeboten → nicht anzeigen.
   { label: 'Ratenzahlung PayPal', enabled: false },
-  { label: 'Ratenzahlung Klarna', enabled: false },
 ]
 
 /**
- * Versanddienstleister. Aktuell alle drei als Textbadge, weil für DHL und
- * Raben keine lizenzierten lokalen SVGs vorliegen (Hotlinking ist
- * ausgeschlossen). Sobald ein Logo unter public/ liegt, reicht `src` — die
- * Badge-Hülle bleibt identisch.
+ * Versanddienstleister. DHL liegt als lokales SVG vor, Raben nicht — dafür
+ * findet sich in keiner der freien Icon-Sammlungen eine Marke, und
+ * Hotlinking ist ausgeschlossen. Raben und Bodenjäger bleiben deshalb
+ * Textbadges; sobald ein Logo unter public/ liegt, reicht `src`.
  */
 export const SHIPPING_BADGES: FooterBadge[] = [
-  { label: 'DHL', enabled: true },
+  { label: 'DHL', src: '/images/versandlogos/dhl.svg', enabled: true },
   { label: 'Raben', enabled: true },
   { label: 'Bodenjäger', enabled: true, mark: 'bodenjaeger' },
 ]
+
+/**
+ * Shop-Bewertung bei Trusted Shops, wie sie im Footer steht.
+ *
+ * ACHTUNG — manuell gepflegt. Es gibt im Projekt keine Anbindung an die
+ * eTrusted-API; der Wert wird NICHT automatisch aktualisiert. Er muss mit der
+ * tatsächlichen Note im Trusted-Shops-Profil übereinstimmen, sonst ist die
+ * Angabe eine falsche Werbeaussage. Die aktuelle Note liefert daneben das
+ * Floating-Trustbadge (components/TrustedShops.tsx) — dort gegenprüfen.
+ *
+ * Herkunft des aktuellen Werts: Designvorlage „Footer_2026"
+ * (Stand 23.09.2026), NOCH NICHT gegen das echte Profil verifiziert.
+ */
+export const TRUSTED_SHOPS_BEWERTUNG = {
+  note: 4.6,
+  maximum: 5,
+} as const
 
 export const TRUST_ZONE_TEXTE = {
   trustedShops: {

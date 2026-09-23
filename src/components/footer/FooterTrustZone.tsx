@@ -1,7 +1,13 @@
 import Image from 'next/image'
 import { CreditCard, MapPin, Store, Truck, type LucideIcon } from 'lucide-react'
 import BadgeGrid from './BadgeGrid'
-import { PAYMENT_BADGES, SHIPPING_BADGES, TRUST_ZONE_TEXTE } from '@/lib/footer-nav'
+import StarRating from './StarRating'
+import {
+  PAYMENT_BADGES,
+  SHIPPING_BADGES,
+  TRUST_ZONE_TEXTE,
+  TRUSTED_SHOPS_BEWERTUNG,
+} from '@/lib/footer-nav'
 
 const BLOCK_TITLE =
   'mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-white'
@@ -26,11 +32,20 @@ function BlockTitle({ icon: Icon, children }: { icon: LucideIcon; children: stri
  * (`bg-mid`) ist entfallen. Abgesetzt wird die Zone stattdessen nur noch über
  * eine dezente Trennlinie, wie sie auch die Bottom-Bar nutzt.
  *
- * Trusted Shops bleibt bewusst ein ruhiger statischer Block ohne Note und
- * ohne Sterne — die Bewertung liefert allein das bestehende Floating-Widget
- * (components/TrustedShops.tsx), das hier nicht angefasst wird.
+ * Der Trusted-Shops-Block zeigt Note und Sterne (Designvorlage
+ * „Footer_2026", Stand 23.09.2026). Die Zahl kommt statisch aus
+ * TRUSTED_SHOPS_BEWERTUNG — siehe Warnhinweis dort. Das Floating-Widget
+ * (components/TrustedShops.tsx) bleibt davon unberührt.
  */
 export default function FooterTrustZone() {
+  const { note, maximum } = TRUSTED_SHOPS_BEWERTUNG
+  // de-DE: Komma als Dezimaltrennzeichen, immer eine Nachkommastelle
+  // (4,0 statt 4 — sonst wirkt eine glatte Note wie ein abgeschnittener Wert).
+  const noteFormatiert = note.toLocaleString('de-DE', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })
+
   return (
     <div className="w-full bg-dark">
       <div className="content-container">
@@ -38,24 +53,29 @@ export default function FooterTrustZone() {
           {/* 1 — Trusted Shops */}
           <div className="lg:col-span-2">
             <h3 className={BLOCK_TITLE}>Geprüfter Shop</h3>
-            <div className="flex items-start gap-3">
+            <div
+              className="flex items-start gap-3"
+              role="img"
+              aria-label={`Trusted Shops Käuferschutz — Bewertung ${noteFormatiert} von ${maximum}`}
+            >
               {/* Das Trustmark ist ein dunkel umringtes Rundsiegel und würde auf
                   `bg-dark` seine Außenkante verlieren. Es sitzt deshalb — wie die
                   Zahlungslogos — auf Weiß, hier als Kreis statt als Kachel. */}
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white">
                 <Image
                   src="/images/trusted-shops/Trustmark-RGB.png"
-                  alt="Trusted Shops Gütesiegel"
+                  alt=""
                   width={1250}
                   height={1250}
                   className="h-9 w-9 object-contain"
                 />
               </span>
               <div>
-                <p className="text-[15px] font-bold leading-6 text-white">
+                <p className="text-2xl font-bold leading-none text-white">{noteFormatiert}</p>
+                <StarRating note={note} maximum={maximum} className="mt-1.5" />
+                <p className="mt-1.5 text-[13px] leading-5 text-ash">
                   {TRUST_ZONE_TEXTE.trustedShops.titel}
-                </p>
-                <p className="text-[15px] leading-6 text-ash">
+                  <br />
                   {TRUST_ZONE_TEXTE.trustedShops.text}
                 </p>
               </div>
@@ -65,18 +85,13 @@ export default function FooterTrustZone() {
           {/* 2 — Sichere Zahlung */}
           <div className="lg:col-span-4">
             <BlockTitle icon={CreditCard}>{TRUST_ZONE_TEXTE.zahlung.titel}</BlockTitle>
-            {/* Durchgehend 4 Spalten: Die 8 aktiven Badges gehen damit auf
-                jeder Breite in genau 2 vollen Zeilen auf — keine Zeile endet
-                mit einem einzelnen Badge. Bei der reduzierten Kachelhöhe (36px)
-                bleibt selbst auf 320px Viewport genug Kachelbreite (~67px) für
-                die 22px hohen Logos. */}
-            <BadgeGrid badges={PAYMENT_BADGES} columnsClassName="grid-cols-4" />
+            <BadgeGrid badges={PAYMENT_BADGES} />
           </div>
 
           {/* 3 — Schnelle Lieferung */}
           <div className="lg:col-span-3">
             <BlockTitle icon={Truck}>{TRUST_ZONE_TEXTE.lieferung.titel}</BlockTitle>
-            <BadgeGrid badges={SHIPPING_BADGES} columnsClassName="grid-cols-3" />
+            <BadgeGrid badges={SHIPPING_BADGES} />
             <p className="mt-2 text-[13px] leading-5 text-ash">
               {TRUST_ZONE_TEXTE.lieferung.zusatz}
             </p>
