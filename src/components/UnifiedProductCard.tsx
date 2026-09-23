@@ -21,6 +21,42 @@ interface UnifiedProductCardProps {
 }
 
 /**
+ * Gemeinsame Hülle der beiden Aktions-Buttons auf der Karte.
+ *
+ * `cursor-pointer` ist Pflicht und nicht Kosmetik: Browser geben <button>
+ * per Default `cursor: default`, und weder Tailwind Preflight noch die
+ * globale button-Regel in globals.css setzen etwas anderes. Ohne den Zeiger
+ * wirken die Kacheln wie Bildbeschriftung statt wie Bedienelemente — genau
+ * der gemeldete Eindruck.
+ *
+ * Der Fokusring liegt bewusst als weißer Spalt plus brandroter Ring außen
+ * (`ring-offset-white`): Die Buttons sitzen auf der Unterkante des
+ * Produktbilds, ein einfarbiger Ring würde je nach Bodenfoto verschwinden.
+ * Der weiße Spalt trennt ihn in jedem Fall vom Hintergrund.
+ *
+ * Als Hover-Rot dient #d11820, nicht `bg-brand` (#ed1b24): brandrot trägt
+ * weiße Schrift nur mit Kontrast 4,39:1 und verfehlt damit WCAG AA für kleine
+ * Schrift (4,5:1) — die Labels hier sind 10-12px. #d11820 kommt auf 5,44:1 und
+ * ist im Projekt bereits der etablierte Hover-Ton (u.a. cart/page.tsx,
+ * CategoryPageClient, FachmarktPage). Der Wert steht literal in der Klasse,
+ * weil Tailwind arbitrary values zur Buildzeit braucht.
+ */
+const CARD_ACTION_BUTTON = [
+  'flex cursor-pointer items-center justify-start gap-2 text-white',
+  'transition-colors duration-200',
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+  'focus-visible:ring-offset-2 focus-visible:ring-offset-white',
+  'disabled:cursor-not-allowed disabled:opacity-50',
+].join(' ')
+
+/** Geometrie der Buttons — unverändert aus dem bestehenden Design. */
+const CARD_ACTION_STYLE = {
+  height: '10px',
+  padding: '1rem',
+  borderRadius: '6px',
+} as const
+
+/**
  * Einheitliche Produktkarte für alle Übersichten
  * Basiert auf CategoryPageClient Design
  */
@@ -210,19 +246,33 @@ export default function UnifiedProductCard({ product }: UnifiedProductCardProps)
         {/* Action Buttons on Border - Only for floor products */}
         {isFloorProduct && (
           <div className="absolute left-0 right-0 flex justify-between px-4 z-10" style={{ bottom: '-2%' }}>
+            {/* Gemerkt: brandrot als Ruhezustand, Hover wird dunkel — der
+                Farbwechsel signalisiert „Klick entfernt wieder". Ungemerkt
+                umgekehrt: dunkel, Hover brandrot. So braucht der Toggle nur
+                die zwei Markenfarben und keinen dritten Ton.
+
+                Kein `aria-pressed`: Der Zustand steckt schon im wechselnden
+                Label („setzen" / „entfernen"), beides zusammen würde ihn
+                doppelt ansagen. Das Label muss wechseln, damit der Accessible
+                Name den sichtbaren Text „Auf die/der Merkliste" enthält
+                (WCAG 2.5.3 Label in Name) — ein statisches Label plus
+                `aria-pressed` würde das verletzen. */}
             <button
+              type="button"
               onClick={handleToggleWishlist}
-              className="text-white flex items-center justify-start gap-2 transition-colors duration-200"
-              style={{
-                backgroundColor: wishlisted ? 'var(--color-primary)' : 'var(--color-bg-darkest)',
-                height: '10px',
-                padding: '1rem',
-                borderRadius: '6px'
-              }}
+              aria-label={
+                wishlisted
+                  ? `${product.name} von der Merkliste entfernen`
+                  : `${product.name} auf die Merkliste setzen`
+              }
+              className={`${CARD_ACTION_BUTTON} ${
+                wishlisted ? 'bg-brand hover:bg-dark' : 'bg-dark hover:bg-[#d11820]'
+              }`}
+              style={CARD_ACTION_STYLE}
             >
               <Image
                 src="/images/Icons/favoriten-weiss.png"
-                alt="Wunschlist"
+                alt=""
                 width={16}
                 height={16}
               />
@@ -232,19 +282,17 @@ export default function UnifiedProductCard({ product }: UnifiedProductCardProps)
               </div>
             </button>
             <button
+              type="button"
               onClick={handleOrderSample}
               disabled={isOrderingSample}
-              className="text-white flex items-center justify-start gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: 'var(--color-bg-darkest)',
-                height: '10px',
-                padding: '1rem',
-                borderRadius: '6px'
-              }}
+              aria-busy={isOrderingSample}
+              aria-label={`Kostenloses Muster von ${product.name} bestellen`}
+              className={`${CARD_ACTION_BUTTON} bg-dark hover:bg-[#d11820]`}
+              style={CARD_ACTION_STYLE}
             >
               <Image
                 src="/images/Icons/musterbox-weiss.png"
-                alt="Muster bestellen"
+                alt=""
                 width={16}
                 height={16}
               />
