@@ -10,6 +10,7 @@ import HeaderLogo from './header/HeaderLogo';
 import HeaderNav from './header/HeaderNav';
 import ShopMobileMenu from './header/ShopMobileMenu';
 import UspBar from './header/UspBar';
+import SaleBanner from './SaleBanner';
 
 /**
  * Shop-Header.
@@ -17,6 +18,8 @@ import UspBar from './header/UspBar';
  * Desktop (ab lg) drei Zeilen: USP-Leiste 48px, Hauptzeile 96px, Navigation
  * 64px — zusammen 208px. Mobile drei Zeilen: USP-Ticker 40px, Header-Zeile
  * 56px, Suchzeile 60px. Alle Höhen sind fest, damit beim Laden nichts springt.
+ * Darüber optional die Aktionsleiste (SaleBanner, gesteuert über
+ * `src/content/sale-banner.ts`), die beim Scrollen stehen bleibt.
  *
  * Sticky-Verhalten: Die USP-Leiste scrollt weg, Hauptzeile und Navigation
  * bleiben oben stehen. Umgesetzt über einen negativen Sticky-Offset in Höhe der
@@ -123,6 +126,15 @@ export default function Header() {
       }`}
     >
       <div className="relative z-[3] bg-hdr-bg">
+        {/* Zeile 0 — Aktionsleiste (SaleBanner). Eigenes `sticky top-0`: Beim
+            Scrollen rutscht der Header um die USP-Höhe nach oben, die Leiste
+            bleibt am Viewport-Rand stehen und deckt die ausgeblendete
+            USP-Zeile ab (z-[1], USP ist nicht positioniert). Funktioniert
+            unabhängig von der Leistenhöhe. Bei offenem Mobile-Menü aus. */}
+        <div className={`sticky top-0 z-[1] ${isMenuOpen ? 'hidden lg:block' : ''}`}>
+          <SaleBanner />
+        </div>
+
         {/* Zeile 1 — USP-Leiste (Desktop statisch, mobil Ticker) */}
         <div className={isMenuOpen ? 'hidden lg:block' : undefined}>
           <UspBar />
