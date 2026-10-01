@@ -211,12 +211,12 @@ export const BODEN_KATEGORIEN = {
   // (kein Link/Hover/Pointer). Teppichboden + PVC/CV vorerst ohne Verlinkung.
   kategorien: [
     { titel: 'Klick-Vinyl', href: '/category/rigid-vinyl', image: '/images/fachmarkt-hueckelhoven/sortiment/klick-vinyl.webp' }, // Kunde: Klick-Vinyl = rigid-vinyl
-    { titel: 'Klebe-Vinyl', href: '/category/klebe-vinyl', image: '/images/fachmarkt-hueckelhoven/sortiment/Sortiment - Klebe-Vinyl.png' },
+    { titel: 'Klebe-Vinyl', href: '/category/klebe-vinyl', image: '/images/fachmarkt-hueckelhoven/sortiment/Sortiment - Klebe-Vinyl.png', imagePosition: '39% 50%' }, // Schriftzug sitzt links der Bildmitte – sonst schneidet der Hover-Zoom das „K“ ab
     { titel: 'Parkett', href: '/category/parkett', image: '/images/fachmarkt-hueckelhoven/sortiment/Sortiment - Parkett.png' },
     { titel: 'Laminat', href: '/category/laminat', image: '/images/fachmarkt-hueckelhoven/sortiment/laminat.webp' },
     { titel: 'Teppichboden', href: null, image: '/images/fachmarkt-hueckelhoven/sortiment/teppichboden.webp' }, // vorerst keine Verlinkung
     { titel: 'PVC / CV-Belag', href: null, image: '/images/fachmarkt-hueckelhoven/sortiment/cv-boden.webp' }, // vorerst keine Verlinkung
-  ] as { titel: string; href: string | null; image: string }[],
+  ] as { titel: string; href: string | null; image: string; imagePosition?: string }[],
   cta: { label: 'Gesamtes Sortiment ansehen', href: '/', variant: 'outline' } as Cta,
 }
 
