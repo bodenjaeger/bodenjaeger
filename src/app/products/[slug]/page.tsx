@@ -2,7 +2,7 @@ import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { wooCommerceClient, type StoreApiProduct } from "@/lib/woocommerce";
 import ProductPageContent from "@/components/product/ProductPageContent";
 import { JsonLd } from "@/components/JsonLd";
-import { buildProductSchema, buildBreadcrumbSchema, stripHtml } from "@/lib/schema";
+import { buildProductSchema, buildBreadcrumbSchema, buildProductMetaTitle, buildProductMetaDescription } from "@/lib/schema";
 import { SITE_URL, productUrl, categoryUrl } from "@/lib/site";
 
 // Slug-Präfix → Kategorie-Slug.
@@ -299,13 +299,13 @@ export async function generateMetadata({ params }: ProductPageProps) {
       };
     }
 
-    const description = stripHtml(
-      product.short_description || product.description?.substring(0, 160) || ''
-    ) || `${product.name} bei Bodenjäger kaufen`;
+    // Eindeutig pro Produkt: Beschreibung aus der individuellen Artikelbeschreibung
+    const title = buildProductMetaTitle(product);
+    const description = buildProductMetaDescription(product);
     const canonicalUrl = productUrl(product.slug);
 
     return {
-      title: `${product.name} | Bodenjäger`,
+      title,
       description,
       alternates: {
         canonical: canonicalUrl,

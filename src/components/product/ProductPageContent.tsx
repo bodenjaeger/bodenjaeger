@@ -20,6 +20,7 @@ import ProductInfo from './ProductInfo';
 import QuantitySelector from './QuantitySelector';
 import TotalPrice from './TotalPrice';
 import ZubehoerSlider from './ZubehoerSlider';
+import ProductDescription from './ProductDescription';
 
 interface ProductPageContentProps {
   product: StoreApiProduct;
@@ -248,98 +249,6 @@ export default function ProductPageContent({
     setSelectedDaemmung(daemmung);
     setSelectedSockelleiste(sockelleiste);
   }, []);
-
-  // ========== PRODUCT TABS (Beschreibung / Eigenschaften) ==========
-
-  const ProductTabs = ({ product }: { product: StoreApiProduct }) => {
-    const [activeTab, setActiveTab] = useState<'beschreibung' | 'eigenschaften' | null>('beschreibung');
-
-    const rawBeschreibung = product.artikelbeschreibung || '';
-    // ChatGPT-UI-HTML bereinigen: Nur <p>, <strong>, <em>, <br>, <ul>, <li>, <ol> behalten
-    const cleanHtml = (html: string): string => {
-      // Entferne alle div-Wrapper (ChatGPT kopiert UI-Container mit)
-      let cleaned = html.replace(/<div[^>]*>/gi, '').replace(/<\/div>/gi, '');
-      // Entferne class/style/data-Attribute von allen Tags
-      cleaned = cleaned.replace(/<(\w+)\s+[^>]*?>/gi, '<$1>');
-      return cleaned.trim();
-    };
-    const cleanedBeschreibung = cleanHtml(rawBeschreibung);
-    const beschreibung = cleanedBeschreibung.includes('<p')
-      ? cleanedBeschreibung
-      : cleanedBeschreibung.replace(/\r?\n\r?\n/g, '<br/><br/>').replace(/\r?\n/g, '<br/>');
-    const descriptionHtml = product.description || '';
-    const hasBeschreibung = !!beschreibung;
-    const hasEigenschaften = descriptionHtml.includes('<table') || descriptionHtml.includes('bj-specs');
-
-    if (!hasBeschreibung && !hasEigenschaften) return null;
-
-    const toggleTab = (tab: 'beschreibung' | 'eigenschaften') => {
-      setActiveTab(activeTab === tab ? null : tab);
-    };
-
-    return (
-      <div style={{ width: '100%' }}>
-        {/* Tab Buttons */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '0' }}>
-          {hasBeschreibung && (
-            <button
-              onClick={() => toggleTab('beschreibung')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '10px 32px', borderRadius: '9999px',
-                fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: 'none',
-                backgroundColor: activeTab === 'beschreibung' ? '#e5e5e5' : '#fff',
-                color: '#2e2d32',
-                outline: activeTab === 'beschreibung' ? 'none' : '1px solid #d1d5db',
-              }}
-            >
-              Artikelbeschreibung
-              <svg style={{ width: '16px', height: '16px', transform: activeTab === 'beschreibung' ? 'rotate(0)' : 'rotate(-90deg)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          )}
-          {hasEigenschaften && (
-            <button
-              onClick={() => toggleTab('eigenschaften')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '10px 32px', borderRadius: '9999px',
-                fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: 'none',
-                backgroundColor: activeTab === 'eigenschaften' ? '#e5e5e5' : '#fff',
-                color: '#2e2d32',
-                outline: activeTab === 'eigenschaften' ? 'none' : '1px solid #d1d5db',
-              }}
-            >
-              Weitere Artikeldetails
-              <svg style={{ width: '16px', height: '16px', transform: activeTab === 'eigenschaften' ? 'rotate(0)' : 'rotate(-90deg)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        {/* Tab Content */}
-        {activeTab && (
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: 'clamp(16px, 4vw, 32px)', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-            {activeTab === 'beschreibung' && hasBeschreibung && (
-              <div
-                style={{ color: '#2e2d32', fontSize: '14px', lineHeight: '1.75' }}
-                dangerouslySetInnerHTML={{ __html: beschreibung }}
-              />
-            )}
-
-            {activeTab === 'eigenschaften' && hasEigenschaften && (
-              <div
-                className="bj-specs-table"
-                dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-              />
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   // ========== SIMPLE PRODUCT LAYOUT COMPONENTS (for Accessories) ==========
 
@@ -1139,7 +1048,12 @@ export default function ProductPageContent({
           <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
         </div>
 
-        <ProductTabs product={product} />
+        <ProductDescription
+          product={product}
+          showSample={isFloorProduct}
+          onOrderSample={handleOrderSample}
+          isOrderingSample={isOrderingSample}
+        />
           </>
         )}
       </div>

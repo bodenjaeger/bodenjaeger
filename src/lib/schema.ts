@@ -40,11 +40,55 @@ export function stripHtml(html: string): string {
     .trim()
 }
 
+// Kategorien, die keine Produktart beschreiben (Muster-Box, Aktionen)
+const NON_TYPE_CATEGORIES = ['musterbox', 'sale']
+
+/**
+ * Meta-Title pro Produkt. Die Produktart wird nur angehängt, wenn sie nicht
+ * schon im Namen steht („Klebe-Vinyl Pulse Grey“ braucht kein „| Klebe-Vinyl“).
+ */
+export function buildProductMetaTitle(product: StoreApiProduct): string {
+  const category = product.categories?.find(
+    (c) => !NON_TYPE_CATEGORIES.includes(c.slug)
+  )?.name
+  const showCategory =
+    category && !product.name.toLowerCase().includes(category.toLowerCase())
+  return showCategory
+    ? `${product.name} | ${category} kaufen | Bodenjäger`
+    : `${product.name} kaufen | Bodenjäger`
+}
+
+/**
+ * Meta-Description pro Produkt aus der individuellen Artikelbeschreibung.
+ * Die Kurzbeschreibung ist innerhalb einer Produktlinie identisch und
+ * taugt deshalb nur noch als Fallback.
+ */
+export function buildProductMetaDescription(
+  product: StoreApiProduct,
+  maxLength = 158
+): string {
+  const source = product.artikelbeschreibung
+    ? product.artikelbeschreibung
+        // Überschriften/Absätze als Satzende, damit Headline und Text nicht verschmelzen
+        .replace(/<\/(h[1-6]|p|li)>/gi, '. ')
+        .replace(/<br\s*\/?>/gi, '. ')
+        .replace(/\r?\n\s*\r?\n/g, '. ')
+    : product.short_description || ''
+  const text = stripHtml(source)
+    .replace(/\s*\.(\s*\.)+/g, '.')
+    .replace(/([!?:])\s*\./g, '$1')
+    .replace(/^[.\s]+/, '')
+
+  if (!text) return `${product.name} bei Bodenjäger kaufen`
+  if (text.length <= maxLength) return text
+
+  const cut = text.slice(0, maxLength - 1)
+  return `${cut.slice(0, cut.lastIndexOf(' ')).replace(/[,;:.–\-\s]+$/, '')}…`
+}
+
 export function buildProductSchema(product: StoreApiProduct): object {
   const url = productUrl(product.slug)
-  const description = product.short_description
-    ? stripHtml(product.short_description)
-    : undefined
+  const description = buildProductMetaDescription(product, 500) || undefined
   const image = product.images?.[0]?.src || undefined
 
   const additionalProperty: object[] = []
