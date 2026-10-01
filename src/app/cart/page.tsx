@@ -7,6 +7,7 @@ import { useCart } from '@/contexts/CartContext';
 import { track } from '@/lib/analytics/track';
 import { cartItemsToGA4Items, mapCartItemToGA4Item } from '@/lib/analytics/mapItem';
 import { PAKET_AKTION, calculatePaketAktion } from '@/lib/promo';
+import { isSparpaketItemType } from '@/content/klebevinyl-sparpaket';
 
 export default function CartPage() {
   const {
@@ -95,7 +96,7 @@ export default function CartPage() {
 
           {/* Cart Items */}
           <div className="divide-y divide-gray-200">
-            {cartItems.map((item) => {
+            {cartItems.filter((item) => !isSparpaketItemType(item.setItemType) || item.quantity > 0).map((item) => {
               const paketinhalt = item.product.paketinhalt || 1;
               const einheit = item.isSample ? 'Stk.' : (item.product.einheit_short || 'm²');
               const verpackungsart = item.product.verpackungsart_short || 'Pak.';

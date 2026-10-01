@@ -7,6 +7,7 @@ interface QuantitySelectorProps {
   einheit: string;
   einheitFull?: string;          // Ausgeschrieben, z.B. "Quadratmeter", "Kilogramm"
   verpackungsartFull?: string;   // Ausgeschrieben, z.B. "Paket(e)", "Stück"
+  initialPackages?: number;      // Startwert (Klebe-Vinyl: 5 für das Sparpaket)
   onQuantityChange?: (packages: number, sqm: number) => void;
 }
 
@@ -15,6 +16,7 @@ export default function QuantitySelector({
   einheit,
   einheitFull,
   verpackungsartFull,
+  initialPackages = 1,
   onQuantityChange
 }: QuantitySelectorProps) {
   // Ausgeschriebene Labels für über den +/- Feldern
@@ -26,9 +28,9 @@ export default function QuantitySelector({
   // Wenn paketinhalt === 1 und beide Labels identisch → nur ein Feld
   const showBothFields = showUnitField && !(paketinhalt === 1 && packageLabel === unitLabel);
   const [showInfo, setShowInfo] = useState(false);
-  const [sqm, setSqm] = useState<number>(paketinhalt);
-  const [sqmInputValue, setSqmInputValue] = useState<string>(paketinhalt.toFixed(2));
-  const [packagesInputValue, setPackagesInputValue] = useState<string>(Math.ceil(paketinhalt / paketinhalt).toString());
+  const [sqm, setSqm] = useState<number>(initialPackages * paketinhalt);
+  const [sqmInputValue, setSqmInputValue] = useState<string>((initialPackages * paketinhalt).toFixed(2));
+  const [packagesInputValue, setPackagesInputValue] = useState<string>(initialPackages.toString());
 
   // FP-sicheres Aufrunden: behebt Fälle wie 10 * 1.92 = 19.200000000000003 → ceil(10.000000000000002) wäre fälschlich 11
   const ceilPackages = (m2: number) => Math.max(1, Math.ceil((m2 - 1e-9) / paketinhalt));

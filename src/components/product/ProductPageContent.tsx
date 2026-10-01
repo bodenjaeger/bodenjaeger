@@ -4,7 +4,9 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { MinusIcon, PlusIcon } from 'lucide-react';
 import type { StoreApiProduct } from '@/lib/woocommerce';
-import { calculateSetQuantities } from '@/lib/setCalculations';
+import { calculateSetQuantities, calculateSparpaketQuantities } from '@/lib/setCalculations';
+import { KLEBEVINYL_SPARPAKET } from '@/content/klebevinyl-sparpaket';
+import type { SparpaketAnzeige } from './SetAngebot';
 import {
   FREE_SAMPLE_LIMIT,
   SAMPLE_SHIPPING_SURCHARGE,
@@ -27,6 +29,7 @@ interface ProductPageContentProps {
   sockelleisteProduct: StoreApiProduct | null;
   daemmungOptions: StoreApiProduct[];
   sockelleisteOptions: StoreApiProduct[];
+  sparpaketProducts?: StoreApiProduct[];  // nur Klebe-Vinyl, sonst leer
 }
 
 export default function ProductPageContent({
@@ -34,7 +37,8 @@ export default function ProductPageContent({
   daemmungProduct,
   sockelleisteProduct,
   daemmungOptions,
-  sockelleisteOptions
+  sockelleisteOptions,
+  sparpaketProducts = []
 }: ProductPageContentProps) {
   // ✅ USE ROOT-LEVEL FIELDS (backend/ROOT_LEVEL_FIELDS.md)
   const paketinhalt = product.paketinhalt || 1;
@@ -46,8 +50,12 @@ export default function ProductPageContent({
   // Alert modal
   const { alertState, showSuccess, showError, showInfo, closeAlert } = useAlert();
 
+  // Klebe-Vinyl Sparpaket: Produktseite startet mit der Mindestmenge
+  const hasSparpaket = sparpaketProducts.length > 0;
+  const initialPackages = hasSparpaket ? KLEBEVINYL_SPARPAKET.mindestPakete : 1;
+
   // State for wanted m² (user input)
-  const [wantedM2, setWantedM2] = useState(paketinhalt);
+  const [wantedM2, setWantedM2] = useState(paketinhalt * initialPackages);
 
   // State for selected addition products
   const [selectedDaemmung, setSelectedDaemmung] = useState<StoreApiProduct | null>(daemmungProduct);
@@ -95,6 +103,40 @@ export default function ProductPageContent({
       sockelleisteProduct // standardBaseboardProduct
     );
   }, [wantedM2, product, selectedDaemmung, selectedSockelleiste, daemmungProduct, sockelleisteProduct]);
+
+  // Klebe-Vinyl Sparpaket: Gebinde je Bestandteil (nur Mengen)
+  const sparpaket = useMemo(() => {
+    if (!hasSparpaket || !quantities) return null;
+    return calculateSparpaketQuantities(quantities.floor.packages, quantities.floor.actualM2, sparpaketProducts);
+  }, [hasSparpaket, quantities, sparpaketProducts]);
+
+  // Sparpaket-Zeilen für das Set-Angebot (Zahnspachtel wird nicht angezeigt)
+  const sparpaketAnzeige = useMemo((): SparpaketAnzeige | null => {
+    if (!sparpaket) return null;
+    const zeilen = KLEBEVINYL_SPARPAKET.bestandteile
+      .filter(b => b.imSetAnzeigen)
+      .map(b => {
+        const positionen = sparpaket.positionen.filter(p => p.typ === b.typ);
+        if (positionen.length === 0) return null;
+        const first = positionen[0].product;
+        const einheitShort = first.einheit_short || 'kg';
+        return {
+          typ: b.typ,
+          label: b.label,
+          // Gebindegröße aus dem Namen nehmen – die Menge steht in mengeText
+          name: first.name.replace(/\s+\d+([.,]\d+)?\s*kg$/i, ''),
+          image: first.images?.[0]?.src || '/images/placeholder.jpg',
+          mengeText: positionen
+            .filter(p => p.packages > 0)
+            .map(p => `${p.packages} × ${p.product.paketinhalt} ${einheitShort}`)
+            .join(' + '),
+          // Streichpreis pro m² Boden: Verbrauch × Preis des kleinsten Gebindes
+          regularPreisProM2: b.verbrauchProM2 * (first.price || 0),
+        };
+      })
+      .filter((z): z is NonNullable<typeof z> => z !== null);
+    return { aktiv: sparpaket.aktiv, mindestPakete: KLEBEVINYL_SPARPAKET.mindestPakete, zeilen };
+  }, [sparpaket]);
 
   // ✅ VOLLSTÄNDIGE SET-ANGEBOT BERECHNUNG
   // Basierend auf: SETANGEBOT_BERECHNUNG_KOMPLETT.md
@@ -216,7 +258,11 @@ export default function ProductPageContent({
     // (setangebot_einzelpreis ist statisch und kennt keine Premium-Optionen)
     const gesamtStreichpreisProM2 = bodenComparisonPricePerM2 + daemmungRegularPricePerUnit + sockelleisteRegularPricePerUnit;
     // comparisonPriceTotal = Streichpreis × m² (konsistent mit per-m²-Anzeige in SetAngebot)
-    const comparisonPriceTotal = quantities.floor.actualM2 * gesamtStreichpreisProM2;
+    // Klebe-Vinyl Sparpaket: Wert der Gratis-Gebinde erhöht Streichpreis und Ersparnis
+    const sparpaketRegularTotal = sparpaket?.aktiv
+      ? sparpaket.positionen.reduce((sum, p) => sum + p.amount * (p.product.price || 0), 0)
+      : 0;
+    const comparisonPriceTotal = quantities.floor.actualM2 * gesamtStreichpreisProM2 + sparpaketRegularTotal;
     // totalDisplayPrice = Set-Preis (was der Kunde MIT Set bezahlt)
     const totalDisplayPrice = bodenPriceTotal + daemmungSetPrice + sockelleisteSetPrice;
     const savings = comparisonPriceTotal - totalDisplayPrice;
@@ -234,7 +280,7 @@ export default function ProductPageContent({
       sockelleisteSetPricePerUnit,
       sockelleisteRegularPricePerUnit,
     };
-  }, [product, quantities, selectedDaemmung, selectedSockelleiste, daemmungProduct, sockelleisteProduct]);
+  }, [product, quantities, selectedDaemmung, selectedSockelleiste, daemmungProduct, sockelleisteProduct, sparpaket]);
 
   // Handle quantity changes from QuantitySelector
   const handleQuantityChange = (newPackages: number, newSqm: number) => {
@@ -1057,6 +1103,7 @@ export default function ProductPageContent({
               daemmungRegularPricePerUnit={prices?.daemmungRegularPricePerUnit || 0}
               sockelleisteSetPricePerUnit={prices?.sockelleisteSetPricePerUnit || 0}
               sockelleisteRegularPricePerUnit={prices?.sockelleisteRegularPricePerUnit || 0}
+              sparpaket={sparpaketAnzeige}
             />
 
             {/* Quantity + Price Container with Gray Background */}
@@ -1067,6 +1114,7 @@ export default function ProductPageContent({
                 einheit={einheit}
                 einheitFull={product.einheit || undefined}
                 verpackungsartFull={product.verpackungsart || undefined}
+                initialPackages={initialPackages}
                 onQuantityChange={handleQuantityChange}
               />
 
@@ -1080,6 +1128,7 @@ export default function ProductPageContent({
                 selectedSockelleiste={selectedSockelleiste}
                 daemmungProduct={daemmungProduct}
                 sockelleisteProduct={sockelleisteProduct}
+                sparpaket={sparpaket}
                 lieferzeit={product.lieferzeit || '3-7 Arbeitstage'}
                 showLieferzeit={!!product.show_lieferzeit}
               />

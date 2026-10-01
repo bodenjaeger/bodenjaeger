@@ -1,5 +1,7 @@
 // Cart Drawer Types for Mini-Warenkorb with Set-Angebote support
 
+import type { SparpaketItemType } from '@/content/klebevinyl-sparpaket';
+
 export type ProductUnit = 'Pak.' | 'Rol.' | 'Stk.' | 'm²' | 'm' | 'lfm';
 
 /**
@@ -26,7 +28,7 @@ export interface CartItemBase {
   originalPricePerUnit?: number; // UVP (strikethrough)
   total: number;
   isFree?: boolean; // Free items in set
-  itemType?: 'floor' | 'insulation' | 'baseboard'; // Type for bundle products
+  itemType?: 'floor' | 'insulation' | 'baseboard' | SparpaketItemType; // Type for bundle products
   isSample?: boolean; // Sample products (locked to quantity 1)
 }
 

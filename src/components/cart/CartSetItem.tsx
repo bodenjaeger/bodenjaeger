@@ -4,6 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { CartSetItem as CartSetItemType, CartItemBase } from '@/types/cart-drawer';
 import { formatPrice, formatUnitValue } from '@/lib/cart-utils';
+import { isSparpaketItemType, SPARPAKET_LABELS } from '@/content/klebevinyl-sparpaket';
 
 interface CartSetItemProps {
   setItem: CartSetItemType;
@@ -120,6 +121,9 @@ export default function CartSetItem({ setItem, onQuantityChange, onRemove }: Car
 function BundleProductItem({ product }: { product: CartItemBase }) {
   // Determine product type label from itemType (preferred) or fallback to unit
   const getTypeLabel = () => {
+    if (isSparpaketItemType(product.itemType)) {
+      return SPARPAKET_LABELS[product.itemType];
+    }
     if (product.itemType === 'baseboard') {
       return 'Sockelleiste';
     } else if (product.itemType === 'insulation') {

@@ -4,6 +4,7 @@ import ProductPageContent from "@/components/product/ProductPageContent";
 import { JsonLd } from "@/components/JsonLd";
 import { buildProductSchema, buildBreadcrumbSchema, stripHtml } from "@/lib/schema";
 import { SITE_URL, productUrl, categoryUrl } from "@/lib/site";
+import { KLEBEVINYL_SPARPAKET, SPARPAKET_PRODUKT_IDS } from "@/content/klebevinyl-sparpaket";
 
 // Slug-Präfix → Kategorie-Slug.
 // Reihenfolge wichtig: längere/spezifischere Präfixe zuerst,
@@ -102,6 +103,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   let sockelleisteProduct: StoreApiProduct | null = null;
   let daemmungOptions: StoreApiProduct[] = [];
   let sockelleisteOptions: StoreApiProduct[] = [];
+  let sparpaketProducts: StoreApiProduct[] = [];
 
   try {
     product = await wooCommerceClient.getProduct(slug);
@@ -170,8 +172,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
     console.log('Dämmung option IDs:', daemmungOptionIds);
     console.log('Sockelleiste option IDs:', sockelleisteOptionIds);
 
+    // Klebe-Vinyl: Sparpaket-Bestandteile mitladen
+    const sparpaketIds = product.categories?.some(c => c.slug === KLEBEVINYL_SPARPAKET.kategorie)
+      ? SPARPAKET_PRODUKT_IDS
+      : [];
+
     // Check if we need to load additional products
-    const needsProducts = daemmungId || sockelleisteId || daemmungOptionIds.length > 0 || sockelleisteOptionIds.length > 0;
+    const needsProducts = daemmungId || sockelleisteId || daemmungOptionIds.length > 0 || sockelleisteOptionIds.length > 0 || sparpaketIds.length > 0;
 
     if (needsProducts) {
       try {
@@ -184,6 +191,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           ...(sockelleisteId ? [sockelleisteId] : []),
           ...daemmungOptionIds,
           ...sockelleisteOptionIds,
+          ...sparpaketIds,
         ];
 
         // Load all products in one batch request (much more efficient!)
@@ -237,6 +245,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
             console.log('Added standard Sockelleiste to options list');
           }
         }
+
+        sparpaketProducts = sparpaketIds
+          .map(id => productsById.get(id))
+          .filter((p): p is StoreApiProduct => p !== undefined);
       } catch (error) {
         console.error('❌ Error loading addition products:', error);
         // Continue without additional products rather than failing completely
@@ -265,6 +277,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         sockelleisteProduct={sockelleisteProduct}
         daemmungOptions={daemmungOptions}
         sockelleisteOptions={sockelleisteOptions}
+        sparpaketProducts={sparpaketProducts}
       />
     </>
   );

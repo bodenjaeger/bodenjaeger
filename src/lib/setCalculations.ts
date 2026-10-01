@@ -11,6 +11,7 @@
  */
 
 import type { StoreApiProduct } from './woocommerce';
+import { KLEBEVINYL_SPARPAKET, type SparpaketItemType } from '@/content/klebevinyl-sparpaket';
 
 /**
  * Calculate required packages for a given area and package content
@@ -237,6 +238,93 @@ export function calculateSetQuantities(
     insulation,
     baseboard,
   };
+}
+
+// ========================================
+// KLEBE-VINYL SPARPAKET (src/content/klebevinyl-sparpaket.ts)
+// ========================================
+
+export interface SparpaketPosition {
+  typ: SparpaketItemType;
+  product: StoreApiProduct;
+  packages: number;          // Gebinde (0 = dieses Gebinde wird nicht gebraucht)
+  amount: number;            // packages × paketinhalt (kg bzw. Stk.)
+}
+
+export interface SparpaketQuantityCalculation {
+  aktiv: boolean;            // false = unter Mindestmenge, alle packages = 0
+  positionen: SparpaketPosition[];
+}
+
+/**
+ * Kleinste Gesamtmenge aus den Gebinden, die den Bedarf deckt.
+ * Bei gleicher Menge gewinnt die Kombination mit weniger Gebinden.
+ * Liefert die Anzahl je Gebinde in der Reihenfolge von `sizes`.
+ */
+function combineGebinde(bedarf: number, sizes: number[]): number[] {
+  // FP-sicher: 16,7 × 3 = 50,100000000000001 soll nicht auf ein Gebinde mehr springen
+  const need = bedarf - 1e-9;
+  type Kandidat = { counts: number[]; total: number; packs: number };
+  const result: { best: Kandidat | null } = { best: null };
+
+  const search = (index: number, counts: number[], covered: number) => {
+    if (index === sizes.length - 1) {
+      const last = Math.max(0, Math.ceil((need - covered) / sizes[index]));
+      const finalCounts = [...counts, last];
+      const total = covered + last * sizes[index];
+      const packs = finalCounts.reduce((a, b) => a + b, 0);
+      const best = result.best;
+      if (!best || total < best.total - 1e-9 || (Math.abs(total - best.total) < 1e-9 && packs < best.packs)) {
+        result.best = { counts: finalCounts, total, packs };
+      }
+      return;
+    }
+    const max = Math.max(0, Math.ceil((need - covered) / sizes[index]));
+    for (let n = 0; n <= max; n++) {
+      search(index + 1, [...counts, n], covered + n * sizes[index]);
+    }
+  };
+
+  search(0, [], 0);
+  return result.best?.counts ?? sizes.map(() => 0);
+}
+
+/**
+ * Sparpaket-Mengen für eine Bodenfläche. NUR MENGEN, keine Preise.
+ * Basis ist die tatsächliche Bodenfläche nach Aufrunden auf ganze Pakete.
+ * Jedes geladene Gebinde bekommt eine Position (ggf. mit 0), damit der
+ * Warenkorb bei Mengenänderung zwischen den Gebinden wechseln kann.
+ */
+export function calculateSparpaketQuantities(
+  floorPackages: number,
+  floorM2: number,
+  sparpaketProducts: StoreApiProduct[]
+): SparpaketQuantityCalculation {
+  const aktiv = floorPackages >= KLEBEVINYL_SPARPAKET.mindestPakete;
+  const positionen: SparpaketPosition[] = [];
+
+  for (const bestandteil of KLEBEVINYL_SPARPAKET.bestandteile) {
+    const products = bestandteil.produktIds
+      .map((id) => sparpaketProducts.find((p) => p.id === id))
+      .filter((p): p is StoreApiProduct => p !== undefined && (p.paketinhalt || 0) > 0);
+    if (products.length === 0) continue;
+
+    const sizes = products.map((p) => p.paketinhalt as number);
+    const counts = aktiv
+      ? combineGebinde(floorM2 * bestandteil.verbrauchProM2, sizes)
+      : sizes.map(() => 0);
+
+    products.forEach((product, i) => {
+      positionen.push({
+        typ: bestandteil.typ,
+        product,
+        packages: counts[i],
+        amount: counts[i] * sizes[i],
+      });
+    });
+  }
+
+  return { aktiv, positionen };
 }
 
 // ========================================

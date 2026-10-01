@@ -10,6 +10,8 @@ import {
   toProductUnit,
 } from '@/types/cart-drawer';
 import { calculateCartData } from '@/lib/cart-utils';
+import { calculateSparpaketQuantities } from '@/lib/setCalculations';
+import { isSparpaketItemType } from '@/content/klebevinyl-sparpaket';
 import { track } from '@/lib/analytics/track';
 import { cartItemsToGA4Items, mapCartItemToGA4Item } from '@/lib/analytics/mapItem';
 import CartSetItemComponent from './CartSetItem';
@@ -74,8 +76,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         };
 
         // Convert bundle products
+        // Sparpaket-Gebinde mit 0 Stück bleiben im Warenkorb (für Neuberechnung), werden aber nicht angezeigt
         const bundleProducts: CartItemBase[] = setItems
           .filter((si) => si.setItemType !== 'floor')
+          .filter((si) => !isSparpaketItemType(si.setItemType) || si.quantity > 0)
           .map((bundleItem) => {
             // ✅ USE SET PRICING FROM CART ITEM (setPricePerUnit, actualM2)
             const bundleActualM2 = bundleItem.actualM2 || 0;
@@ -203,7 +207,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
     // Recalculate each bundle from scratch (identical to setCalculations.ts logic)
     // isFree → Math.floor (kostenlos: abrunden), premium → Math.ceil (aufpreis: aufrunden)
-    setItem.bundleProducts.forEach((bundleProduct) => {
+    setItem.bundleProducts.filter((bundleProduct) => !isSparpaketItemType(bundleProduct.itemType)).forEach((bundleProduct) => {
       const newBundleQuantity = bundleProduct.isFree
         ? Math.floor(newMainActualM2 / bundleProduct.unitValue)
         : Math.ceil(newMainActualM2 / bundleProduct.unitValue);
@@ -211,6 +215,21 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
       updateQuantity(bundleProduct.productId, newBundleQuantity, newBundleActualM2, setId);
     });
+
+    // Klebe-Vinyl Sparpaket: komplett neu berechnen (unter Mindestmenge alles 0)
+    const sparpaketItems = cartItems.filter(
+      (ci) => ci.setId === setId && isSparpaketItemType(ci.setItemType)
+    );
+    if (sparpaketItems.length > 0) {
+      const sparpaket = calculateSparpaketQuantities(
+        newQuantity,
+        newMainActualM2,
+        sparpaketItems.map((ci) => ci.product)
+      );
+      sparpaket.positionen.forEach((position) => {
+        updateQuantity(position.product.id, position.packages, position.amount, setId);
+      });
+    }
   };
 
   // Handle remove single item

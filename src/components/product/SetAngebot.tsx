@@ -4,6 +4,20 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 
+// Klebe-Vinyl Sparpaket: kostenlose Zeilen unter der Sockelleiste
+export interface SparpaketAnzeige {
+  aktiv: boolean;           // false = unter Mindestmenge, Zeilen nur als Hinweis
+  mindestPakete: number;
+  zeilen: {
+    typ: string;
+    label: string;
+    name: string;
+    image: string;
+    mengeText: string;        // z.B. "1 × 10 kg + 1 × 5 kg"
+    regularPreisProM2: number;
+  }[];
+}
+
 interface SetAngebotProps {
   setangebotTitel?: string;
   productName: string;
@@ -31,6 +45,7 @@ interface SetAngebotProps {
   totalDisplayPrice?: number;
   savingsAmount?: number;
   savingsPercent?: number;
+  sparpaket?: SparpaketAnzeige | null;
 }
 
 export default function SetAngebot({
@@ -55,7 +70,8 @@ export default function SetAngebot({
   sockelleisteOptions = [],
   gesamtVergleichspreisProM2,
   onProductSelection,
-  savingsPercent
+  savingsPercent,
+  sparpaket = null
 }: SetAngebotProps) {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -92,7 +108,7 @@ export default function SetAngebot({
   }, [selectedDaemmung, selectedSockelleiste, hasDaemmung, hasSockelleiste]);
 
   // Don't render if no addition products
-  if (!hasDaemmung && !hasSockelleiste) {
+  if (!hasDaemmung && !hasSockelleiste && !sparpaket) {
     return null;
   }
 
@@ -101,7 +117,11 @@ export default function SetAngebot({
   const setAngebotPreisProM2 = basePrice + daemmungSetPricePerUnit + sockelleisteSetPricePerUnit;
   // Streichpreis immer dynamisch berechnen: Boden-UVP + voller Preis des gewählten Zubehörs
   // (gesamtVergleichspreisProM2 ist statisch und kennt keine Premium-Optionen)
-  const vergleichspreisProM2 = regularPrice + daemmungRegularPricePerUnit + sockelleisteRegularPricePerUnit;
+  // Sparpaket zählt nur ab Mindestmenge in den Streichpreis
+  const sparpaketRegularProM2 = sparpaket?.aktiv
+    ? sparpaket.zeilen.reduce((sum, z) => sum + z.regularPreisProM2, 0)
+    : 0;
+  const vergleichspreisProM2 = regularPrice + daemmungRegularPricePerUnit + sockelleisteRegularPricePerUnit + sparpaketRegularProM2;
   // ✅ Backend-Wert verwenden (savingsPercent = setangebot_ersparnis_prozent)
   const ersparnisProzent = savingsPercent || 0;
 
@@ -235,6 +255,40 @@ export default function SetAngebot({
             </div>
           </div>
         )}
+        {/* Klebe-Vinyl Sparpaket */}
+        {sparpaket?.zeilen.map((zeile) => (
+          <div
+            key={zeile.typ}
+            className={`grid grid-cols-[auto_1fr_auto] gap-4 p-4 rounded-lg items-stretch${sparpaket.aktiv ? '' : ' opacity-50'}`}
+          >
+            {/* Bild */}
+            <div className="w-[72px] relative overflow-hidden rounded">
+              <Image
+                src={zeile.image}
+                alt={zeile.name}
+                fill
+                className="object-cover"
+              />
+            </div>
+            {/* Kategorie + Name + Menge */}
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">{zeile.label}</h3>
+              <p className="text-sm text-dark break-words leading-tight">{zeile.name}</p>
+              <p className="mt-1 text-xs text-mid">
+                {sparpaket.aktiv ? zeile.mengeText : `Kostenlos ab ${sparpaket.mindestPakete} Paketen`}
+              </p>
+            </div>
+            {/* Preise */}
+            <div className="flex flex-col items-end flex-shrink-0">
+              <span className="text-xs text-mid line-through whitespace-nowrap">
+                {zeile.regularPreisProM2.toFixed(2).replace('.', ',')} €
+              </span>
+              <span className="text-sm font-semibold text-brand whitespace-nowrap">
+                0,00 €/{einheit}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Gesamt-Preiszeile (STATISCHER M²-PREIS) */}

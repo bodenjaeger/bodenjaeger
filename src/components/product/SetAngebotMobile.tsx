@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import type { StoreApiProduct } from '@/lib/woocommerce';
+import type { SparpaketAnzeige } from './SetAngebot';
 
 interface SetAngebotMobileProps {
   setangebotTitel?: string;
@@ -26,6 +27,7 @@ interface SetAngebotMobileProps {
   daemmungOptions?: StoreApiProduct[];
   sockelleisteOptions?: StoreApiProduct[];
   onProductSelection?: (daemmung: StoreApiProduct | null, sockelleiste: StoreApiProduct | null) => void;
+  sparpaket?: SparpaketAnzeige | null;
 }
 
 export default function SetAngebotMobile({
@@ -47,7 +49,8 @@ export default function SetAngebotMobile({
   daemmungOptions = [],
   sockelleisteOptions = [],
   onProductSelection,
-  savingsPercent
+  savingsPercent,
+  sparpaket = null
 }: SetAngebotMobileProps) {
   const hasDaemmung = daemmungName !== 'Trittschalldämmung';
   const hasSockelleiste = sockelleisteName !== 'Sockelleiste';
@@ -89,7 +92,11 @@ export default function SetAngebotMobile({
 
   // STATISCHER M²-PREIS (dynamisch berechnet aus gewählten Produkten)
   const setAngebotPreisProM2 = basePrice + daemmungSetPricePerUnit + sockelleisteSetPricePerUnit;
-  const vergleichspreisProM2 = regularPrice + daemmungRegularPricePerUnit + sockelleisteRegularPricePerUnit;
+  // Sparpaket zählt nur ab Mindestmenge in den Streichpreis
+  const sparpaketRegularProM2 = sparpaket?.aktiv
+    ? sparpaket.zeilen.reduce((sum, z) => sum + z.regularPreisProM2, 0)
+    : 0;
+  const vergleichspreisProM2 = regularPrice + daemmungRegularPricePerUnit + sockelleisteRegularPricePerUnit + sparpaketRegularProM2;
   // ✅ Backend-Wert verwenden (savingsPercent = setangebot_ersparnis_prozent)
   const ersparnisProzent = savingsPercent || 0;
 
@@ -212,6 +219,40 @@ export default function SetAngebotMobile({
             </div>
           </div>
         )}
+        {/* Klebe-Vinyl Sparpaket */}
+        {sparpaket?.zeilen.map((zeile) => (
+          <div
+            key={zeile.typ}
+            className={`grid grid-cols-[auto_1fr_auto] gap-2 p-3 rounded-lg items-stretch${sparpaket.aktiv ? '' : ' opacity-50'}`}
+          >
+            {/* 1. Bild */}
+            <div className="w-12 relative overflow-hidden rounded">
+              <Image
+                src={zeile.image}
+                alt={zeile.name}
+                fill
+                className="object-cover"
+              />
+            </div>
+            {/* 2. Kategorie + Name + Menge */}
+            <div className="min-w-0">
+              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{zeile.label}</h3>
+              <p className="text-xs text-dark break-words leading-tight">{zeile.name}</p>
+              <p className="mt-0.5 text-[10px] text-mid">
+                {sparpaket.aktiv ? zeile.mengeText : `Kostenlos ab ${sparpaket.mindestPakete} Paketen`}
+              </p>
+            </div>
+            {/* 3. Preise */}
+            <div className="flex flex-col items-end flex-shrink-0">
+              <span className="text-[10px] text-mid line-through whitespace-nowrap">
+                {zeile.regularPreisProM2.toFixed(2).replace('.', ',')} €
+              </span>
+              <span className="text-[11px] font-semibold text-brand whitespace-nowrap">
+                0,00 €/{einheit}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Gesamt-Block */}

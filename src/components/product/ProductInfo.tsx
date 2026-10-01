@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import type { StoreApiProduct } from '@/lib/woocommerce';
-import SetAngebot from './SetAngebot';
+import SetAngebot, { type SparpaketAnzeige } from './SetAngebot';
 import SetAngebotMobile from './SetAngebotMobile';
 
 interface ProductInfoProps {
@@ -22,6 +22,7 @@ interface ProductInfoProps {
   daemmungRegularPricePerUnit?: number;
   sockelleisteSetPricePerUnit?: number;
   sockelleisteRegularPricePerUnit?: number;
+  sparpaket?: SparpaketAnzeige | null;  // Klebe-Vinyl Sparpaket
 }
 
 export default function ProductInfo({
@@ -38,7 +39,8 @@ export default function ProductInfo({
   daemmungSetPricePerUnit = 0,
   daemmungRegularPricePerUnit = 0,
   sockelleisteSetPricePerUnit = 0,
-  sockelleisteRegularPricePerUnit = 0
+  sockelleisteRegularPricePerUnit = 0,
+  sparpaket = null
 }: ProductInfoProps) {
   // Extract features from short_description or jaeger_meta
   const getFeaturesFromDescription = (html: string): string[] => {
@@ -177,6 +179,7 @@ export default function ProductInfo({
           totalDisplayPrice={totalDisplayPrice}
           savingsAmount={savingsAmount}
           savingsPercent={savingsPercent}
+          sparpaket={sparpaket}
         />
       </div>
 
@@ -204,6 +207,7 @@ export default function ProductInfo({
           daemmungOptions={daemmungOptions}
           sockelleisteOptions={sockelleisteOptions}
           onProductSelection={onProductSelection}
+          sparpaket={sparpaket}
         />
       </div>
     </div>

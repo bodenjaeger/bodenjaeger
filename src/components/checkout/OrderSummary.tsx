@@ -5,6 +5,7 @@ import { useCart } from '@/contexts/CartContext';
 import { calculateShippingCost } from '@/lib/shippingConfig';
 import { toValidationItems } from '@/lib/cart-utils';
 import { PAKET_AKTION, calculatePaketAktion } from '@/lib/promo';
+import { isSparpaketItemType } from '@/content/klebevinyl-sparpaket';
 import type { AppliedCoupon } from '@/types/checkout';
 import CouponInput from '@/components/checkout/CouponInput';
 
@@ -92,7 +93,7 @@ export default function OrderSummary({
 
       {/* Produkt-Liste */}
       <div className="space-y-4 mb-6">
-        {cartItems.map((item) => {
+        {cartItems.filter((item) => !isSparpaketItemType(item.setItemType) || item.quantity > 0).map((item) => {
           const image = item.product.images?.[0]?.src || '/images/placeholder.jpg';
           const name = item.product.name;
           const einheit = item.product.einheit_short || 'm²';

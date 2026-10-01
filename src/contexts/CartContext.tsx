@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { StoreApiProduct } from '@/lib/woocommerce';
+import type { SparpaketItemType } from '@/content/klebevinyl-sparpaket';
 
 export type AddSampleResult =
   | { status: 'added' }
@@ -14,7 +15,7 @@ export interface CartItem {
   quantity: number;
   isSetItem?: boolean;           // Flag to identify set items
   setId?: string;                 // Group ID for set items
-  setItemType?: 'floor' | 'insulation' | 'baseboard';  // Type of set item
+  setItemType?: 'floor' | 'insulation' | 'baseboard' | SparpaketItemType;  // Type of set item (Sparpaket nur Klebe-Vinyl)
   // Set-Angebot pricing information
   setPricePerUnit?: number;      // Actual price per unit in the set (0 for free items, verrechnung for upgrades)
   regularPricePerUnit?: number;  // Regular price per unit for comparison
@@ -49,6 +50,15 @@ export interface SetBundle {
     regularPricePerUnit: number;  // Full regular price
     standardProduct: StoreApiProduct;  // Reference to standard product for price calculation
   } | null;
+  // Klebe-Vinyl Sparpaket: alle Gebinde, auch mit 0 Stück – der Warenkorb
+  // rechnet bei Mengenänderung neu und kann so zwischen Gebinden wechseln
+  sparpaket?: {
+    typ: SparpaketItemType;
+    product: StoreApiProduct;
+    packages: number;
+    amount: number;               // kg bzw. Stk.
+    regularPricePerUnit: number;  // Normalpreis je kg/Stk. (Set-Preis immer 0)
+  }[];
 }
 
 // Cart context type definition
@@ -259,6 +269,21 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           actualM2: setBundle.baseboard.actualLfm
         });
       }
+
+      // Klebe-Vinyl Sparpaket: kostenlos
+      setBundle.sparpaket?.forEach((position) => {
+        newItems.push({
+          id: position.product.id,
+          product: position.product,
+          quantity: position.packages,
+          isSetItem: true,
+          setId,
+          setItemType: position.typ,
+          setPricePerUnit: 0,
+          regularPricePerUnit: position.regularPricePerUnit,
+          actualM2: position.amount
+        });
+      });
 
       return [...prevItems, ...newItems];
     });

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import type { StoreApiProduct } from '@/lib/woocommerce';
-import type { SetQuantityCalculation } from '@/lib/setCalculations';
+import type { SetQuantityCalculation, SparpaketQuantityCalculation } from '@/lib/setCalculations';
 import { useCart } from '@/contexts/CartContext';
 import { track } from '@/lib/analytics/track';
 import { mapProductToItem } from '@/lib/analytics/mapItem';
@@ -26,6 +26,7 @@ interface TotalPriceProps {
   selectedSockelleiste: StoreApiProduct | null;
   daemmungProduct: StoreApiProduct | null;  // Standard dämmung for price calculation
   sockelleisteProduct: StoreApiProduct | null;  // Standard sockelleiste for price calculation
+  sparpaket?: SparpaketQuantityCalculation | null;  // Klebe-Vinyl Sparpaket
   lieferzeit?: string;
   showLieferzeit?: boolean;
 }
@@ -38,6 +39,7 @@ export default function TotalPrice({
   selectedSockelleiste,
   daemmungProduct,
   sockelleisteProduct,
+  sparpaket = null,
   lieferzeit = '3-7 Arbeitstage',
   showLieferzeit = true
 }: TotalPriceProps) {
@@ -157,6 +159,14 @@ export default function TotalPrice({
         regularPricePerUnit: sockelleisteRegularPricePerUnit,
         standardProduct: product, // Reference for price calculation
       } : null,
+      // Klebe-Vinyl Sparpaket: alle Gebinde mitgeben (auch 0), Preis im Set immer 0
+      sparpaket: sparpaket?.positionen.map((position) => ({
+        typ: position.typ,
+        product: position.product,
+        packages: position.packages,
+        amount: position.amount,
+        regularPricePerUnit: position.product.price || 0,
+      })),
     };
 
     console.log('🛒 SET BUNDLE VOR ADD TO CART:', JSON.stringify(setBundle, null, 2));
@@ -191,6 +201,16 @@ export default function TotalPrice({
         })
       );
     }
+    sparpaket?.positionen
+      .filter((position) => position.packages > 0)
+      .forEach((position) => {
+        ga4Items.push(
+          mapProductToItem(position.product, position.packages, {
+            variant: 'Set: Sparpaket',
+            pricePerUnitOverride: 0,
+          })
+        );
+      });
     track.addToCart(ga4Items, totalDisplayPrice);
 
     openCartDrawer();

@@ -35,6 +35,10 @@ const SET_VARIANT: Record<NonNullable<CartItem['setItemType']>, string> = {
   floor: 'Set: Boden',
   insulation: 'Set: Dämmung',
   baseboard: 'Set: Sockelleiste',
+  primer: 'Set: Sparpaket',
+  leveler: 'Set: Sparpaket',
+  adhesive: 'Set: Sparpaket',
+  trowel: 'Set: Sparpaket',
 };
 
 export function mapCartItemToGA4Item(item: CartItem): GA4Item {
