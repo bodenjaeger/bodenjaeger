@@ -249,6 +249,7 @@ export interface SparpaketPosition {
   product: StoreApiProduct;
   packages: number;          // Gebinde (0 = dieses Gebinde wird nicht gebraucht)
   amount: number;            // packages × paketinhalt (kg bzw. Stk.)
+  grossesGebinde: StoreApiProduct;  // größtes Gebinde des Bestandteils – Basis für den Streichpreis
 }
 
 export interface SparpaketQuantityCalculation {
@@ -257,36 +258,29 @@ export interface SparpaketQuantityCalculation {
 }
 
 /**
- * Kleinste Gesamtmenge aus den Gebinden, die den Bedarf deckt.
- * Bei gleicher Menge gewinnt die Kombination mit weniger Gebinden.
+ * Große Gebinde + höchstens 1 kleines Gebinde für den Rest.
+ * Passt der Rest nicht in das kleine Gebinde, kommt ein weiteres großes dazu.
  * Liefert die Anzahl je Gebinde in der Reihenfolge von `sizes`.
  */
 function combineGebinde(bedarf: number, sizes: number[]): number[] {
   // FP-sicher: 16,7 × 3 = 50,100000000000001 soll nicht auf ein Gebinde mehr springen
   const need = bedarf - 1e-9;
-  type Kandidat = { counts: number[]; total: number; packs: number };
-  const result: { best: Kandidat | null } = { best: null };
+  const counts = sizes.map(() => 0);
+  if (need <= 0) return counts;
 
-  const search = (index: number, counts: number[], covered: number) => {
-    if (index === sizes.length - 1) {
-      const last = Math.max(0, Math.ceil((need - covered) / sizes[index]));
-      const finalCounts = [...counts, last];
-      const total = covered + last * sizes[index];
-      const packs = finalCounts.reduce((a, b) => a + b, 0);
-      const best = result.best;
-      if (!best || total < best.total - 1e-9 || (Math.abs(total - best.total) < 1e-9 && packs < best.packs)) {
-        result.best = { counts: finalCounts, total, packs };
-      }
-      return;
-    }
-    const max = Math.max(0, Math.ceil((need - covered) / sizes[index]));
-    for (let n = 0; n <= max; n++) {
-      search(index + 1, [...counts, n], covered + n * sizes[index]);
-    }
-  };
+  const large = sizes.indexOf(Math.max(...sizes));
+  const small = sizes.indexOf(Math.min(...sizes));
 
-  search(0, [], 0);
-  return result.best?.counts ?? sizes.map(() => 0);
+  counts[large] = Math.floor(need / sizes[large]);
+  const rest = need - counts[large] * sizes[large];
+  if (rest > 0) {
+    if (small !== large && rest <= sizes[small]) {
+      counts[small] = 1;
+    } else {
+      counts[large] += 1;
+    }
+  }
+  return counts;
 }
 
 /**
@@ -313,6 +307,7 @@ export function calculateSparpaketQuantities(
     const counts = aktiv
       ? combineGebinde(floorM2 * bestandteil.verbrauchProM2, sizes)
       : sizes.map(() => 0);
+    const grossesGebinde = products[sizes.indexOf(Math.max(...sizes))];
 
     products.forEach((product, i) => {
       positionen.push({
@@ -320,6 +315,7 @@ export function calculateSparpaketQuantities(
         product,
         packages: counts[i],
         amount: counts[i] * sizes[i],
+        grossesGebinde,
       });
     });
   }

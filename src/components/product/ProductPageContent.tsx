@@ -119,19 +119,14 @@ export default function ProductPageContent({
         const positionen = sparpaket.positionen.filter(p => p.typ === b.typ);
         if (positionen.length === 0) return null;
         const first = positionen[0].product;
-        const einheitShort = first.einheit_short || 'kg';
         return {
           typ: b.typ,
           label: b.label,
-          // Gebindegröße aus dem Namen nehmen – die Menge steht in mengeText
+          // Gebindegröße aus dem Namen nehmen – Gebinde werden nicht angezeigt
           name: first.name.replace(/\s+\d+([.,]\d+)?\s*kg$/i, ''),
           image: first.images?.[0]?.src || '/images/placeholder.jpg',
-          mengeText: positionen
-            .filter(p => p.packages > 0)
-            .map(p => `${p.packages} × ${p.product.paketinhalt} ${einheitShort}`)
-            .join(' + '),
-          // Streichpreis pro m² Boden: Verbrauch × Preis des kleinsten Gebindes
-          regularPreisProM2: b.verbrauchProM2 * (first.price || 0),
+          // Streichpreis pro m² Boden: Verbrauch × Preis des großen Gebindes
+          regularPreisProM2: b.verbrauchProM2 * (positionen[0].grossesGebinde.price || 0),
         };
       })
       .filter((z): z is NonNullable<typeof z> => z !== null);
@@ -258,9 +253,9 @@ export default function ProductPageContent({
     // (setangebot_einzelpreis ist statisch und kennt keine Premium-Optionen)
     const gesamtStreichpreisProM2 = bodenComparisonPricePerM2 + daemmungRegularPricePerUnit + sockelleisteRegularPricePerUnit;
     // comparisonPriceTotal = Streichpreis × m² (konsistent mit per-m²-Anzeige in SetAngebot)
-    // Klebe-Vinyl Sparpaket: Wert der Gratis-Gebinde erhöht Streichpreis und Ersparnis
+    // Klebe-Vinyl Sparpaket: Wert der Gratis-Gebinde (zum Preis des großen Gebindes) erhöht Streichpreis und Ersparnis
     const sparpaketRegularTotal = sparpaket?.aktiv
-      ? sparpaket.positionen.reduce((sum, p) => sum + p.amount * (p.product.price || 0), 0)
+      ? sparpaket.positionen.reduce((sum, p) => sum + p.amount * (p.grossesGebinde.price || 0), 0)
       : 0;
     const comparisonPriceTotal = quantities.floor.actualM2 * gesamtStreichpreisProM2 + sparpaketRegularTotal;
     // totalDisplayPrice = Set-Preis (was der Kunde MIT Set bezahlt)

@@ -13,7 +13,6 @@ export interface SparpaketAnzeige {
     label: string;
     name: string;
     image: string;
-    mengeText: string;        // z.B. "1 × 10 kg + 1 × 5 kg"
     regularPreisProM2: number;
   }[];
 }
@@ -270,13 +269,13 @@ export default function SetAngebot({
                 className="object-cover"
               />
             </div>
-            {/* Kategorie + Name + Menge */}
+            {/* Kategorie + Name */}
             <div className="min-w-0">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">{zeile.label}</h3>
               <p className="text-sm text-dark break-words leading-tight">{zeile.name}</p>
-              <p className="mt-1 text-xs text-mid">
-                {sparpaket.aktiv ? zeile.mengeText : `Kostenlos ab ${sparpaket.mindestPakete} Paketen`}
-              </p>
+              {!sparpaket.aktiv && (
+                <p className="mt-1 text-xs text-mid">Kostenlos ab {sparpaket.mindestPakete} Paketen</p>
+              )}
             </div>
             {/* Preise */}
             <div className="flex flex-col items-end flex-shrink-0">

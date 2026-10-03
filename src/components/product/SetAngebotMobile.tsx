@@ -234,13 +234,13 @@ export default function SetAngebotMobile({
                 className="object-cover"
               />
             </div>
-            {/* 2. Kategorie + Name + Menge */}
+            {/* 2. Kategorie + Name */}
             <div className="min-w-0">
               <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{zeile.label}</h3>
               <p className="text-xs text-dark break-words leading-tight">{zeile.name}</p>
-              <p className="mt-0.5 text-[10px] text-mid">
-                {sparpaket.aktiv ? zeile.mengeText : `Kostenlos ab ${sparpaket.mindestPakete} Paketen`}
-              </p>
+              {!sparpaket.aktiv && (
+                <p className="mt-0.5 text-[10px] text-mid">Kostenlos ab {sparpaket.mindestPakete} Paketen</p>
+              )}
             </div>
             {/* 3. Preise */}
             <div className="flex flex-col items-end flex-shrink-0">

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { StoreApiProduct } from '@/lib/woocommerce';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { isMusterProduct } from '@/lib/sampleUtils';
+import { KLEBEVINYL_SPARPAKET } from '@/content/klebevinyl-sparpaket';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -265,7 +266,9 @@ export default function ProductCard({ product, showDescription = false }: Produc
           <div className="border-t pt-4">
             <div className="mb-2">
               <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                {product.setangebot_titel || 'Set-Angebot'}
+                {product.categories?.some(c => c.slug === KLEBEVINYL_SPARPAKET.kategorie)
+                  ? 'Sparpaket'
+                  : product.setangebot_titel || 'Set-Angebot'}
               </h4>
               <p className="text-xs text-gray-600">
                 {/* Dynamischer Text basierend auf vorhandenen Zusatzprodukten */}

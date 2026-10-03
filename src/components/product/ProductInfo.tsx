@@ -42,6 +42,9 @@ export default function ProductInfo({
   sockelleisteRegularPricePerUnit = 0,
   sparpaket = null
 }: ProductInfoProps) {
+  // Klebe-Vinyl: Titel "Sparpaket" statt Backend-Titel ("Komplett-Set")
+  const setangebotTitel = sparpaket ? 'Sparpaket' : product.setangebot_titel || undefined;
+
   // Extract features from short_description or jaeger_meta
   const getFeaturesFromDescription = (html: string): string[] => {
     // Strategy 1: Extract from <li> tags
@@ -154,7 +157,7 @@ export default function ProductInfo({
       {/* Set Angebot Component - Desktop */}
       <div className="mt-6 hidden md:block">
         <SetAngebot
-          setangebotTitel={product.setangebot_titel || undefined}
+          setangebotTitel={setangebotTitel}
           productName={product.name}
           productImage={productImage}
           basePrice={basePrice}
@@ -186,7 +189,7 @@ export default function ProductInfo({
       {/* Set Angebot Component - Mobile */}
       <div className="mt-6 md:hidden">
         <SetAngebotMobile
-          setangebotTitel={product.setangebot_titel || undefined}
+          setangebotTitel={setangebotTitel}
           productName={product.name}
           productImage={productImage}
           basePrice={basePrice}

@@ -165,7 +165,7 @@ export default function TotalPrice({
         product: position.product,
         packages: position.packages,
         amount: position.amount,
-        regularPricePerUnit: position.product.price || 0,
+        regularPricePerUnit: position.grossesGebinde.price || 0,
       })),
     };
 
