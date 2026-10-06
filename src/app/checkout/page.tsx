@@ -22,6 +22,7 @@ import type { AppliedCoupon } from '@/types/checkout';
 import type { ValidateCouponResult } from '@/lib/coupon';
 import OrderSummary from '@/components/checkout/OrderSummary';
 import ExpressCheckout from '@/components/checkout/ExpressCheckout';
+import GewaehrleistungsMitteilung from '@/components/checkout/GewaehrleistungsMitteilung';
 
 type PaymentMethod = 'stripe' | 'paypal' | 'bacs' | 'klarna';
 type ShippingMethod = 'delivery' | 'pickup';
@@ -1057,6 +1058,9 @@ export default function CheckoutPage() {
                   </span>
                 </label>
               </div>
+
+              {/* EU-Gewährleistungsmitteilung (VO (EU) 2025/1960) – immer anzeigen */}
+              <GewaehrleistungsMitteilung />
 
               {/* CTA Button */}
               <button
