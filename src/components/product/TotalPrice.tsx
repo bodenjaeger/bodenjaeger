@@ -8,6 +8,7 @@ import { useCart } from '@/contexts/CartContext';
 import { track } from '@/lib/analytics/track';
 import { mapProductToItem } from '@/lib/analytics/mapItem';
 import type { GA4Item } from '@/lib/analytics/types';
+import { calculateProductAktion } from '@/lib/promo';
 
 // Simple price interface - prices come from backend!
 interface SetPrices {
@@ -66,6 +67,11 @@ export default function TotalPrice({
   } = prices;
 
   const hasSavings = savings !== undefined && savings > 0;
+
+  // Aktion "Jedes 7. Paket gratis" (Kundenentscheidung): Rabatt direkt von der
+  // Gesamtsumme abziehen – gleiche Berechnung wie später im Warenkorb (promo.ts)
+  const aktion = calculateProductAktion(product, quantities.floor.packages);
+  const endpreis = totalDisplayPrice - aktion.discount;
 
   // Calculate total packages in set
   const totalPackages =
@@ -242,10 +248,18 @@ export default function TotalPrice({
         </span>
         <div className="text-right flex-shrink-0">
           <div className="text-[#000000] font-bold text-xl sm:text-2xl md:text-[28px] lg:text-[32px] leading-tight">
-            {totalDisplayPrice.toFixed(2).replace('.', ',')}€
+            {endpreis.toFixed(2).replace('.', ',')}€
           </div>
         </div>
       </div>
+
+      {/* Aktion: Gratis-Pakete */}
+      {aktion.freePackages > 0 && (
+        <div className="font-semibold text-sm md:text-base text-brand">
+          {aktion.freePackages === 1 ? '1 Paket' : `${aktion.freePackages} Pakete`} gratis – du sparst{' '}
+          {aktion.discount.toFixed(2).replace('.', ',')}€
+        </div>
+      )}
 
       {/* 2. ERSPARNIS-BOX */}
       {hasSavings && (
