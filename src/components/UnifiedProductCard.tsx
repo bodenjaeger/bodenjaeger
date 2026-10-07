@@ -13,6 +13,8 @@ import {
   SAMPLE_SLUG_PREFIX,
   isMusterProduct,
 } from '@/lib/sampleUtils';
+import { KLEBEVINYL_SPARPAKET } from '@/content/klebevinyl-sparpaket';
+import { useSparpaketRegularProM2 } from '@/hooks/useSparpaketRegularProM2';
 
 interface UnifiedProductCardProps {
   product: StoreApiProduct;
@@ -65,6 +67,10 @@ export default function UnifiedProductCard({ product }: UnifiedProductCardProps)
   const { addSampleToCart, getFreeSamplesRemaining } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { showSuccess, showError, showInfo } = useAlert();
+
+  // Klebe-Vinyl: Sparpaket-Wert pro m² erhöht den Streichpreis (wie auf der Produktseite ab 5 Paketen)
+  const isKlebeVinyl = product.categories?.some(c => c.slug === KLEBEVINYL_SPARPAKET.kategorie) ?? false;
+  const sparpaketRegularProM2 = useSparpaketRegularProM2(isKlebeVinyl);
 
   const wishlisted = isInWishlist(product.id);
 
@@ -394,7 +400,7 @@ export default function UnifiedProductCard({ product }: UnifiedProductCardProps)
             // Streichpreis: Bei Set-Produkten = setangebot_einzelpreis (Vergleichspreis inkl. Zusatzprodukte)
             const isSetProduct = product.show_setangebot && product.setangebot_einzelpreis;
             const stattPrice = isSetProduct
-              ? (product.setangebot_einzelpreis || 0)
+              ? (product.setangebot_einzelpreis || 0) + sparpaketRegularProM2
               : (product.regular_price || product.price || 0);
             const hasDiscount = stattPrice > displayPrice;
 
