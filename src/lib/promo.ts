@@ -23,6 +23,7 @@
  */
 
 import type { CartItem } from '@/contexts/CartContext';
+import type { StoreApiProduct } from '@/lib/woocommerce';
 
 // ============================================================================
 // Konfiguration
@@ -148,16 +149,40 @@ function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
+/** Gehört das Produkt zu einer Aktions-Kategorie (Bodenprodukt)? */
+function isAktionProduct(product: Pick<StoreApiProduct, 'categories'>): boolean {
+  return (
+    product.categories?.some((cat) =>
+      (AKTION_CATEGORY_SLUGS as readonly string[]).includes(cat.slug.toLowerCase())
+    ) ?? false
+  );
+}
+
 /** Fällt die Position unter die Aktion? */
 export function isAktionEligible(item: CartItem): boolean {
   if (item.isSample) return false;
   // Set-Positionen, die ohnehin kostenlos sind, bringen keinen Rabatt.
   if (item.isSetItem && item.setItemType !== 'floor') return false;
-  return (
-    item.product.categories?.some((cat) =>
-      (AKTION_CATEGORY_SLUGS as readonly string[]).includes(cat.slug.toLowerCase())
-    ) ?? false
-  );
+  return isAktionProduct(item.product);
+}
+
+/**
+ * Aktion für die Produktseite, bevor etwas im Warenkorb liegt: gleiche Regel
+ * und gleicher Paketwert wie `getLineDiscount` (Set-Boden: Set-Preis/m² ×
+ * Paketinhalt = `product.price` × `paketinhalt`), damit die Anzeige auf der
+ * Produktseite dem späteren Warenkorb-Abzug entspricht.
+ */
+export function calculateProductAktion(
+  product: StoreApiProduct,
+  packages: number,
+  now: Date = new Date()
+): { freePackages: number; discount: number } {
+  if (!isAktionActive(now) || !isAktionProduct(product) || packages <= 0) {
+    return { freePackages: 0, discount: 0 };
+  }
+  const freePackages = Math.floor(packages / PAKET_AKTION.everyNth);
+  const paketpreis = Number(product.price || 0) * (product.paketinhalt || 1);
+  return { freePackages, discount: round2(paketpreis * freePackages) };
 }
 
 /**
