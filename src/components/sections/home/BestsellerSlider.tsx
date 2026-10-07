@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import { shimmerBlurDataURL } from '@/lib/imageUtils';
+import { SliderPreis, SliderSaleBadge } from './SliderKartePreis';
 
 interface BestsellerSliderProps {
   products: StoreApiProduct[];
@@ -195,10 +196,8 @@ export default function BestsellerSlider({
                       {/* Badges */}
                       <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
                         {/* Sale Badge */}
-                        {product.on_sale && (product.setangebot_ersparnis_prozent || 0) > 0 && (
-                          <div className="bg-red-600 text-white px-3 py-1 rounded font-bold text-sm shadow-md w-fit">
-                            -{Math.round(product.setangebot_ersparnis_prozent || 0)}%
-                          </div>
+                        {product.on_sale && (
+                          <SliderSaleBadge product={product} backendProzent={product.setangebot_ersparnis_prozent || 0} />
                         )}
 
                         {/* Aktion Badge */}
@@ -228,34 +227,7 @@ export default function BestsellerSlider({
                       <div className="h-[1px] bg-dark mx-8 mb-3" />
 
                       {/* Preisanzeige */}
-                      {(() => {
-                        const unit = product.einheit_short || 'm²';
-                        const price = product.price;
-                        // Streichpreis: Bei Set-Produkten = setangebot_einzelpreis (Vergleichspreis inkl. Zusatzprodukte)
-                        const isSetProduct = product.show_setangebot && product.setangebot_einzelpreis;
-                        const stattPrice = isSetProduct
-                          ? (product.setangebot_einzelpreis || 0)
-                          : (product.regular_price || 0);
-                        const hasDiscount = stattPrice > price;
-
-                        return (
-                          <div className="space-y-1">
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-900 font-medium">{isSetProduct ? 'Set-Preis' : 'Preis'}</span>
-                              <div className="flex flex-col items-end">
-                                {hasDiscount && (
-                                  <span className="text-gray-500 text-sm line-through">
-                                    {stattPrice.toFixed(2).replace('.', ',')} €/{unit}
-                                  </span>
-                                )}
-                                <span className={`font-bold text-xl ${hasDiscount ? 'text-red-600' : 'text-gray-900'}`}>
-                                  {price.toFixed(2).replace('.', ',')} €/{unit}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
+                      <SliderPreis product={product} />
                     </div>
                   </Link>
                 </article>

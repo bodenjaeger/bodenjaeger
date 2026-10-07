@@ -13,8 +13,7 @@ import {
   SAMPLE_SLUG_PREFIX,
   isMusterProduct,
 } from '@/lib/sampleUtils';
-import { KLEBEVINYL_SPARPAKET } from '@/content/klebevinyl-sparpaket';
-import { useSparpaketRegularProM2 } from '@/hooks/useSparpaketRegularProM2';
+import { useSparpaketStreichpreisProM2, sparpaketRabattProzent } from '@/hooks/useSparpaketStreichpreisProM2';
 
 interface UnifiedProductCardProps {
   product: StoreApiProduct;
@@ -62,15 +61,14 @@ const CARD_ACTION_STYLE = {
  * Einheitliche Produktkarte für alle Übersichten
  * Basiert auf CategoryPageClient Design
  */
-export default function UnifiedProductCard({ product }: UnifiedProductCardProps) {
+export default function UnifiedProductCard({ product, sockelleisteProduct }: UnifiedProductCardProps) {
   const [isOrderingSample, setIsOrderingSample] = useState(false);
   const { addSampleToCart, getFreeSamplesRemaining } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { showSuccess, showError, showInfo } = useAlert();
 
-  // Klebe-Vinyl: Sparpaket-Wert pro m² erhöht den Streichpreis (wie auf der Produktseite ab 5 Paketen)
-  const isKlebeVinyl = product.categories?.some(c => c.slug === KLEBEVINYL_SPARPAKET.kategorie) ?? false;
-  const sparpaketRegularProM2 = useSparpaketRegularProM2(isKlebeVinyl);
+  // Klebe-Vinyl: Streichpreis = Boden + Standard-Sockelleiste + Bauchemie (wie Produktseite in Grundeinstellung)
+  const sparpaketStreichpreisProM2 = useSparpaketStreichpreisProM2(product, sockelleisteProduct);
 
   const wishlisted = isInWishlist(product.id);
 
@@ -174,7 +172,11 @@ export default function UnifiedProductCard({ product }: UnifiedProductCardProps)
           <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
             {/* Sale Badge - on_sale aus Backend als Trigger, Prozent aus discount_percent oder setangebot_ersparnis_prozent */}
             {product.on_sale && (() => {
-              const percent = product.setangebot_ersparnis_prozent || product.discount_percent || 0;
+              const percent = sparpaketRabattProzent(
+                sparpaketStreichpreisProM2,
+                product.price || 0,
+                product.setangebot_ersparnis_prozent || product.discount_percent || 0
+              );
               return percent > 0 ? (
                 <div className="text-white rounded font-bold shadow-md w-fit" style={{ fontSize: '12px', padding: '3% 10%', whiteSpace: 'nowrap', backgroundColor: '#ed1b24' }}>
                   -{Math.round(percent)}%
@@ -400,7 +402,7 @@ export default function UnifiedProductCard({ product }: UnifiedProductCardProps)
             // Streichpreis: Bei Set-Produkten = setangebot_einzelpreis (Vergleichspreis inkl. Zusatzprodukte)
             const isSetProduct = product.show_setangebot && product.setangebot_einzelpreis;
             const stattPrice = isSetProduct
-              ? (product.setangebot_einzelpreis || 0) + sparpaketRegularProM2
+              ? (sparpaketStreichpreisProM2 ?? (product.setangebot_einzelpreis || 0))
               : (product.regular_price || product.price || 0);
             const hasDiscount = stattPrice > displayPrice;
 

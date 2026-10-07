@@ -182,14 +182,17 @@ export default function CartPage() {
                         </button>
                       </div>
                     )}
-                    <span className="text-sm text-mid">
-                      {item.isSample
-                        ? `${item.quantity} Stk.`
-                        : item.isSetItem && item.actualM2
-                        ? `${displayAmount.toFixed(2)} ${einheit}`
-                        : `${item.quantity} ${verpackungsart} = ${totalAmount.toFixed(2)} ${einheit}`
-                      }
-                    </span>
+                    {/* Sparpaket-Bauchemie ohne Menge/Einheit (Kundenvorgabe) */}
+                    {!isSparpaketItemType(item.setItemType) && (
+                      <span className="text-sm text-mid">
+                        {item.isSample
+                          ? `${item.quantity} Stk.`
+                          : item.isSetItem && item.actualM2
+                          ? `${displayAmount.toFixed(2)} ${einheit}`
+                          : `${item.quantity} ${verpackungsart} = ${totalAmount.toFixed(2)} ${einheit}`
+                        }
+                      </span>
+                    )}
                     {item.isSetItem && (
                       <span className="text-xs text-mid italic">
                         (Set-Angebot)

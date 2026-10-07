@@ -253,16 +253,21 @@ export default function ProductPageContent({
     // (setangebot_einzelpreis ist statisch und kennt keine Premium-Optionen)
     const gesamtStreichpreisProM2 = bodenComparisonPricePerM2 + daemmungRegularPricePerUnit + sockelleisteRegularPricePerUnit;
     // comparisonPriceTotal = Streichpreis × m² (konsistent mit per-m²-Anzeige in SetAngebot)
-    // Klebe-Vinyl Sparpaket: Wert der Gratis-Gebinde (zum Preis des großen Gebindes) erhöht Streichpreis und Ersparnis
-    const sparpaketRegularTotal = sparpaket?.aktiv
-      ? sparpaket.positionen.reduce((sum, p) => sum + p.amount * (p.grossesGebinde.price || 0), 0)
+    // Klebe-Vinyl Sparpaket (Kundenvorgabe): Bauchemie mit der vorgegebenen Menge pro m² × Preis des
+    // großen Gebindes – dieselben Werte wie die Set-Zeilen, nicht die aufgerundeten Gebinde.
+    // Unter Mindestmenge fällt die Bauchemie aus dem Streichpreis.
+    const sparpaketRegularProM2 = sparpaketAnzeige?.aktiv
+      ? sparpaketAnzeige.zeilen.reduce((sum, z) => sum + z.regularPreisProM2, 0)
       : 0;
-    const comparisonPriceTotal = quantities.floor.actualM2 * gesamtStreichpreisProM2 + sparpaketRegularTotal;
+    const comparisonPriceTotal = quantities.floor.actualM2 * (gesamtStreichpreisProM2 + sparpaketRegularProM2);
     // totalDisplayPrice = Set-Preis (was der Kunde MIT Set bezahlt)
     const totalDisplayPrice = bodenPriceTotal + daemmungSetPrice + sockelleisteSetPrice;
     const savings = comparisonPriceTotal - totalDisplayPrice;
     // ✅ Backend-Wert verwenden (setangebot_ersparnis_prozent) — konsistent mit Produktkarten
-    const savingsPercent = product.setangebot_ersparnis_prozent || 0;
+    // Klebe-Vinyl Sparpaket (Kundenvorgabe): höherer Wert aus Backend und berechneter Ersparnis
+    const backendPercent = product.setangebot_ersparnis_prozent || 0;
+    const berechnetPercent = comparisonPriceTotal > 0 ? (savings / comparisonPriceTotal) * 100 : 0;
+    const savingsPercent = hasSparpaket ? Math.max(backendPercent, berechnetPercent) : backendPercent;
 
     return {
       totalDisplayPrice,
@@ -275,7 +280,7 @@ export default function ProductPageContent({
       sockelleisteSetPricePerUnit,
       sockelleisteRegularPricePerUnit,
     };
-  }, [product, quantities, selectedDaemmung, selectedSockelleiste, daemmungProduct, sockelleisteProduct, sparpaket]);
+  }, [product, quantities, selectedDaemmung, selectedSockelleiste, daemmungProduct, sockelleisteProduct, sparpaketAnzeige, hasSparpaket]);
 
   // Handle quantity changes from QuantitySelector
   const handleQuantityChange = (newPackages: number, newSqm: number) => {
@@ -1001,7 +1006,7 @@ export default function ProductPageContent({
         <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-8 mb-12 w-full">
           {/* LEFT COLUMN - Image Gallery */}
           <div className="space-y-6">
-            <ImageGallery product={product} />
+            <ImageGallery product={product} rabattProzent={hasSparpaket ? prices?.savingsPercent : undefined} />
 
             {/* Action Buttons - Only for floor products */}
             {isFloorProduct && (

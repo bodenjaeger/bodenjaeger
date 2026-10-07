@@ -7,9 +7,10 @@ import type { StoreApiProduct } from '@/lib/woocommerce';
 
 interface ImageGalleryProps {
   product: StoreApiProduct;
+  rabattProzent?: number;  // Klebe-Vinyl Sparpaket: höherer Wert aus Backend und Berechnung
 }
 
-export default function ImageGallery({ product }: ImageGalleryProps) {
+export default function ImageGallery({ product, rabattProzent }: ImageGalleryProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const images = product.images || [];
 
@@ -37,7 +38,7 @@ export default function ImageGallery({ product }: ImageGalleryProps) {
 
   // ✅ USE BACKEND-CALCULATED DISCOUNT
   // on_sale als Trigger, Prozent aus setangebot_ersparnis_prozent oder discount_percent
-  const discountPercent = Math.round(product.setangebot_ersparnis_prozent || product.discount_percent || 0);
+  const discountPercent = Math.round(rabattProzent ?? (product.setangebot_ersparnis_prozent || product.discount_percent || 0));
 
   return (
     <div className="space-y-4 w-full max-w-full overflow-hidden">
