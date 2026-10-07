@@ -16,6 +16,7 @@ import AlertModal from '@/components/AlertModal';
 import { track } from '@/lib/analytics/track';
 import { mapProductToItem } from '@/lib/analytics/mapItem';
 import ImageGallery from './ImageGallery';
+import ZahlungsIcons from './ZahlungsIcons';
 import ProductInfo from './ProductInfo';
 import QuantitySelector from './QuantitySelector';
 import TotalPrice from './TotalPrice';
@@ -704,121 +705,6 @@ export default function ProductPageContent({
     );
   };
 
-  // Payment Methods — gemeinsame Komponente für beide Layouts (Simple & Set-Angebot)
-  const PaymentMethods = () => (
-    <div className="bg-ash rounded-md p-4">
-      <h3 className="text-lg font-semibold text-dark mb-3">
-        Zahlungsarten
-      </h3>
-      <div className="flex flex-wrap gap-2 items-center">
-        {/* Amex */}
-        <div className="bg-white rounded px-2 py-1 flex items-center justify-center h-10 min-w-[56px]">
-          <svg className="h-7" viewBox="0 0 50 30" fill="none" aria-label="American Express">
-            <rect width="50" height="30" rx="3" fill="#2E77BB" />
-            <text x="25" y="20" textAnchor="middle" fontSize="10" fontWeight="900" fontFamily="Arial, sans-serif" fill="#FFFFFF" letterSpacing="0.5">AMEX</text>
-          </svg>
-        </div>
-
-        {/* Maestro */}
-        <div className="bg-white rounded px-2 py-1 flex items-center justify-center h-10 min-w-[56px]">
-          <svg className="h-7" viewBox="0 0 48 32" fill="none" aria-label="Maestro">
-            <circle cx="18" cy="16" r="10" fill="#0099DF" />
-            <circle cx="30" cy="16" r="10" fill="#ED0006" />
-            <path d="M24 8.2c1.7 2.1 2.8 4.8 2.8 7.8s-1.1 5.7-2.8 7.8c-1.7-2.1-2.8-4.8-2.8-7.8s1.1-5.7 2.8-7.8z" fill="#6C6BBD" />
-          </svg>
-        </div>
-
-        {/* Mastercard */}
-        <div className="bg-white rounded px-2 py-1 flex items-center justify-center h-10 min-w-[56px]">
-          <svg className="h-7" viewBox="0 0 48 32" fill="none" aria-label="Mastercard">
-            <circle cx="18" cy="16" r="10" fill="#EB001B" />
-            <circle cx="30" cy="16" r="10" fill="#F79E1B" />
-            <path d="M24 8.2c1.7 2.1 2.8 4.8 2.8 7.8s-1.1 5.7-2.8 7.8c-1.7-2.1-2.8-4.8-2.8-7.8s1.1-5.7 2.8-7.8z" fill="#FF5F00" />
-          </svg>
-        </div>
-
-        {/* Visa */}
-        <div className="bg-white rounded px-2 py-1 flex items-center justify-center h-10 min-w-[56px]">
-          <svg className="h-5" viewBox="0 0 60 20" fill="none" aria-label="Visa">
-            <text x="30" y="16" textAnchor="middle" fontSize="17" fontWeight="900" fontStyle="italic" fontFamily="Arial, sans-serif" fill="#1A1F71">VISA</text>
-          </svg>
-        </div>
-
-        {/* PayPal */}
-        <div className="bg-white rounded px-2 py-1 flex items-center justify-center h-10 min-w-[60px]">
-          <svg className="h-5" viewBox="0 0 72 20" fill="none" aria-label="PayPal">
-            <text x="0" y="16" fontSize="16" fontWeight="800" fontStyle="italic" fontFamily="Arial, sans-serif" fill="#003087">Pay</text>
-            <text x="33" y="16" fontSize="16" fontWeight="800" fontStyle="italic" fontFamily="Arial, sans-serif" fill="#009CDE">Pal</text>
-          </svg>
-        </div>
-
-        {/* PayPal Rechnungskauf */}
-        <div className="bg-white rounded px-2 py-1 flex flex-col items-center justify-center h-10 min-w-[80px]">
-          <svg className="h-3.5" viewBox="0 0 60 14" fill="none" aria-label="PayPal Rechnungskauf">
-            <text x="0" y="11" fontSize="11" fontWeight="800" fontStyle="italic" fontFamily="Arial, sans-serif" fill="#003087">Pay</text>
-            <text x="22" y="11" fontSize="11" fontWeight="800" fontStyle="italic" fontFamily="Arial, sans-serif" fill="#009CDE">Pal</text>
-          </svg>
-          <span className="text-[8px] font-semibold text-gray-700 leading-none mt-0.5 uppercase tracking-wide">Rechnungskauf</span>
-        </div>
-
-        {/* Apple Pay */}
-        <div className="bg-white rounded px-2 py-1 flex items-center justify-center h-10 min-w-[60px]">
-          <svg className="h-5" viewBox="0 0 56 20" fill="none" aria-label="Apple Pay">
-            <path d="M11.4 4.7c-.8.9-2 1.6-3.2 1.5-.1-1.2.5-2.5 1.2-3.3.8-.9 2.1-1.6 3.1-1.6.1 1.3-.4 2.5-1.1 3.4zm1.1 1.7c-1.7-.1-3.1 1-3.9 1s-2-1-3.3-1c-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.3.9 1.3 1.9 2.7 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.3.8c1.4 0 2.3-1.3 3.2-2.6 1-1.5 1.3-2.9 1.4-3 0-.1-2.7-1.1-2.7-4.2-.1-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.8-2z" fill="#000" />
-            <text x="20" y="14" fontSize="11" fontWeight="600" fontFamily="Helvetica, Arial, sans-serif" fill="#000">Pay</text>
-          </svg>
-        </div>
-
-        {/* Google Pay */}
-        <div className="bg-white rounded px-2 py-1 flex items-center justify-center h-10 min-w-[60px]">
-          <svg className="h-5" viewBox="0 0 60 20" fill="none" aria-label="Google Pay">
-            <text x="0" y="15" fontSize="14" fontWeight="500" fontFamily="Arial, sans-serif">
-              <tspan fill="#4285F4">G</tspan>
-              <tspan fill="#5F6368"> Pay</tspan>
-            </text>
-          </svg>
-        </div>
-
-        {/* Amazon Pay */}
-        <div className="bg-white rounded px-2 py-1 flex items-center justify-center h-10 min-w-[70px]">
-          <svg className="h-5" viewBox="0 0 80 20" fill="none" aria-label="Amazon Pay">
-            <text x="2" y="12" fontSize="11" fontWeight="700" fontFamily="Arial, sans-serif" fill="#232F3E">amazon</text>
-            <text x="48" y="12" fontSize="11" fontWeight="700" fontFamily="Arial, sans-serif" fill="#FF9900">pay</text>
-            <path d="M4 15 Q 40 20 72 15" stroke="#FF9900" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-          </svg>
-        </div>
-
-        {/* Klarna */}
-        <div className="bg-[#FFB3C7] rounded px-2 py-1 flex items-center justify-center h-10 min-w-[60px]">
-          <svg className="h-4" viewBox="0 0 60 14" fill="none" aria-label="Klarna">
-            <text x="30" y="11" textAnchor="middle" fontSize="13" fontWeight="700" fontFamily="Arial, sans-serif" fill="#000">Klarna.</text>
-          </svg>
-        </div>
-
-        {/* Vorkasse */}
-        <div className="bg-white rounded px-2 py-1 flex items-center gap-1.5 justify-center h-10 min-w-[70px]">
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M3 10 L12 4 L21 10" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M5 10 V19 H19 V10" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M9 19 V13 M12 19 V13 M15 19 V13" stroke="#333" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <span className="text-xs font-semibold text-gray-800">Vorkasse</span>
-        </div>
-
-        {/* Bei Abholung */}
-        <div className="bg-white rounded px-2 py-1 flex items-center gap-1.5 justify-center h-10 min-w-[80px]">
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M4 9 L5 4 H19 L20 9" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M4 9 V19 H20 V9" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M4 9 H20" stroke="#333" strokeWidth="2" strokeLinecap="round" />
-            <path d="M9 14 H15 V19 H9 Z" stroke="#333" strokeWidth="1.5" strokeLinejoin="round" />
-          </svg>
-          <span className="text-xs font-semibold text-gray-800">Bei Abholung</span>
-        </div>
-      </div>
-    </div>
-  );
-
   // Product Details for Simple Layout
   const ProductDetails = () => (
     <div className="bg-white rounded-lg shadow-md p-8">
@@ -863,8 +749,8 @@ export default function ProductPageContent({
           {/* Quantity & Add to Cart */}
           <SimpleQuantityAndCart />
 
-          {/* Payment Methods */}
-          <PaymentMethods />
+          {/* Zahlungsarten – kleine Logo-Reihe wie im Footer */}
+          <ZahlungsIcons />
 
           {/* Service Icons - mobile only */}
           <div className="lg:hidden">
@@ -1085,8 +971,8 @@ export default function ProductPageContent({
               />
             </div>
 
-            {/* Zahlungsarten Section */}
-            <PaymentMethods />
+            {/* Zahlungsarten – kleine Logo-Reihe wie im Footer */}
+            <ZahlungsIcons />
 
             {/* Service Icons - mobile only (on desktop shown in left column) */}
             <div className="lg:hidden space-y-0 text-base sm:text-lg text-gray-700">
