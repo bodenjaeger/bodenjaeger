@@ -113,6 +113,10 @@ export default function ProductPageContent({
   // Sparpaket-Zeilen für das Set-Angebot (Zahnspachtel wird nicht angezeigt)
   const sparpaketAnzeige = useMemo((): SparpaketAnzeige | null => {
     if (!sparpaket) return null;
+    // Unter Mindestmenge komplett ausblenden (Kundenvorgabe) – Titel "Sparpaket" bleibt
+    if (!sparpaket.aktiv) {
+      return { aktiv: false, mindestPakete: KLEBEVINYL_SPARPAKET.mindestPakete, zeilen: [] };
+    }
     const zeilen = KLEBEVINYL_SPARPAKET.bestandteile
       .filter(b => b.imSetAnzeigen)
       .map(b => {

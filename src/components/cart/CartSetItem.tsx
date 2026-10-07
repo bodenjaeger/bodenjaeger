@@ -137,7 +137,6 @@ function BundleProductItem({ product }: { product: CartItemBase }) {
   };
 
   const typeLabel = getTypeLabel();
-  const istSparpaket = isSparpaketItemType(product.itemType);
 
   // Calculate total quantity × unitValue - handle invalid values
   const totalValue = (product.quantity && product.unitValue)
@@ -190,12 +189,10 @@ function BundleProductItem({ product }: { product: CartItemBase }) {
         {product.name}
       </div>
 
-      {/* Zeile 3: X Pak./Stk. = Y m²/m – entfällt beim Sparpaket (Kundenvorgabe: keine Einheiten) */}
-      {!istSparpaket && (
-        <div className="ml-14 text-xs text-gray-500">
-          {product.quantity} {packageUnit} = {formatUnitValue(totalValue)} {unitDisplay}
-        </div>
-      )}
+      {/* Zeile 3: X Pak./Stk. = Y m²/m */}
+      <div className="ml-14 text-xs text-gray-500">
+        {product.quantity} {packageUnit} = {formatUnitValue(totalValue)} {unitDisplay}
+      </div>
 
       {/* Zeile 4: ~~Alt€~~ Neu€/Einheit (mittig) + Gesamt€ (rechts) */}
       <div className="ml-14 flex items-center justify-end gap-4">
@@ -206,7 +203,7 @@ function BundleProductItem({ product }: { product: CartItemBase }) {
             </span>
           )}
           <span className="text-sm font-semibold text-brand">
-            {formatPrice(product.pricePerUnit)} €{istSparpaket ? '' : `/${unitDisplay}`}
+            {formatPrice(product.pricePerUnit)} €/{unitDisplay}
           </span>
         </div>
         <span className="text-sm font-semibold text-dark">
