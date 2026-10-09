@@ -92,6 +92,11 @@ export interface VsAnfrage {
   // Technik
   dateien: VsDatei[]
   tracking: VsTracking
+  /**
+   * Marketing-Einwilligung aus dem Cookie-Banner zum Absendezeitpunkt.
+   * Nur `true` erlaubt Meta CAPI; fehlt die Angabe, gilt sie als abgelehnt.
+   */
+  marketingConsent?: boolean
   turnstileToken?: string
   /** Honeypot — muss leer bleiben. */
   website?: string

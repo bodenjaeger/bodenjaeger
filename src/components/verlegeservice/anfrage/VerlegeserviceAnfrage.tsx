@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import { CheckCircle2, Loader2, Phone } from 'lucide-react'
 import { STANDORT } from '@/content/fachmarkt'
+import { useCookieConsent } from '@/contexts/CookieConsentContext'
 import {
   VS_ALTBODEN,
   VS_ALTBODEN_BELAG,
@@ -141,6 +142,7 @@ interface Ergebnis {
 }
 
 export default function VerlegeserviceAnfrage() {
+  const { isAllowed } = useCookieConsent()
   const [schritt, setSchritt] = useState(0)
   const [d, setD] = useState<Entwurf>(LEER)
   const [dateien, setDateien] = useState<UploadDatei[]>([])
@@ -304,12 +306,14 @@ export default function VerlegeserviceAnfrage() {
     setSendeFehler(undefined)
     setSendet(true)
 
-    const tracking = sammleTrackingKontext(startZeit.current) as VsTracking
+    const marketingConsent = isAllowed('marketing')
+    const tracking = sammleTrackingKontext(startZeit.current, marketingConsent) as VsTracking
     const payload: VsAnfrage = {
       ...d,
       qm: braucheQm ? d.qm : null,
       dateien: dateien.map(({ filename, mime, dataBase64 }) => ({ filename, mime, dataBase64 })),
       tracking,
+      marketingConsent,
       turnstileToken: turnstileToken ?? undefined,
       website,
     }

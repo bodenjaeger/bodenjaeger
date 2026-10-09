@@ -13,6 +13,7 @@ import { pruefeAnfrage } from '@/lib/verlegeservice-validierung'
 import type {
   VsAnfrage,
   VsAnfrageAntwort,
+  VsTracking,
 } from '@/types/verlegeservice-anfrage'
 
 /**
@@ -43,8 +44,21 @@ interface TurnstileVerifyResponse {
   'error-codes'?: string[]
 }
 
+/** Ohne Marketing-Einwilligung werden die Meta-Cookies verworfen. */
+function bereinigeTracking(roh: unknown, marketingConsent: boolean): VsTracking {
+  if (!roh || typeof roh !== 'object') return {}
+  const tracking = { ...(roh as VsTracking) }
+  if (!marketingConsent) {
+    delete tracking.fbp
+    delete tracking.fbc
+  }
+  return tracking
+}
+
 /** Leere Vorgabe, damit fehlende Felder nicht als undefined durchlaufen. */
 function normalisiere(rohdaten: Partial<VsAnfrage>): VsAnfrage {
+  // Nur ein ausdrückliches `true` zählt — fehlt die Angabe, gilt sie als abgelehnt.
+  const marketingConsent = rohdaten.marketingConsent === true
   const s = (v: unknown) => (typeof v === 'string' ? v : '')
   return {
     plz: s(rohdaten.plz).trim(),
@@ -79,7 +93,8 @@ function normalisiere(rohdaten: Partial<VsAnfrage>): VsAnfrage {
     freitext: s(rohdaten.freitext).trim(),
     datenschutz: rohdaten.datenschutz === true,
     dateien: Array.isArray(rohdaten.dateien) ? rohdaten.dateien : [],
-    tracking: rohdaten.tracking && typeof rohdaten.tracking === 'object' ? rohdaten.tracking : {},
+    tracking: bereinigeTracking(rohdaten.tracking, marketingConsent),
+    marketingConsent,
     turnstileToken: typeof rohdaten.turnstileToken === 'string' ? rohdaten.turnstileToken : undefined,
     website: typeof rohdaten.website === 'string' ? rohdaten.website : undefined,
   }
@@ -223,35 +238,38 @@ export async function POST(request: NextRequest): Promise<NextResponse<VsAnfrage
 
   // Meta CAPI: nach der Zustellung, Fehler nur protokollieren. Tracking darf
   // eine erfolgreich zugestellte Anfrage nicht nachträglich kippen.
+  // Nur mit ausdrücklicher Marketing-Einwilligung aus dem Cookie-Banner.
   const staffel = VS_FLAECHE_STAFFELN.find((s) => s.key === a.flaecheStaffel)
   const zeitraum = VS_ZEITRAEUME.find((z) => z.key === a.zeitraum)
-  await sendeMetaLead({
-    leadId,
-    areaStatus,
-    areaRange: staffel?.key ?? null,
-    // Kommaseparierte Keys; der Parametername bleibt `floor_type`, damit
-    // bestehende Auswertungen weiterlaufen.
-    floorType: a.bodenarten.join(',') || null,
-    timeline: zeitraum?.key ?? null,
-    email: a.email,
-    telefon: a.telefon,
-    vorname: a.vorname,
-    nachname: a.nachname,
-    plz: a.plz,
-    ort,
-    fbp: a.tracking.fbp,
-    fbc: a.tracking.fbc,
-    clientIp:
-      request.headers.get('cf-connecting-ip') ||
-      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-      undefined,
-    userAgent: request.headers.get('user-agent') ?? undefined,
-    eventSourceUrl: a.tracking.landingpage,
-    zeitpunkt: eingang,
-  }).catch((e) => {
-    console.error('[api/verlegeservice] Meta CAPI Fehler:', e)
-    return false
-  })
+  if (a.marketingConsent) {
+    await sendeMetaLead({
+      leadId,
+      areaStatus,
+      areaRange: staffel?.key ?? null,
+      // Kommaseparierte Keys; der Parametername bleibt `floor_type`, damit
+      // bestehende Auswertungen weiterlaufen.
+      floorType: a.bodenarten.join(',') || null,
+      timeline: zeitraum?.key ?? null,
+      email: a.email,
+      telefon: a.telefon,
+      vorname: a.vorname,
+      nachname: a.nachname,
+      plz: a.plz,
+      ort,
+      fbp: a.tracking.fbp,
+      fbc: a.tracking.fbc,
+      clientIp:
+        request.headers.get('cf-connecting-ip') ||
+        request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+        undefined,
+      userAgent: request.headers.get('user-agent') ?? undefined,
+      eventSourceUrl: a.tracking.landingpage,
+      zeitpunkt: eingang,
+    }).catch((e) => {
+      console.error('[api/verlegeservice] Meta CAPI Fehler:', e)
+      return false
+    })
+  }
 
   return NextResponse.json({
     success: true,

@@ -192,8 +192,13 @@ function browserName(): string {
  * Die UTM-/Klick-Parameter werden aus der aktuellen URL gelesen; kommt der
  * Nutzer über mehrere Seiten, liefert `landingpage` die Einstiegsseite, sofern
  * sie im sessionStorage hinterlegt wurde.
+ *
+ * Die Meta-Cookies `_fbp`/`_fbc` werden nur mit Marketing-Einwilligung gelesen.
  */
-export function sammleTrackingKontext(formularStart?: string): Record<string, string | undefined> {
+export function sammleTrackingKontext(
+  formularStart?: string,
+  marketingErlaubt = false,
+): Record<string, string | undefined> {
   const w = fenster()
   if (!w) return {}
 
@@ -218,8 +223,8 @@ export function sammleTrackingKontext(formularStart?: string): Record<string, st
     gbraid: wert('gbraid'),
     wbraid: wert('wbraid'),
     fbclid: wert('fbclid'),
-    fbp: cookie('_fbp'),
-    fbc: cookie('_fbc'),
+    fbp: marketingErlaubt ? cookie('_fbp') : undefined,
+    fbc: marketingErlaubt ? cookie('_fbc') : undefined,
     landingpage,
     referrer: w.document.referrer || undefined,
     deviceKategorie: geraetKategorie(),

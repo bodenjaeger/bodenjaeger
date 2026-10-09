@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { WordPressPage } from '@/lib/wordpress';
+import ConsentGatedMap from '@/components/shared/ConsentGatedMap';
 
 interface FachmarktPageProps {
   page: WordPressPage;
@@ -423,12 +424,10 @@ export default function FachmarktPage({ page }: FachmarktPageProps) {
 
             {/* Google Maps */}
             <div>
-              <iframe
+              <ConsentGatedMap
                 src="https://maps.google.com/maps?q=bodenjäger&t=m&z=10&output=embed&iwloc=near"
                 title="Bodenjäger Hückelhoven"
-                aria-label="Bodenjäger Hückelhoven"
                 className="w-full h-full min-h-[300px] rounded-lg"
-                loading="lazy"
               />
             </div>
           </div>

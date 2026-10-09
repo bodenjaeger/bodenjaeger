@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, memo } from 'react';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { WordPressPage } from '@/lib/wordpress';
+import ConsentGatedMap from '@/components/shared/ConsentGatedMap';
 
 interface KontaktPageProps {
   page: WordPressPage;
@@ -522,15 +523,10 @@ export default function KontaktPage({ page }: KontaktPageProps) {
             Hier findest du uns
           </h2>
           <div className="rounded-xl overflow-hidden shadow-lg max-w-5xl mx-auto" style={{ height: '400px' }}>
-            <iframe
+            <ConsentGatedMap
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2507.5!2d6.2279!3d51.0567!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47bf5f9b1f1b1b1b%3A0x1234567890abcdef!2sNeckarstra%C3%9Fe+9%2C+41836+H%C3%BCckelhoven!5e0!3m2!1sde!2sde!4v1700000000000!5m2!1sde!2sde"
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              allowFullScreen
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
               title="Bodenjäger Fachmarkt Hückelhoven"
+              className="w-full h-full"
             />
           </div>
         </div>

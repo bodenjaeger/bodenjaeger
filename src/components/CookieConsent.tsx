@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useCookieConsent } from '@/contexts/CookieConsentContext';
 
@@ -11,7 +11,7 @@ type Prefs = {
 };
 
 export const CookieConsent: React.FC = () => {
-  const { isBannerOpen, acceptAll, rejectAll, savePreferences, closeBanner, hasDecided } =
+  const { consent, isBannerOpen, acceptAll, rejectAll, savePreferences, closeBanner, hasDecided } =
     useCookieConsent();
   const [showSettings, setShowSettings] = useState(false);
   const [prefs, setPrefs] = useState<Prefs>({
@@ -19,6 +19,18 @@ export const CookieConsent: React.FC = () => {
     analytics: false,
     marketing: false,
   });
+
+  // Beim (Wieder-)Öffnen die gespeicherte Auswahl übernehmen — sonst stehen
+  // alle Häkchen auf aus und „Auswahl speichern" widerruft unbemerkt.
+  useEffect(() => {
+    if (!isBannerOpen) return;
+    setShowSettings(false);
+    setPrefs({
+      functional: consent?.categories.functional ?? false,
+      analytics: consent?.categories.analytics ?? false,
+      marketing: consent?.categories.marketing ?? false,
+    });
+  }, [isBannerOpen, consent]);
 
   if (!isBannerOpen) return null;
 

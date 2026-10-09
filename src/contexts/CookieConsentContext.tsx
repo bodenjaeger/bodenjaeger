@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { consent as consentApi, type ConsentDecisionAction } from '@/lib/analytics/track';
+import { clearDeniedCookies } from '@/lib/analytics/clearCookies';
 
 export interface CookieCategories {
   necessary: true;
@@ -49,6 +50,9 @@ export const CookieConsentProvider: React.FC<CookieConsentProviderProps> = ({ ch
   const [consent, setConsent] = useState<CookieConsent | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isBannerOpen, setIsBannerOpen] = useState(false);
+  // Vorherige Entscheidung für `persist` (stabiler Callback ohne consent-Dep).
+  const consentRef = useRef<CookieConsent | null>(null);
+  consentRef.current = consent;
 
   useEffect(() => {
     try {
@@ -88,6 +92,14 @@ export const CookieConsentProvider: React.FC<CookieConsentProviderProps> = ({ ch
     // über den Banner), nicht beim Re-Signaling des Consent Mode auf Folge-Seiten.
     consentApi.decision(action, categories);
     setIsBannerOpen(false);
+
+    // Widerruf: Tracking-Cookies der abgelehnten Kategorien entfernen.
+    clearDeniedCookies(categories);
+    // Bereits geladene Marketing-Skripte (TikTok, Meta via GTM) lassen sich nicht
+    // entladen — nach einem Marketing-Widerruf daher die Seite neu laden.
+    if (consentRef.current?.categories.marketing && !categories.marketing) {
+      window.location.reload();
+    }
   }, []);
 
   const acceptAll = useCallback(() => {

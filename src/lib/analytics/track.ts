@@ -26,11 +26,16 @@ function pushEcommerce(event: string, ecommerce: EcommercePayload): void {
   dl.push({ event, ecommerce });
 }
 
-function gtagPush(...args: unknown[]): void {
+// Klassische gtag-Signatur: pusht das `arguments`-Objekt, KEIN echtes Array.
+// GTM wertet nur `arguments`-Objekte als Consent-Befehl — ein Array wird
+// stillschweigend ignoriert (live verifiziert am 07.10.2026).
+// Der Rest-Parameter dient nur der Typisierung der Aufrufe.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function gtagPush(..._args: unknown[]): void {
   const dl = ensureDataLayer();
   if (!dl) return;
-  // Klassische gtag-Signatur: pusht das `arguments`-Objekt; GTM/Consent-Mode-API erwartet genau das.
-  dl.push(args as unknown as Record<string, unknown>);
+  // eslint-disable-next-line prefer-rest-params
+  dl.push(arguments as unknown as Record<string, unknown>);
 }
 
 export const track = {
