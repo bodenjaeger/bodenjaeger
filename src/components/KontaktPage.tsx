@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, memo } from 'react';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { WordPressPage } from '@/lib/wordpress';
+import { demoteWpH1 } from '@/lib/wp-content';
 
 interface KontaktPageProps {
   page: WordPressPage;
@@ -29,7 +30,7 @@ const WordPressContent = memo(function WordPressContent({ html }: WordPressConte
             prose-p:text-gray-700 prose-p:mb-4
             prose-a:text-brand prose-a:hover:underline
             prose-img:rounded-xl prose-img:shadow-md"
-          dangerouslySetInnerHTML={{ __html: html }}
+          dangerouslySetInnerHTML={{ __html: demoteWpH1(html) }}
         />
       </div>
     </section>

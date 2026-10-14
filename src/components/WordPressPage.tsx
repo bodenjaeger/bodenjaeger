@@ -1,4 +1,5 @@
 import { WordPressPage } from '@/lib/wordpress';
+import { demoteWpH1 } from '@/lib/wp-content';
 
 interface WordPressPageProps {
   page: WordPressPage;
@@ -14,7 +15,7 @@ export default function WordPressPageComponent({ page }: WordPressPageProps) {
         />
         <div
           className="wp-page-content max-w-none"
-          dangerouslySetInnerHTML={{ __html: page.content.rendered }}
+          dangerouslySetInnerHTML={{ __html: demoteWpH1(page.content.rendered) }}
         />
       </div>
     </div>

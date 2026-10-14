@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { WordPressPage } from '@/lib/wordpress';
+import { demoteWpH1 } from '@/lib/wp-content';
 
 interface VersandLieferzeitPageProps {
   page: WordPressPage;
@@ -60,7 +61,8 @@ export default function VersandLieferzeitPage({ page }: VersandLieferzeitPagePro
     // Lagerdauer: 12 Monate (WP-Inhalt nennt noch 6 Monate)
     clean = clean.replace(/Kostenlose Lagerung bis zu 6 Monate/gi, 'Kostenlose Lagerung bis zu 12 Monate');
     clean = clean.replace(/bis zu 6 Monate kostenlos/gi, 'bis zu 12 Monate kostenlos');
-    return clean;
+    // Zwischenüberschriften sind im WP-Editor als H1 angelegt → H2 (eine H1 pro Seite)
+    return demoteWpH1(clean);
   }, [page.content.rendered]);
 
   const hasContent = cleanContent.replace(/<[^>]*>/g, '').trim().length > 0;
@@ -91,7 +93,7 @@ export default function VersandLieferzeitPage({ page }: VersandLieferzeitPagePro
             <div
               suppressHydrationWarning
               className="prose prose-lg max-w-3xl mx-auto
-                [&_h1]:text-4xl [&_h1]:font-bold [&_h1]:text-dark [&_h1]:mb-6 [&_h1]:mt-10
+                [&_.wp-h1]:text-4xl [&_.wp-h1]:font-bold [&_.wp-h1]:text-dark [&_.wp-h1]:mb-6 [&_.wp-h1]:mt-10
                 [&_h2]:text-2xl [&_h2]:md:text-3xl [&_h2]:font-bold [&_h2]:text-dark [&_h2]:mb-4 [&_h2]:mt-14
                 [&_h3]:text-xl [&_h3]:md:text-2xl [&_h3]:font-bold [&_h3]:text-dark [&_h3]:mb-3 [&_h3]:mt-10
                 [&_p]:text-gray-600 [&_p]:mb-4 [&_p]:leading-relaxed
