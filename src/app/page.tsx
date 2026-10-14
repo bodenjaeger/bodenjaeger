@@ -1,7 +1,13 @@
+import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
 import { wooCommerceClient, type StoreApiProduct } from "@/lib/woocommerce";
 import HeroSlider from "@/components/startseite/HeroSlider";
 import VorteileSlider from "@/components/sections/home/VorteileSlider";
+
+export const metadata: Metadata = {
+  title: 'Vinyl, Laminat & Parkett online kaufen | Bodenjäger',
+  description: 'Rigid-Vinyl, Klebe-Vinyl, Laminat und Parkett von COREtec, primeCORE & Co. – mit Set-Angeboten, Fachmarkt in Hückelhoven und persönlicher Beratung.',
+};
 
 // Dynamic imports for below-the-fold components to reduce initial bundle size
 const BodenkategorienSection = dynamic(() => import("@/components/sections/home/BodenkategorienSection"), {

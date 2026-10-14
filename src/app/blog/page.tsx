@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { wordPressClient } from '@/lib/wordpress';
 import Image from 'next/image';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Ratgeber & Blog rund um Bodenbeläge | Bodenjäger',
+  description: 'Tipps zu Auswahl, Verlegung und Pflege von Vinyl, Laminat und Parkett – der Bodenjäger-Blog mit Praxiswissen aus dem Fachmarkt.',
+};
 
 export const revalidate = 300; // 5 minutes
 
