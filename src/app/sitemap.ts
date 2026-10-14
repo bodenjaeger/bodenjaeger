@@ -66,6 +66,11 @@ const STATIC_PAGES: StaticPage[] = [
   { path: '/widerruf', priority: 0.3, changeFrequency: 'yearly' },
 ];
 
+// Nicht in die Sitemap: Muster-Produkte (nur über den Muster-Button bestellbar,
+// Seiten stehen auf noindex) und die interne Muster-Kategorie (ebenfalls noindex).
+const EXCLUDED_PRODUCT_PREFIX = 'muster-';
+const EXCLUDED_CATEGORY_SLUGS = new Set(['muster']);
+
 const PRODUCTS_PER_PAGE = 100;
 const MAX_PRODUCT_PAGES = 50; // Safety-Limit (5.000 Produkte max)
 
@@ -109,6 +114,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
     categoryEntries = categories
       .filter((cat) => typeof cat.slug === 'string' && cat.slug.length > 0)
+      .filter((cat) => !EXCLUDED_CATEGORY_SLUGS.has(cat.slug))
       .map((cat) => ({
         url: categoryUrl(cat.slug),
         lastModified: now,
@@ -125,6 +131,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const products = await fetchAllProducts();
     productEntries = products
       .filter((p) => typeof p.slug === 'string' && p.slug.length > 0)
+      .filter((p) => !p.slug.startsWith(EXCLUDED_PRODUCT_PREFIX))
       .map((p) => ({
         url: productUrl(p.slug),
         lastModified: now,

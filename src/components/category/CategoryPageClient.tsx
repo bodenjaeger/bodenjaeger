@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useState, useEffect, useTransition } from 'react';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import { type StoreApiProduct } from '@/lib/woocommerce';
 import Image from 'next/image';
 import UnifiedProductCard from '@/components/UnifiedProductCard';
+import { SORT_OPTIONS, listingHref } from '@/lib/category-listing';
 
 interface CategoryImage {
   id: number;
@@ -18,205 +20,61 @@ interface CategoryPageClientProps {
   categoryName: string;
   categoryDescription?: string | null;
   categoryImage?: CategoryImage | null;
+  /**
+   * Produkte, Paginierung und Sortierung kommen serverseitig aus der Seite
+   * (lib/category-listing-server.ts), damit Kacheln und Seitenlinks ohne
+   * JavaScript im HTML stehen. Blättern = echter Link auf ?page=n.
+   */
+  products: StoreApiProduct[];
+  totalProducts: number;
+  totalPages: number;
+  currentPage: number;
+  sortBy: string;
+  error: string | null;
 }
 
-/**
- * Standard-Sortierung der Kategorieseiten: Bestseller zuerst.
- *
- * Steht bewusst als Konstante, weil der Wert an drei Stellen gebraucht wird —
- * Initial-State, URL-Synchronisierung (der Default wird aus der URL
- * weggelassen) und das Dropdown. Liefen die auseinander, stünde im Dropdown
- * etwas anderes als tatsächlich sortiert wird.
- *
- * Gegenstück im Proxy: `src/app/api/store-api-test/route.ts` fällt auf
- * denselben Wert zurück, wenn ein Aufruf gar keine Sortierung mitschickt.
- */
-const DEFAULT_SORT = 'popularity-desc';
-
-export default function CategoryPageClient({ slug, categoryName, categoryDescription, categoryImage }: CategoryPageClientProps) {
+export default function CategoryPageClient({
+  categoryName,
+  categoryDescription,
+  categoryImage,
+  products,
+  totalProducts,
+  totalPages,
+  currentPage,
+  sortBy,
+  error,
+}: CategoryPageClientProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  // Initial-State aus URL lesen, damit Back-Button die Position wiederherstellt
-  const initialPage = (() => {
-    const p = parseInt(searchParams.get('page') || '1', 10);
-    return Number.isFinite(p) && p > 0 ? p : 1;
-  })();
-  const initialSort = searchParams.get('sort') || DEFAULT_SORT;
-
-  const [products, setProducts] = useState<StoreApiProduct[]>([]);
+  const [, startTransition] = useTransition();
   const [addonProductsMap, setAddonProductsMap] = useState<Map<number, StoreApiProduct>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(initialPage);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [sortBy, setSortBy] = useState<string>(initialSort);
-  const [searchQuery] = useState<string>(''); // Not currently used, but referenced in fetchProducts
 
-  const productsPerPage = 12;
-
-  // State → URL synchronisieren (replace statt push, damit der History-Stack
-  // nicht mit jedem Seitenwechsel vollläuft). Defaults werden aus der URL weggelassen.
+  // Batch-fetch Dämmung + Sockelleiste für Set-Angebot Preisvergleich
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (currentPage > 1) params.set('page', String(currentPage));
-    if (sortBy !== DEFAULT_SORT) params.set('sort', sortBy);
-    const query = params.toString();
-    const targetUrl = query ? `${pathname}?${query}` : pathname;
-    const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
-    if (targetUrl !== currentUrl) {
-      router.replace(targetUrl, { scroll: false });
-    }
-  }, [currentPage, sortBy, pathname, router, searchParams]);
-
-  const fetchProducts = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      console.log(`🔍 Fetching products for category: ${slug}`);
-
-      // Parse sort settings
-      const [orderby, order] = sortBy.split('-');
-
-      // Build API URL with sorting and search
-      let apiUrl = `/api/store-api-test?per_page=${productsPerPage}&page=${currentPage}&category=${encodeURIComponent(slug)}&orderby=${orderby}&order=${order}`;
-
-      // Add search query if present
-      if (searchQuery.trim()) {
-        apiUrl += `&search=${encodeURIComponent(searchQuery.trim())}`;
+    const addonIds = new Set<number>();
+    products.forEach((p) => {
+      if (p.show_setangebot) {
+        if (p.daemmung_id) addonIds.add(p.daemmung_id);
+        if (p.sockelleisten_id) addonIds.add(p.sockelleisten_id);
       }
+    });
+    if (addonIds.size === 0) return;
 
-      // Add cache buster timestamp to force fresh data when sorting/searching
-      apiUrl += `&_t=${Date.now()}`;
+    fetch('/api/products/by-ids', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(addonIds) }),
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then((addonProducts: StoreApiProduct[]) => {
+        const map = new Map<number, StoreApiProduct>();
+        addonProducts.forEach(p => map.set(p.id, p));
+        setAddonProductsMap(map);
+      })
+      .catch(() => {});
+  }, [products]);
 
-      console.log('📡 API URL:', apiUrl);
-      console.log('📊 Sort settings:', { orderby, order, searchQuery });
-
-      const response = await fetch(apiUrl, {
-        cache: 'no-store' // Disable Next.js fetch cache for dynamic sorting
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const fetchedProducts = await response.json();
-
-      // Get pagination info from headers
-      const totalProductsCount = parseInt(response.headers.get('X-WP-Total') || '0');
-      const totalPagesFromAPI = parseInt(response.headers.get('X-WP-TotalPages') || '1');
-
-      console.log(`📦 Fetched ${fetchedProducts.length} products for category ${slug} (${totalProductsCount} total across ${totalPagesFromAPI} pages)`);
-
-      // API now handles category filtering server-side, so we can use the products directly
-      setProducts(fetchedProducts);
-
-      // Use the total pages and total products count from the API
-      setTotalPages(totalPagesFromAPI);
-      setTotalProducts(totalProductsCount);
-
-      // Batch-fetch Dämmung + Sockelleiste für Set-Angebot Preisvergleich
-      const addonIds = new Set<number>();
-      fetchedProducts.forEach((p: StoreApiProduct) => {
-        if (p.show_setangebot) {
-          if (p.daemmung_id) addonIds.add(p.daemmung_id);
-          if (p.sockelleisten_id) addonIds.add(p.sockelleisten_id);
-        }
-      });
-      if (addonIds.size > 0) {
-        fetch('/api/products/by-ids', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids: Array.from(addonIds) }),
-        })
-          .then(r => r.ok ? r.json() : [])
-          .then((addonProducts: StoreApiProduct[]) => {
-            const map = new Map<number, StoreApiProduct>();
-            addonProducts.forEach(p => map.set(p.id, p));
-            setAddonProductsMap(map);
-          })
-          .catch(() => {});
-      }
-
-    } catch (err) {
-      console.error('❌ Error fetching category products:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error occurred');
-    } finally {
-      setLoading(false);
-    }
-  }, [slug, currentPage, productsPerPage, sortBy, searchQuery]);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  // Debounce search: Only fetch after user stops typing for 500ms
-  useEffect(() => {
-    if (searchQuery === '') {
-      // If search is cleared, fetch immediately
-      return;
-    }
-
-    const debounceTimer = setTimeout(() => {
-      setCurrentPage(1); // Reset to first page
-    }, 500);
-
-    return () => clearTimeout(debounceTimer);
-  }, [searchQuery]);
-
-  // Prefetch next page for faster navigation.
-  // Muss dieselbe Sortierung mitschicken wie fetchProducts, sonst wärmt der
-  // Prefetch einen Cache-Key, der beim Blättern nie abgerufen wird (der Proxy
-  // cacht pro Sortierung) — und lädt dabei auch noch die falschen Produkte vor.
-  useEffect(() => {
-    if (slug && currentPage < totalPages) {
-      const nextPage = currentPage + 1;
-      const [orderby, order] = sortBy.split('-');
-      const prefetchUrl = `/api/store-api-test?per_page=${productsPerPage}&page=${nextPage}&category=${encodeURIComponent(slug)}&orderby=${orderby}&order=${order}`;
-
-      // Prefetch with a small delay to not interfere with current page loading
-      const timeoutId = setTimeout(() => {
-        fetch(prefetchUrl).catch(() => {}); // Silent prefetch
-      }, 1000);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [slug, currentPage, totalPages, productsPerPage, sortBy]);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="content-container py-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">{categoryName}</h1>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
-                <div className="aspect-[4/3] bg-gray-300"></div>
-                <div className="p-4 space-y-3">
-                  <div className="h-4 bg-gray-300 rounded"></div>
-                  <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-gray-300 rounded"></div>
-                    <div className="h-3 bg-gray-300 rounded"></div>
-                  </div>
-                  <div className="h-6 bg-gray-300 rounded w-1/2"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const reload = () => router.refresh();
 
   if (error) {
     return (
@@ -229,7 +87,7 @@ export default function CategoryPageClient({ slug, categoryName, categoryDescrip
           </div>
 
           <button
-            onClick={fetchProducts}
+            onClick={reload}
             className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-medium transition-colors"
           >
             Erneut versuchen
@@ -322,20 +180,17 @@ export default function CategoryPageClient({ slug, categoryName, categoryDescrip
               <select
                 value={sortBy}
                 onChange={(e) => {
-                  setSortBy(e.target.value);
-                  setCurrentPage(1); // Reset to first page on sort change
+                  // Sortierwechsel startet wieder auf Seite 1
+                  const href = listingHref(pathname, 1, e.target.value);
+                  startTransition(() => router.push(href, { scroll: false }));
                 }}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {/* Erste Option = DEFAULT_SORT, damit das Dropdown beim
                     Seitenaufruf den tatsächlich sortierten Zustand zeigt. */}
-                <option value="popularity-desc">Beliebteste</option>
-                <option value="date-desc">Neueste zuerst</option>
-                <option value="date-asc">Älteste zuerst</option>
-                <option value="price-asc">Preis: Niedrig zu Hoch</option>
-                <option value="price-desc">Preis: Hoch zu Niedrig</option>
-                <option value="title-asc">Name: A-Z</option>
-                <option value="title-desc">Name: Z-A</option>
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -363,7 +218,7 @@ export default function CategoryPageClient({ slug, categoryName, categoryDescrip
               In der Kategorie &ldquo;{categoryName}&rdquo; sind derzeit keine Produkte verfügbar.
             </p>
             <button
-              onClick={fetchProducts}
+              onClick={reload}
               className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
               Aktualisieren
@@ -383,17 +238,38 @@ export default function CategoryPageClient({ slug, categoryName, categoryDescrip
           if (right < totalPages - 1) pages.push('ellipsis');
           pages.push(totalPages);
 
+          // Echte Links (?page=n) statt onClick, damit Crawler alle Seiten
+          // und damit alle Produkte ohne JavaScript erreichen.
+          const navClass = 'px-3 py-2 rounded-lg border border-gray-300 text-gray-500 transition-colors shrink-0';
+          const prevLabel = (
+            <>
+              <span className="hidden sm:inline">Zurück</span>
+              <span className="sm:hidden" aria-hidden="true">‹</span>
+            </>
+          );
+          const nextLabel = (
+            <>
+              <span className="hidden sm:inline">Weiter</span>
+              <span className="sm:hidden" aria-hidden="true">›</span>
+            </>
+          );
+
           return (
-            <div className="flex justify-center items-center gap-1 sm:gap-2">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                aria-label="Vorherige Seite"
-                className="px-3 py-2 rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
-              >
-                <span className="hidden sm:inline">Zurück</span>
-                <span className="sm:hidden" aria-hidden="true">‹</span>
-              </button>
+            <nav aria-label="Seitennavigation" className="flex justify-center items-center gap-1 sm:gap-2">
+              {currentPage > 1 ? (
+                <Link
+                  href={listingHref(pathname, currentPage - 1, sortBy)}
+                  rel="prev"
+                  aria-label="Vorherige Seite"
+                  className={`${navClass} hover:bg-gray-100`}
+                >
+                  {prevLabel}
+                </Link>
+              ) : (
+                <span aria-disabled="true" aria-label="Vorherige Seite" className={`${navClass} opacity-50 cursor-not-allowed`}>
+                  {prevLabel}
+                </span>
+              )}
 
               {pages.map((page, index) =>
                 page === 'ellipsis' ? (
@@ -401,9 +277,9 @@ export default function CategoryPageClient({ slug, categoryName, categoryDescrip
                     …
                   </span>
                 ) : (
-                  <button
+                  <Link
                     key={page}
-                    onClick={() => handlePageChange(page)}
+                    href={listingHref(pathname, page, sortBy)}
                     aria-label={`Seite ${page}`}
                     aria-current={currentPage === page ? 'page' : undefined}
                     className={`px-3 py-2 rounded-lg border transition-colors shrink-0 ${
@@ -413,20 +289,25 @@ export default function CategoryPageClient({ slug, categoryName, categoryDescrip
                     }`}
                   >
                     {page}
-                  </button>
+                  </Link>
                 )
               )}
 
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                aria-label="Nächste Seite"
-                className="px-3 py-2 rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
-              >
-                <span className="hidden sm:inline">Weiter</span>
-                <span className="sm:hidden" aria-hidden="true">›</span>
-              </button>
-            </div>
+              {currentPage < totalPages ? (
+                <Link
+                  href={listingHref(pathname, currentPage + 1, sortBy)}
+                  rel="next"
+                  aria-label="Nächste Seite"
+                  className={`${navClass} hover:bg-gray-100`}
+                >
+                  {nextLabel}
+                </Link>
+              ) : (
+                <span aria-disabled="true" aria-label="Nächste Seite" className={`${navClass} opacity-50 cursor-not-allowed`}>
+                  {nextLabel}
+                </span>
+              )}
+            </nav>
           );
         })()}
 

@@ -466,6 +466,38 @@ class WooCommerceClient {
   }
 
   /**
+   * Eine Seite einer Produktliste inkl. Paginierungsdaten (für die
+   * serverseitig gerenderten Kategorieseiten). Ergebnis wird 5 Minuten im
+   * Next-Data-Cache gehalten, damit Crawler-Hits nicht jedes Mal das Backend treffen.
+   */
+  async getProductsPage(params: {
+    category: string;
+    page: number;
+    per_page: number;
+    orderby: string;
+    order: string;
+  }): Promise<{ products: StoreApiProduct[]; total: number; totalPages: number }> {
+    const searchParams = new URLSearchParams({
+      per_page: String(params.per_page),
+      page: String(params.page),
+      category: params.category,
+      orderby: params.orderby,
+      order: params.order,
+    });
+
+    const response = await this.makeRequest<{
+      products?: StoreApiProduct[];
+      pagination?: { total?: number; total_pages?: number };
+    }>(`/jaeger/v1/products?${searchParams.toString()}`, { next: { revalidate: 300 } });
+
+    return {
+      products: response.products || [],
+      total: response.pagination?.total ?? 0,
+      totalPages: response.pagination?.total_pages ?? 1,
+    };
+  }
+
+  /**
    * Get a single product by slug from WooCommerce Store API
    * With Redis/KV caching for improved performance
    */

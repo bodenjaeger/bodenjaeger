@@ -4,6 +4,11 @@ import { wooCommerceClient } from '@/lib/woocommerce';
 import { JsonLd } from '@/components/JsonLd';
 import { buildBreadcrumbSchema } from '@/lib/schema';
 import { SITE_URL, categoryUrl } from '@/lib/site';
+import { parseListingParams, listingHref } from '@/lib/category-listing';
+import { loadListing } from '@/lib/category-listing-server';
+
+// Interne Muster-Kategorie: nicht indexieren (steht auch nicht in der Sitemap)
+const NOINDEX_CATEGORIES = new Set(['muster']);
 
 // Category mapping for display names (fallback)
 const categoryNames: Record<string, string> = {
@@ -32,8 +37,10 @@ const categoryNames: Record<string, string> = {
   'reinigung-pflege': 'Reinigung und Pflege',
 };
 
-export async function generateMetadata({ params }: PageProps<'/category/[slug]'>): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps<'/category/[slug]'>): Promise<Metadata> {
   const { slug } = await params;
+  // Canonical zeigt auf die jeweilige Seite selbst (?page=n), ohne sort-Parameter
+  const { page } = parseListingParams(await searchParams);
   const categoryData = await wooCommerceClient.getCategoryBySlug(slug).catch(() => null);
   const name = categoryData?.name || categoryNames[slug] || slug;
 
@@ -41,13 +48,16 @@ export async function generateMetadata({ params }: PageProps<'/category/[slug]'>
     title: `${name} – Bodenbeläge online kaufen | Bodenjäger`,
     description: `${name} in großer Auswahl bei Bodenjäger – Top-Qualität, schnelle Lieferung und persönliche Beratung.`,
     alternates: {
-      canonical: categoryUrl(slug),
+      canonical: `${SITE_URL}${listingHref(`/category/${slug}`, page)}`,
     },
+    ...(NOINDEX_CATEGORIES.has(slug) && { robots: { index: false, follow: true } }),
   };
 }
 
-export default async function CategoryPage({ params }: PageProps<'/category/[slug]'>) {
+export default async function CategoryPage({ params, searchParams }: PageProps<'/category/[slug]'>) {
   const { slug } = await params;
+  const { page, sort } = parseListingParams(await searchParams);
+  const listing = await loadListing(slug, page, sort);
 
   // Try to fetch category information from WordPress
   let categoryData = null;
@@ -76,6 +86,12 @@ export default async function CategoryPage({ params }: PageProps<'/category/[slu
         categoryName={categoryName}
         categoryDescription={categoryDescription}
         categoryImage={categoryImage}
+        products={listing.products}
+        totalProducts={listing.totalProducts}
+        totalPages={listing.totalPages}
+        currentPage={page}
+        sortBy={sort}
+        error={listing.error}
       />
     </>
   );

@@ -323,6 +323,8 @@ export async function generateMetadata({ params }: ProductPageProps) {
       alternates: {
         canonical: canonicalUrl,
       },
+      // Muster-Produkte sind nicht verlinkt und nicht in der Sitemap
+      ...(product.slug.startsWith('muster-') && { robots: { index: false, follow: true } }),
       openGraph: {
         title: product.name,
         description,
