@@ -102,6 +102,12 @@ export default function CategoryPageClient({
       <div className="content-container py-8">
         {/* Category Header */}
         <div className="mb-8">
+          {/* Ohne Beschreibung gibt es keinen Beschreibungsblock (dort sitzt sonst
+              die H1) — die H1 muss trotzdem immer da sein. Stil wie im Fehlerzustand. */}
+          {!categoryDescription && (
+            <h1 className="text-3xl font-bold text-gray-900 mb-8">{categoryName}</h1>
+          )}
+
           {/* Category Image & Description - Two Column Layout */}
           {(categoryImage || categoryDescription) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">

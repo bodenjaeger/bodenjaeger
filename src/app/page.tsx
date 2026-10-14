@@ -80,6 +80,9 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      {/* H1 nur für Suchmaschinen/Screenreader — der Hero-Slider trägt keinen Text-Titel */}
+      <h1 className="sr-only">Bodenbeläge online kaufen: Vinyl, Laminat &amp; Parkett</h1>
+
       {/* Hero Slider */}
       <HeroSlider />
 
