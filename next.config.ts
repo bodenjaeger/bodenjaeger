@@ -97,6 +97,15 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
 
+      // Lumber Fischgrät existiert im Backend nicht. Ohne diese Regel greift der
+      // Kategorie-Fallback in products/[slug]/page.tsx — der kommt wegen Streaming
+      // (loading.tsx) aber nur als Meta-Refresh mit Status 200 an, nicht als 301.
+      {
+        source: '/products/rigid-vinyl-coretec-lumber-fischgraet',
+        destination: '/category/rigid-vinyl',
+        statusCode: 301, // ausdrücklich 301 (permanent: true liefert 308)
+      },
+
       // ----- Gelöschte Produkte (existieren im Backend nicht mehr).
       //       302 (temporär), damit bei Re-Listing nichts permanent verfälscht ist. -----
       // Grande-Serie → Rigid-Vinyl Kategorie
