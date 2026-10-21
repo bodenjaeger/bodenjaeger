@@ -106,20 +106,6 @@ const STAGE_TEXT_HEIGHT_MOBILE = 'h-[250px]';
 
 const slides: SlideData[] = [
   {
-    id: 4,
-    // Motiv, Rotton und Linkziel aus der gemeinsamen Quelle — die
-    // Fachmarktseite zeigt denselben Banner in ihrem Hero.
-    bgColor: AKTION_BANNER.bgColor,
-    fullBleed: true,
-    image: AKTION_BANNER.imageDesktop,
-    mobileImage: AKTION_BANNER.imageMobile,
-    imageAlt: AKTION_BANNER.alt,
-    buttonLabel: AKTION_BANNER.linkLabel,
-    buttonHref: AKTION_BANNER.href,
-    paintedButtonDesktop: AKTION_BANNER.buttonDesktop,
-    paintedButtonMobile: AKTION_BANNER.buttonMobile,
-  },
-  {
     id: 1,
     bgColor: '#4c4c4c',
     image: '/images/sliderbilder/primecore.webp',

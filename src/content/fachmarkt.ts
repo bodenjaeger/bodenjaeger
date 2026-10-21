@@ -153,7 +153,8 @@ export const FILIAL_BANNER_MOCK: FilialBanner[] = [
     hintergrund: '#ed1b24',
     ctaLabel: AKTION_BANNER.linkLabel,
     ctaUrl: AKTION_BANNER.href,
-    aktiv: true,
+    // Aktion am 21.10.2026 beendet. Daten bleiben erhalten.
+    aktiv: false,
     reihenfolge: 1,
     gueltigBis: null,
   },

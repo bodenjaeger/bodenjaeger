@@ -25,7 +25,7 @@ export interface SaleBannerConfig {
 }
 
 export const SALE_BANNER: SaleBannerConfig = {
-  enabled: true,
+  enabled: false,
   onlyWhilePaketAktion: true,
   textMobile: '🎁 Jedes 7. Paket gratis – automatisch sparen!',
   textDesktop: '🎁 Jedes 7. Paket gratis – automatisch sparen!',
