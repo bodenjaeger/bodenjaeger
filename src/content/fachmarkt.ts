@@ -297,7 +297,7 @@ export const TEAM = {
     { name: 'Hans-Dieter Wittmers', funktion: 'Fachberater', foto: '/images/fachmarkt-hueckelhoven/team/hans-dieter-wittmers.png', telefon: STANDORT.telefonLink },
     { name: 'Sascha Glogowskyj', funktion: 'Fachberater', foto: '/images/fachmarkt-hueckelhoven/team/sascha-glogowskyj.png', telefon: STANDORT.telefonLink },
     { name: 'Stephan Hallen', funktion: 'Fachberater', foto: '/images/fachmarkt-hueckelhoven/team/stephan-hallen.png', telefon: STANDORT.telefonLink },
-    { name: 'Daniel Schulze', funktion: 'Verlegeservice', foto: '/images/fachmarkt-hueckelhoven/team/daniel-schulze.png', telefon: STANDORT.telefonLink },
+    { name: 'Daniel Schulze', funktion: 'Projektleiter Verlegung', foto: '/images/fachmarkt-hueckelhoven/team/daniel-schulze.png', telefon: STANDORT.telefonLink },
     { name: 'Julian Ritterbex', funktion: 'Lagerist', foto: '/images/fachmarkt-hueckelhoven/team/julian-ritterbex.png', telefon: STANDORT.telefonLink },
   ],
   // Gleiche Zielstrecke wie „Beratung vereinbaren"
