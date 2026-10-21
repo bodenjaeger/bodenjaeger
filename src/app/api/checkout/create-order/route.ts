@@ -25,7 +25,7 @@ import {
   type AppliedCoupon,
   type CartItemForValidation,
 } from '@/lib/coupon';
-import { isAktionForced } from '@/lib/promo';
+import { PAKET_AKTION, isAktionActive, isAktionForced } from '@/lib/promo';
 import { TAX_RATE, toNetLineItems } from '@/lib/order-line-items';
 
 // ============================================================================
@@ -135,6 +135,29 @@ export async function POST(request: NextRequest) {
           error: validation.errors.join(', '),
         },
         { status: 400 }
+      );
+    }
+
+    // 2a. Paket-Aktion serverseitig absichern. Der Rabatt wird im Browser
+    // berechnet — mit der Uhr des Kunden und dem Code, der beim Laden der
+    // Seite aktuell war. Nach Aktionsende darf trotzdem keine Bestellung mit
+    // Aktionsrabatt durchgehen (alter offener Tab, falsch gestellte Uhr).
+    // Maßgeblich ist die Server-Uhr.
+    const hasAktionDiscount = line_items.some((item) =>
+      item.meta_data?.some((meta) => meta.key === '_aktion')
+    );
+    if (hasAktionDiscount && !isAktionActive()) {
+      console.warn('[create-order] Aktionsrabatt nach Aktionsende abgelehnt', {
+        aktion: PAKET_AKTION.id,
+        endsAt: PAKET_AKTION.endsAt,
+        email: billing?.email,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Die Aktion „${PAKET_AKTION.label}“ ist beendet. Bitte lade die Seite neu – die Preise werden dann ohne Aktionsrabatt angezeigt.`,
+        },
+        { status: 409 }
       );
     }
 
