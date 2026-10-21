@@ -118,7 +118,7 @@ export const CookieConsent: React.FC = () => {
               />
               <CategoryRow
                 title="Marketing"
-                description="Personalisierte Werbung, Retargeting und Tracking-Pixel von Drittanbietern (z.B. Social Media)."
+                description="Personalisierte Werbung, Retargeting und Tracking-Pixel von Drittanbietern (z.B. Meta, TikTok, Google Ads, OpenAI/ChatGPT)."
                 checked={prefs.marketing}
                 onChange={() => toggle('marketing')}
               />

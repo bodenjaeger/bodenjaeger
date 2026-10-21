@@ -13,6 +13,7 @@ import PageViewTracker from "@/components/PageViewTracker";
 import AttributionTracker from "@/components/AttributionTracker";
 import TrustedShops from "@/components/TrustedShops";
 import TikTokPixel from "@/components/TikTokPixel";
+import OpenAIPixel from "@/components/OpenAIPixel";
 import Roomvo from "@/components/Roomvo";
 import { JsonLd } from "@/components/JsonLd";
 import { buildOrganizationSchema, buildWebSiteSchema } from "@/lib/schema";
@@ -83,6 +84,7 @@ export default function RootLayout({
             <CartProvider>
               <WishlistProvider>
                 <TikTokPixel />
+                <OpenAIPixel />
                 <Roomvo />
                 <CookieConsent />
                 {/* Gelbes SummerSALE-Banner entfernt — die Aktion läuft jetzt

@@ -1,5 +1,6 @@
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import { mapProductToItem } from './mapItem';
+import { openaiPixel } from './openai-pixel';
 import type {
   ConsentCategories,
   EcommercePayload,
@@ -43,6 +44,8 @@ export const track = {
       page_path: typeof window !== 'undefined' ? window.location.pathname : '',
       page_title: title,
     });
+    // OpenAI-Pixel: nur aktiv, wenn nach Marketing-Einwilligung geladen.
+    openaiPixel.pageViewed(typeof window !== 'undefined' ? window.location.pathname : url, title);
   },
 
   viewItem(product: StoreApiProduct, quantity: number = 1): void {
@@ -53,6 +56,7 @@ export const track = {
       currency: 'EUR',
       items: [item],
     });
+    openaiPixel.contentsViewed(item);
   },
 
   addToCart(items: GA4Item[], totalValue: number): void {
@@ -62,6 +66,7 @@ export const track = {
       currency: 'EUR',
       items,
     });
+    openaiPixel.itemsAdded(items, totalValue);
   },
 
   viewCart(items: GA4Item[], totalValue: number): void {
@@ -93,6 +98,7 @@ export const track = {
       currency: 'EUR',
       items,
     });
+    openaiPixel.checkoutStarted(items, totalValue);
   },
 
   addPaymentInfo(items: GA4Item[], totalValue: number, paymentType: PaymentType): void {
@@ -125,6 +131,7 @@ export const track = {
     if (typeof args.shipping === 'number') payload.shipping = Number(args.shipping);
     if (typeof args.tax === 'number') payload.tax = Number(args.tax);
     pushEcommerce('purchase', payload);
+    openaiPixel.orderCreated(args.orderId, args.items, args.value);
   },
 };
 
