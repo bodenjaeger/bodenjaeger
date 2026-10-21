@@ -5,11 +5,13 @@
  *
  * Body (vom Express-Button im Browser):
  * {
- *   items: [{ name, quantity, price }]   // Brutto-Einzelpreise in EUR
- *   subtotal: number                      // Brutto-Summe der Items (ohne Versand)
- *   shipping_cost: number                 // geschätzte Versandkosten in EUR
- *   aktion_discount?: number              // Rabatt der Paket-Aktion, brutto EUR
+ *   line_items: OrderLineItem[]   // aus buildOrderLineItems(), Brutto
+ *   shipping_cost: number         // Versandkosten brutto, EUR
  * }
+ *
+ * PayPal zieht `Summe der line_items.total + shipping_cost` ein — dieselben
+ * Positionen schickt der Browser danach an /express-capture, damit die
+ * WooCommerce-Order exakt den eingezogenen Betrag abbildet.
  *
  * Response (Erfolg):
  * {
@@ -25,21 +27,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createPayPalExpressOrder } from '@/lib/paypal';
+import {
+  sumLineItemTotals,
+  validateOrderLineItems,
+  type OrderLineItem,
+} from '@/lib/order-line-items';
 
 interface ExpressCreateBody {
-  items: Array<{
-    name: string;
-    quantity: number;
-    price: number; // Brutto-Einzelpreis in EUR
-  }>;
-  subtotal: number;
+  line_items: OrderLineItem[];
   shipping_cost: number;
-  /**
-   * Rabatt der laufenden Paket-Aktion (brutto, EUR). Mindert den Betrag, den
-   * PayPal einzieht; die `items` bleiben auf ihren vollen Stückpreisen, weil
-   * PayPal sie nur informativ anzeigt.
-   */
-  aktion_discount?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -58,35 +54,16 @@ export async function POST(request: NextRequest) {
     // 2. Server-Side Validation
     const errors: string[] = [];
 
-    if (!Array.isArray(body.items) || body.items.length === 0) {
-      errors.push('Keine Artikel im Warenkorb');
-    } else {
-      body.items.forEach((item, idx) => {
-        if (!item.name || typeof item.name !== 'string') {
-          errors.push(`Artikel ${idx + 1}: Name fehlt`);
-        }
-        if (typeof item.quantity !== 'number' || item.quantity <= 0) {
-          errors.push(`Artikel ${idx + 1}: Menge ungültig`);
-        }
-        if (typeof item.price !== 'number' || item.price < 0) {
-          errors.push(`Artikel ${idx + 1}: Preis ungültig`);
-        }
-      });
-    }
+    const lineItemsError = validateOrderLineItems(body.line_items);
+    if (lineItemsError) errors.push(lineItemsError);
 
-    if (typeof body.subtotal !== 'number' || body.subtotal <= 0) {
-      errors.push('Zwischensumme ungültig');
-    }
     if (typeof body.shipping_cost !== 'number' || body.shipping_cost < 0) {
       errors.push('Versandkosten ungültig');
     }
-    if (
-      body.aktion_discount !== undefined &&
-      (typeof body.aktion_discount !== 'number' ||
-        body.aktion_discount < 0 ||
-        body.aktion_discount > body.subtotal)
-    ) {
-      errors.push('Aktionsrabatt ungültig');
+
+    const itemsTotal = lineItemsError ? 0 : sumLineItemTotals(body.line_items);
+    if (!lineItemsError && itemsTotal <= 0) {
+      errors.push('Keine bezahlbaren Artikel im Warenkorb');
     }
 
     if (errors.length > 0) {
@@ -96,22 +73,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Line Items für PayPal (Stückpreise als String mit 2 Decimals)
-    const paypalLineItems = body.items.map((item) => ({
-      name: item.name.slice(0, 127), // PayPal max length 127
-      quantity: item.quantity,
-      unit_amount: item.price.toFixed(2),
-    }));
+    // 3. Line Items für PayPal — rein informativ, createPayPalExpressOrder
+    //    bündelt sie ohnehin zu einem Sammelposten. Gratis-Positionen raus,
+    //    PayPal lehnt unit_amount "0.00" ab.
+    const paypalLineItems = body.line_items
+      .filter((item) => parseFloat(item.total) > 0)
+      .map((item) => ({
+        name: (item.name || `Produkt #${item.product_id}`).slice(0, 127), // PayPal max length 127
+        quantity: item.quantity,
+        unit_amount: (parseFloat(item.total) / item.quantity).toFixed(2),
+      }));
 
-    // 4. Gesamtbetrag inkl. (geschätzter) Versandkosten
-    //    Folgt dem Pattern aus create-order/route.ts (Standard-PayPal-Flow):
-    //    amount = subtotal - Aktionsrabatt + shipping_cost, Versand ist KEIN
-    //    separates Line-Item.
-    const aktionDiscount = body.aktion_discount ?? 0;
-    const totalAmount = Math.max(
-      0,
-      body.subtotal - aktionDiscount + body.shipping_cost
-    ).toFixed(2);
+    // 4. Gesamtbetrag = Positionen (Aktionsrabatt steckt schon in `total`)
+    //    + Versand. Gleiche Formel wie der normale PayPal-Ablauf in
+    //    create-order/route.ts.
+    const totalAmount = (itemsTotal + body.shipping_cost).toFixed(2);
 
     // 5. PayPal Express Order beim Proxy erstellen
     const result = await createPayPalExpressOrder({

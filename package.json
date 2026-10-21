@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check-env": "node scripts/check-env.js"
+    "check-env": "node scripts/check-env.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.5.2",
@@ -28,6 +29,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.9",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

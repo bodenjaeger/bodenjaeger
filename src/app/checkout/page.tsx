@@ -7,13 +7,8 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateShippingCost } from '@/lib/shippingConfig';
 import { toValidationItems } from '@/lib/cart-utils';
-import {
-  PAKET_AKTION,
-  calculatePaketAktion,
-  getFreePackages,
-  getLineDiscount,
-  isAktionForced,
-} from '@/lib/promo';
+import { PAKET_AKTION, calculatePaketAktion, isAktionForced } from '@/lib/promo';
+import { buildOrderLineItems } from '@/lib/order-line-items';
 import { track } from '@/lib/analytics/track';
 import { cartItemsToGA4Items } from '@/lib/analytics/mapItem';
 import type { PaymentType, PurchaseTrackingPayload } from '@/lib/analytics/types';
@@ -313,67 +308,8 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Line Items aus Cart erstellen (Items mit quantity 0 ausfiltern).
-      // Muster sind immer kostenlos – der Fracht-Aufschlag für Muster 4+
-      // wird in calculateShippingCost auf die Versandkosten aufgeschlagen.
-      const line_items = cartItems.filter((item) => item.quantity > 0).map((item) => {
-        let totalPrice: number;
-
-        if (item.isSample) {
-          totalPrice = 0;
-        } else if (item.isSetItem && item.setPricePerUnit !== undefined && item.actualM2 !== undefined) {
-          // Set-Angebot Item: Verwende Set-Preis, NICHT regulären Preis!
-          // setPricePerUnit ist bereits der korrekte Preis (0 für kostenlos, verrechnung für Premium)
-          totalPrice = item.setPricePerUnit * item.actualM2;
-        } else {
-          // Reguläres Item
-          const paketinhalt = item.product.paketinhalt || 1;
-          // Paketpreis = Einzelpreis × Paketinhalt (gilt für ALLE Einheiten: m², lfm, kg, Liter etc.)
-          totalPrice = item.product.price * paketinhalt * item.quantity;
-        }
-
-        // Metadata für Set-Angebot Items (umfassend für Rechnungen/Refunds)
-        const metadata = [];
-        if (item.isSetItem) {
-          metadata.push(
-            { key: '_set_angebot', value: 'true' },
-            { key: '_set_id', value: item.setId || '' },
-            { key: '_set_item_type', value: item.setItemType || '' },
-            { key: '_set_price_per_unit', value: item.setPricePerUnit?.toString() || '0' },
-            { key: '_regular_price_per_unit', value: item.regularPricePerUnit?.toString() || '0' },
-            { key: '_actual_m2', value: item.actualM2?.toString() || '0' },
-            { key: '_savings', value: ((item.regularPricePerUnit || 0) * (item.actualM2 || 0) - totalPrice).toFixed(2) }
-          );
-        }
-
-        if (item.isSample) {
-          metadata.push({ key: '_is_sample', value: 'true' });
-        }
-
-        // Paket-Aktion: `subtotal` bleibt der volle Betrag, `total` sinkt um
-        // den Wert der Gratis-Pakete. WooCommerce weist die Differenz dadurch
-        // als Rabatt an der Position aus, statt den Preis stillschweigend zu
-        // drücken.
-        const aktionDiscount = getLineDiscount(item);
-        const lineTotal = Math.max(0, totalPrice - aktionDiscount);
-
-        if (aktionDiscount > 0) {
-          metadata.push(
-            { key: '_aktion', value: PAKET_AKTION.id },
-            { key: '_aktion_gratis_pakete', value: getFreePackages(item).toString() },
-            { key: '_aktion_rabatt', value: aktionDiscount.toFixed(2) }
-          );
-        }
-
-        return {
-          product_id: item.product.id,
-          quantity: item.quantity,
-          subtotal: totalPrice.toFixed(2),
-          total: lineTotal.toFixed(2),
-          name: item.product.name,
-          meta_data: metadata,
-        };
-      });
+      // Line Items aus Cart erstellen — gemeinsame Funktion mit PayPal Express.
+      const line_items = buildOrderLineItems(cartItems);
 
       // Billing Address
       let billing;

@@ -26,6 +26,7 @@ import {
   type CartItemForValidation,
 } from '@/lib/coupon';
 import { isAktionForced } from '@/lib/promo';
+import { TAX_RATE, toNetLineItems } from '@/lib/order-line-items';
 
 // ============================================================================
 // TypeScript Interfaces
@@ -221,16 +222,7 @@ export async function POST(request: NextRequest) {
     // "Preise inkl. Steuern eingeben"-Einstellung im Admin. Das Frontend
     // sendet Brutto (wie im Warenkorb angezeigt), also hier für den
     // WC-Call auf Netto umrechnen. Stripe/PayPal unten bleiben auf Brutto.
-    const TAX_RATE = 1.19;
-    const lineItemsNet = line_items.map((item) => ({
-      ...item,
-      ...(item.subtotal !== undefined
-        ? { subtotal: (parseFloat(item.subtotal) / TAX_RATE).toFixed(2) }
-        : {}),
-      ...(item.total !== undefined
-        ? { total: (parseFloat(item.total) / TAX_RATE).toFixed(2) }
-        : {}),
-    }));
+    const lineItemsNet = toNetLineItems(line_items);
     const shippingCostNet = shipping_cost ? shipping_cost / TAX_RATE : 0;
 
     // 0€-Order erkennen (z.B. reine Muster-Bestellung ≤ 3 ohne Versand-Aufschlag).
