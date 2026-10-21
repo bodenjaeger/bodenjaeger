@@ -29,6 +29,10 @@ import { calculatePaketAktion } from '@/lib/promo';
  * sonst hätte der PayPal-Button stale Closure-Daten, wenn der User nach dem
  * SDK-Load noch Items hinzufügt/entfernt.
  */
+
+/** Timeout für den express-capture-Aufruf (Route: maxDuration 120 s). */
+const CAPTURE_REQUEST_TIMEOUT_MS = 130_000;
+
 export default function ExpressCheckout() {
   const { cartItems, totalPrice, customerNote, deliveryNote } = useCart();
   console.log('[ExpressCheckout] mounting — cartItems:', cartItems?.length ?? 'undef');
@@ -149,18 +153,28 @@ export default function ExpressCheckout() {
                 .filter(Boolean)
                 .join('\n\n');
 
-              const res = await fetch('/api/checkout/paypal/express-capture', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  paypalOrderId: data.orderID,
-                  line_items: pending.lineItems,
-                  shipping_cost: pending.shippingCost,
-                  customer_note: note,
-                }),
-              });
-
-              const result = await res.json();
+              // Eigenes Timeout knapp über maxDuration der Route (120 s): Die
+              // Route antwortet dank eigener Timeouts vorher. Kommt trotzdem
+              // nichts, ist der Ausgang unklar → unten wie „bezahlt“ behandeln.
+              const controller = new AbortController();
+              const timer = setTimeout(() => controller.abort(), CAPTURE_REQUEST_TIMEOUT_MS);
+              let result;
+              try {
+                const res = await fetch('/api/checkout/paypal/express-capture', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    paypalOrderId: data.orderID,
+                    line_items: pending.lineItems,
+                    shipping_cost: pending.shippingCost,
+                    customer_note: note,
+                  }),
+                  signal: controller.signal,
+                });
+                result = await res.json();
+              } finally {
+                clearTimeout(timer);
+              }
 
               // Auch wenn die Bestellung nach dem Capture nicht angelegt werden
               // konnte, kommt `success` + redirectUrl (?paypal=pending) — die
@@ -170,17 +184,19 @@ export default function ExpressCheckout() {
                 return;
               }
 
+              // success:false kommt nur, wenn sicher nichts eingezogen wurde
+              // (Prüfung vor dem Capture, eindeutige Ablehnung, Notschalter).
               setErrorMsg(
                 result.error ||
-                  'Zahlung erfolgt, Bestellung konnte aber nicht angelegt werden. Bitte kontaktieren Sie uns.'
+                  'Die Zahlung konnte nicht abgeschlossen werden. Es wurde nichts abgebucht. Bitte versuche es erneut.'
               );
             } catch (err) {
-              // Keine Antwort vom Server: Ob PayPal schon eingezogen hat, ist
-              // hier unbekannt — Kunde soll nicht ein zweites Mal bezahlen.
+              // Keine (verwertbare) Antwort vom Server — Timeout, Netzwerk,
+              // kein JSON. Ob PayPal eingezogen hat, ist unklar: wie „bezahlt“
+              // behandeln, Bestätigungsseite leert den Warenkorb, damit der
+              // Kunde nicht ein zweites Mal bezahlt.
               console.error('[ExpressCheckout] express-capture request failed:', err);
-              setErrorMsg(
-                'Die Verbindung wurde unterbrochen. Ihre Zahlung wird möglicherweise bereits verarbeitet – bitte nicht erneut bezahlen, sondern prüfen Sie Ihr PayPal-Konto oder kontaktieren Sie uns.'
-              );
+              window.location.href = `/checkout/success?paypal=pending&tx=${encodeURIComponent(data.orderID)}`;
             }
           },
 

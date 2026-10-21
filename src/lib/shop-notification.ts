@@ -15,9 +15,13 @@
  * Details stehen im Log.
  */
 
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
+
 /** Absender-Angaben, falls kein Kunde bekannt ist. */
 const FALLBACK_NAME = 'Bodenjäger Shop';
 const FALLBACK_EMAIL = 'service@bodenjaeger.de';
+/** Standard-Timeout für den Mail-Aufruf an WordPress. */
+const DEFAULT_TIMEOUT_MS = 6000;
 
 export interface ShopNotification {
   /** Betreff OHNE „[Kontaktformular] “ — den setzt das Plugin selbst. */
@@ -25,6 +29,8 @@ export interface ShopNotification {
   /** Plain-Text-Inhalt, Zeilenumbrüche bleiben erhalten. */
   message: string;
   replyTo?: { name?: string; email?: string; phone?: string };
+  /** Eigenes Timeout in ms (Standard 6000). */
+  timeoutMs?: number;
 }
 
 export async function notifyShop(notification: ShopNotification): Promise<boolean> {
@@ -42,20 +48,26 @@ export async function notifyShop(notification: ShopNotification): Promise<boolea
   const email = notification.replyTo?.email?.trim() || FALLBACK_EMAIL;
 
   try {
-    const res = await fetch(`${wpUrl}/wp-json/jaeger/v1/contact`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Jaeger-Secret': sharedSecret,
+    // Eigenes Timeout: Hängt WordPress, darf die Mail den Aufrufer nicht
+    // mit in den maxDuration-Abbruch ziehen.
+    const res = await fetchWithTimeout(
+      `${wpUrl}/wp-json/jaeger/v1/contact`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Jaeger-Secret': sharedSecret,
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          phone: notification.replyTo?.phone ?? '',
+          subject: notification.subject,
+          message: notification.message,
+        }),
       },
-      body: JSON.stringify({
-        name,
-        email,
-        phone: notification.replyTo?.phone ?? '',
-        subject: notification.subject,
-        message: notification.message,
-      }),
-    });
+      notification.timeoutMs ?? DEFAULT_TIMEOUT_MS
+    );
 
     if (!res.ok) {
       const text = await res.text().catch(() => '');

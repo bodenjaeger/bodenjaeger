@@ -5,6 +5,8 @@
  * Credentials (PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET) bleiben auf dem WordPress-Server.
  */
 
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
+
 // ============================================================================
 // Proxy Configuration
 // ============================================================================
@@ -318,6 +320,47 @@ export async function createPayPalExpressOrder(
 // ============================================================================
 
 /**
+ * PayPal-Fehlercodes, die eine EINDEUTIGE Ablehnung bedeuten — die Zahlung
+ * wurde nicht eingezogen, der Kunde kann es erneut versuchen.
+ * Bewusst kurz gehalten: Alles, was hier nicht steht (auch z.B.
+ * ORDER_ALREADY_CAPTURED), gilt als „unklar“.
+ */
+const PAYPAL_DECLINE_CODES = [
+  'INSTRUMENT_DECLINED',
+  'PAYER_ACTION_REQUIRED',
+  'PAYER_CANNOT_PAY',
+  'TRANSACTION_REFUSED',
+  'ORDER_NOT_APPROVED',
+  'PAYEE_BLOCKED_TRANSACTION',
+] as const;
+
+/** Capture-Status, die eindeutig „nicht eingezogen“ bedeuten. */
+const PAYPAL_FAILED_STATUSES = ['DECLINED', 'FAILED'];
+
+/**
+ * Ausgang eines Express-Captures:
+ * - `captured`: PayPal hat eingezogen, alle Käuferdaten liegen vor
+ * - `declined`: PayPal hat eindeutig abgelehnt — nichts eingezogen
+ * - `unknown`:  Timeout, Netzwerkfehler, 5xx, kein JSON oder unbekannte
+ *               Antwort. Es KANN eingezogen worden sein (der Proxy zieht bei
+ *               PayPal ein, bevor er antwortet) → wie „bezahlt“ behandeln.
+ */
+export type CaptureExpressOutcome =
+  | { outcome: 'captured'; data: CapturePayPalExpressOrderResult }
+  | { outcome: 'declined'; reason: string }
+  | { outcome: 'unknown'; reason: string };
+
+function findDeclineCode(data: unknown): string | null {
+  let text: string;
+  try {
+    text = JSON.stringify(data) ?? '';
+  } catch {
+    return null;
+  }
+  return PAYPAL_DECLINE_CODES.find((code) => text.includes(code)) ?? null;
+}
+
+/**
  * Erfasst eine PayPal Express-Zahlung über den WordPress Proxy.
  *
  * Verwendet den NEUEN Endpoint /paypal/express-capture, der die WooCommerce
@@ -325,54 +368,82 @@ export async function createPayPalExpressOrder(
  * Liefert alle PayPal-Daten (Email, Name, Adresse) zurück, mit denen die
  * Capture-Route danach die WC-Order erstellt.
  *
+ * Wirft nur bei fehlender Konfiguration (dann wurde nichts gesendet). Alle
+ * anderen Fehler landen als `declined` oder `unknown` im Ergebnis.
+ *
  * @param paypalOrderId - PayPal Order ID (Query-Parameter "token" von PayPal)
- * @returns success + alle PayPal-Daten (Payer, Shipping, Amount)
+ * @param timeoutMs     - eigenes Timeout für den Proxy-Aufruf
  */
 export async function capturePayPalExpressOrder(
-  paypalOrderId: string
-): Promise<CapturePayPalExpressOrderResult> {
+  paypalOrderId: string,
+  timeoutMs: number
+): Promise<CaptureExpressOutcome> {
   checkProxyConfig();
 
+  let res: Response;
   try {
-    const res = await fetch(`${PROXY_URL}/paypal/express-capture`, {
-      method: 'POST',
-      headers: proxyHeaders(),
-      body: JSON.stringify({ paypalOrderId }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || `Proxy error: ${res.status}`);
-    }
-
-    if (!data.success) {
-      return {
-        success: false,
-        status: data.status,
-      };
-    }
-
-    return {
-      success:         true,
-      transactionId:   data.transactionId,
-      paypalOrderId:   data.paypalOrderId,
-      payerEmail:      data.payerEmail,
-      payerGivenName:  data.payerGivenName,
-      payerSurname:    data.payerSurname,
-      payerPhone:      data.payerPhone,
-      shippingName:    data.shippingName,
-      shippingAddress: data.shippingAddress,
-      amount:          data.amount,
-    };
-  } catch (error) {
-    console.error('Failed to capture PayPal Express order:', error);
-    throw new Error(
-      `Failed to capture PayPal Express order: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }`
+    res = await fetchWithTimeout(
+      `${PROXY_URL}/paypal/express-capture`,
+      {
+        method: 'POST',
+        headers: proxyHeaders(),
+        body: JSON.stringify({ paypalOrderId }),
+      },
+      timeoutMs
     );
+  } catch (error) {
+    // Timeout oder Netzwerkfehler: Der Proxy kann bei PayPal schon
+    // eingezogen haben, nur seine Antwort kam nicht an.
+    return {
+      outcome: 'unknown',
+      reason: error instanceof Error ? error.message : 'Netzwerkfehler',
+    };
   }
+
+  if (res.status >= 500) {
+    return { outcome: 'unknown', reason: `Proxy antwortete mit HTTP ${res.status}` };
+  }
+
+  let data: Record<string, unknown>;
+  try {
+    data = await res.json();
+  } catch {
+    return { outcome: 'unknown', reason: `Proxy-Antwort ist kein JSON (HTTP ${res.status})` };
+  }
+
+  if (!res.ok) {
+    const code = findDeclineCode(data);
+    return code
+      ? { outcome: 'declined', reason: code }
+      : {
+          outcome: 'unknown',
+          reason: `Proxy antwortete mit HTTP ${res.status}: ${String(data.error ?? '').slice(0, 200)}`,
+        };
+  }
+
+  if (!data.success) {
+    const status = typeof data.status === 'string' ? data.status : '';
+    const code = findDeclineCode(data);
+    if (code) return { outcome: 'declined', reason: code };
+    if (PAYPAL_FAILED_STATUSES.includes(status)) return { outcome: 'declined', reason: status };
+    return { outcome: 'unknown', reason: `Capture nicht bestätigt (Status: ${status || 'unbekannt'})` };
+  }
+
+  return {
+    outcome: 'captured',
+    data: {
+      success:         true,
+      transactionId:   data.transactionId as string | undefined,
+      paypalOrderId:   data.paypalOrderId as string | undefined,
+      payerEmail:      data.payerEmail as string | undefined,
+      payerGivenName:  data.payerGivenName as string | undefined,
+      payerSurname:    data.payerSurname as string | undefined,
+      payerPhone:      data.payerPhone as string | undefined,
+      shippingName:    data.shippingName as string | undefined,
+      shippingAddress: data.shippingAddress as PayPalShippingAddress | undefined,
+      amount:          data.amount as CapturePayPalExpressOrderResult['amount'],
+    },
+  };
 }
 
 // ============================================================================

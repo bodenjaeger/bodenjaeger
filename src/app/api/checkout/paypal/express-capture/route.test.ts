@@ -21,6 +21,7 @@ vi.mock('@/lib/shop-notification', () => ({
 import { capturePayPalExpressOrder } from '@/lib/paypal';
 import { createWooCommerceOrder, addOrderNote } from '@/lib/woocommerce-checkout';
 import { notifyShop } from '@/lib/shop-notification';
+import { FetchTimeoutError } from '@/lib/fetch-with-timeout';
 import { POST } from './route';
 
 const captureMock = vi.mocked(capturePayPalExpressOrder);
@@ -40,23 +41,36 @@ const PAID = '393.94';
 
 function capture(overrides: Record<string, unknown> = {}) {
   return {
-    success: true,
-    transactionId: 'CAPTURE-123',
-    paypalOrderId: 'PP-ORDER-1',
-    payerEmail: 'kunde@example.com',
-    payerGivenName: 'Erika',
-    payerSurname: 'Muster',
-    payerPhone: '0123',
-    shippingName: 'Erika Muster',
-    shippingAddress: {
-      address_line_1: 'Hauptstr. 1',
-      admin_area_2: 'Hückelhoven',
-      postal_code: '41836',
-      country_code: 'DE',
+    outcome: 'captured',
+    data: {
+      success: true,
+      transactionId: 'CAPTURE-123',
+      paypalOrderId: 'PP-ORDER-1',
+      payerEmail: 'kunde@example.com',
+      payerGivenName: 'Erika',
+      payerSurname: 'Muster',
+      payerPhone: '0123',
+      shippingName: 'Erika Muster',
+      shippingAddress: {
+        address_line_1: 'Hauptstr. 1',
+        admin_area_1: '',
+        address_line_2: '',
+        admin_area_2: 'Hückelhoven',
+        postal_code: '41836',
+        country_code: 'DE',
+      },
+      amount: { value: PAID, currency_code: 'EUR' },
+      ...overrides,
     },
-    amount: { value: PAID, currency_code: 'EUR' },
-    ...overrides,
   } as Awaited<ReturnType<typeof capturePayPalExpressOrder>>;
+}
+
+/** Die PAYPAL_EXPRESS_ORDER_MISSING-Logzeile als Objekt. */
+function missingLog(): Record<string, unknown> | undefined {
+  const call = vi
+    .mocked(console.error)
+    .mock.calls.find((c) => c[0] === 'PAYPAL_EXPRESS_ORDER_MISSING');
+  return call ? JSON.parse(String(call[1])) : undefined;
 }
 
 function request(body: unknown) {
@@ -97,11 +111,7 @@ describe('express-capture: Fehlerpfad nach erfolgreichem Capture', () => {
     expect(json.redirectUrl).toBe('/checkout/success?paypal=pending&tx=CAPTURE-123');
 
     // Log mit allen Daten zum manuellen Anlegen
-    const logged = vi.mocked(console.error).mock.calls.find((c) =>
-      String(c[0]).includes('WooCommerce-Order NICHT angelegt')
-    );
-    expect(logged).toBeDefined();
-    expect(logged![1]).toMatchObject({
+    expect(missingLog()).toMatchObject({
       paypalOrderId: 'PP-ORDER-1',
       captureId: 'CAPTURE-123',
       amount: `${PAID} EUR`,
@@ -207,13 +217,88 @@ describe('express-capture: vor dem Capture', () => {
     expect(captureMock).not.toHaveBeenCalled();
   });
 
-  it('Capture schlägt fehl → Fehler an den Kunden, keine Order, keine Mail', async () => {
-    captureMock.mockResolvedValue({ success: false, status: 'DECLINED' } as never);
+  it('PayPal lehnt eindeutig ab (INSTRUMENT_DECLINED) → Fehler an den Kunden, keine Order, keine Mail', async () => {
+    captureMock.mockResolvedValue({ outcome: 'declined', reason: 'INSTRUMENT_DECLINED' });
 
     const res = await POST(request(VALID_BODY));
+    const json = await res.json();
 
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(402);
+    expect(json.success).toBe(false);
+    expect(json.error).toContain('nichts abgebucht');
     expect(createOrderMock).not.toHaveBeenCalled();
     expect(notifyMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('express-capture: unklarer Capture-Ausgang und Timeouts', () => {
+  it('Capture-Timeout → wie bezahlt: Bestätigungsseite mit PayPal-Order-ID, Log, Mail, keine WC-Anlage', async () => {
+    captureMock.mockResolvedValue({ outcome: 'unknown', reason: 'Timeout nach 15000 ms' });
+
+    const res = await POST(request(VALID_BODY));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json).toMatchObject({ success: true, orderPending: true, transactionId: 'PP-ORDER-1' });
+    expect(json.redirectUrl).toBe('/checkout/success?paypal=pending&tx=PP-ORDER-1');
+    expect(createOrderMock).not.toHaveBeenCalled();
+
+    expect(missingLog()).toMatchObject({
+      captureUnclear: true,
+      paypalOrderId: 'PP-ORDER-1',
+      lineItems: LINE_ITEMS,
+      itemsTotal: 333.95,
+      shippingCost: 59.99,
+    });
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock.mock.calls[0][0].message).toContain('UNKLAR');
+    expect(notifyMock.mock.calls[0][0].message).toContain('PP-ORDER-1');
+  });
+
+  it('Capture-Timeout und auch WordPress-Mail scheitert → trotzdem Bestätigung und vollständiges Log', async () => {
+    captureMock.mockResolvedValue({ outcome: 'unknown', reason: 'Proxy antwortete mit HTTP 502' });
+    notifyMock.mockResolvedValue(false);
+
+    const res = await POST(request(VALID_BODY));
+    const json = await res.json();
+
+    expect(json).toMatchObject({ success: true, orderPending: true });
+    expect(missingLog()).toMatchObject({ captureUnclear: true, paypalOrderId: 'PP-ORDER-1' });
+  });
+
+  it('WooCommerce-Timeout → Fehlerpfad mit Hinweis, dass die Bestellung doch existieren kann', async () => {
+    captureMock.mockResolvedValue(capture());
+    createOrderMock.mockRejectedValue(new FetchTimeoutError('https://wp/orders', 15000));
+
+    const res = await POST(request(VALID_BODY));
+    const json = await res.json();
+
+    expect(json.redirectUrl).toBe('/checkout/success?paypal=pending&tx=CAPTURE-123');
+    expect(missingLog()).toMatchObject({ orderMayExist: true, captureUnclear: false });
+    expect(notifyMock.mock.calls[0][0].message).toContain('ZUERST in WooCommerce');
+  });
+
+  it('gibt jedem externen Aufruf ein eigenes Timeout mit', async () => {
+    captureMock.mockResolvedValue(capture());
+    createOrderMock.mockResolvedValue({ id: 503, order_key: 'k', total: PAID } as never);
+
+    await POST(request(VALID_BODY));
+
+    expect(captureMock).toHaveBeenCalledWith('PP-ORDER-1', 15_000);
+    expect(createOrderMock.mock.calls[0][1]).toEqual({ timeoutMs: 15_000 });
+    expect(addNoteMock.mock.calls[0][3]).toEqual({ timeoutMs: 5_000 });
+  });
+
+  it('schreibt vor und nach jedem externen Aufruf eine Log-Zeile', async () => {
+    captureMock.mockResolvedValue(capture());
+    createOrderMock.mockResolvedValue({ id: 504, order_key: 'k', total: PAID } as never);
+
+    await POST(request(VALID_BODY));
+
+    const lines = vi.mocked(console.log).mock.calls.map((c) => String(c[0]));
+    for (const name of ['capture', 'wc-create', 'wc-note']) {
+      expect(lines.some((l) => l.startsWith(`[express-capture] ${name} start`))).toBe(true);
+      expect(lines.some((l) => l.startsWith(`[express-capture] ${name} ok ms=`))).toBe(true);
+    }
   });
 });

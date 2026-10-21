@@ -31,7 +31,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { capturePayPalExpressOrder } from '@/lib/paypal';
+import { capturePayPalExpressOrder, type CapturePayPalExpressOrderResult } from '@/lib/paypal';
 import { createWooCommerceOrder, addOrderNote } from '@/lib/woocommerce-checkout';
 import type { WooCommerceOrderData } from '@/lib/woocommerce-checkout';
 import {
@@ -42,10 +42,19 @@ import {
   type OrderLineItem,
 } from '@/lib/order-line-items';
 import { notifyShop } from '@/lib/shop-notification';
+import { FetchTimeoutError } from '@/lib/fetch-with-timeout';
 import { PAYPAL_EXPRESS_ENABLED, PAYPAL_EXPRESS_DISABLED_MESSAGE } from '@/lib/paypal-express-flag';
 
-// Capture + WC-Order + Notiz + ggf. Mail — großzügig, weit unter dem Pro-Limit.
-export const maxDuration = 60;
+// Vercel Pro. Die eigenen Timeouts unten summieren sich im schlechtesten Fall
+// auf knapp 50 s — die Funktion antwortet also immer selbst, bevor Vercel sie
+// abbricht (Live-Test 21.10.2026: ohne Timeouts hing sie im Proxy-fetch).
+export const maxDuration = 120;
+
+/** Eigene Timeouts je externem Aufruf (ms). */
+const TIMEOUT_CAPTURE_MS = 15_000;
+const TIMEOUT_WC_CREATE_MS = 15_000;
+const TIMEOUT_WC_NOTE_MS = 5_000;
+const TIMEOUT_NOTIFY_MS = 6_000;
 
 /** Ab dieser Abweichung (EUR) bekommt die Order eine Notiz. */
 const AMOUNT_NOTE_THRESHOLD = 0.01;
@@ -62,7 +71,34 @@ interface ExpressCaptureBody {
   customer_note?: string;
 }
 
-type CaptureResult = Awaited<ReturnType<typeof capturePayPalExpressOrder>>;
+type CaptureResult = CapturePayPalExpressOrderResult;
+
+/**
+ * Log-Zeile vor und nach jedem externen Aufruf — so ist im Vercel-Log
+ * sichtbar, an welchem Schritt es hängt:
+ * `[express-capture] capture start paypalOrderId=…`
+ * `[express-capture] capture ok ms=812 paypalOrderId=…`
+ */
+async function step<T>(
+  name: string,
+  paypalOrderId: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  const started = Date.now();
+  console.log(`[express-capture] ${name} start paypalOrderId=${paypalOrderId}`);
+  try {
+    const result = await fn();
+    console.log(`[express-capture] ${name} ok ms=${Date.now() - started} paypalOrderId=${paypalOrderId}`);
+    return result;
+  } catch (error) {
+    console.error(
+      `[express-capture] ${name} fail ms=${Date.now() - started} paypalOrderId=${paypalOrderId} error=${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    throw error;
+  }
+}
 
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
@@ -93,16 +129,24 @@ function describeLineItems(items: OrderLineItem[]): string {
 }
 
 /**
- * Bezahlt, aber keine WC-Order: alles loggen, Shop benachrichtigen, Kunde
- * bekommt trotzdem eine Bestätigung. Wirft nie.
+ * Bezahlt (oder möglicherweise bezahlt), aber keine WC-Order: alles loggen,
+ * Shop benachrichtigen, Kunde bekommt trotzdem eine Bestätigung. Wirft nie.
+ *
+ * `captureUnclear`: Der Capture-Ausgang ist unbekannt (Timeout, 5xx, kein
+ * JSON). Es liegen dann keine Käuferdaten vor — das Team muss in PayPal
+ * nachsehen, ob eingezogen wurde.
+ * `orderMayExist`: Die WC-Anlage lief in ein Timeout. WooCommerce kann die
+ * Bestellung trotzdem noch angelegt haben.
  */
 async function handleOrderMissingAfterCapture(params: {
   body: ExpressCaptureBody;
   capture: CaptureResult | null;
   reason: string;
   error?: unknown;
+  captureUnclear?: boolean;
+  orderMayExist?: boolean;
 }): Promise<NextResponse> {
-  const { body, capture, reason, error } = params;
+  const { body, capture, reason, error, captureUnclear = false, orderMayExist = false } = params;
   const transactionId = capture?.transactionId ?? '';
   const amount = capture?.amount?.value ?? '?';
   const currency = capture?.amount?.currency_code ?? 'EUR';
@@ -112,22 +156,46 @@ async function handleOrderMissingAfterCapture(params: {
     '';
   const address = capture?.shippingAddress;
 
-  console.error('❌ PAYPAL EXPRESS: Zahlung erfasst, WooCommerce-Order NICHT angelegt — manuell anlegen!', {
-    reason,
-    error: error instanceof Error ? error.message : error,
-    paypalOrderId: body.paypalOrderId,
-    captureId: transactionId,
-    amount: `${amount} ${currency}`,
-    customer: { name: customerName, email: capture?.payerEmail, phone: capture?.payerPhone },
-    shippingAddress: address,
-    shippingCost: body.shipping_cost,
-    customerNote: body.customer_note,
-    lineItems: body.line_items,
-  });
+  // Einheitliche, durchsuchbare Log-Zeile — auch dann vollständig, wenn die
+  // Mail über WordPress scheitert.
+  console.error(
+    'PAYPAL_EXPRESS_ORDER_MISSING',
+    JSON.stringify({
+      reason,
+      error: error instanceof Error ? error.message : error ?? null,
+      captureUnclear,
+      orderMayExist,
+      paypalOrderId: body.paypalOrderId,
+      captureId: transactionId || null,
+      amount: `${amount} ${currency}`,
+      customer: { name: customerName, email: capture?.payerEmail ?? null, phone: capture?.payerPhone ?? null },
+      shippingAddress: address ?? null,
+      shippingCost: body.shipping_cost,
+      itemsTotal: sumLineItemTotals(body.line_items),
+      customerNote: body.customer_note ?? null,
+      lineItems: body.line_items,
+    })
+  );
+
+  const intro = captureUnclear
+    ? [
+        'Der Ausgang der PayPal-Zahlung ist UNKLAR (keine Antwort vom Zahlungs-Proxy). Es kann eingezogen worden sein.',
+        `Bitte in PayPal nach der Order-ID ${body.paypalOrderId} suchen:`,
+        '- Zahlung eingezogen → Bestellung manuell anlegen (Käuferdaten stehen in PayPal) und Kunden informieren.',
+        '- Nicht eingezogen → Kunden informieren, dass die Zahlung nicht durchging.',
+      ]
+    : [
+        'PayPal hat die Zahlung eingezogen, die Bestellung konnte aber NICHT in WooCommerce angelegt werden.',
+        'Bitte die Bestellung manuell anlegen und den Kunden informieren.',
+      ];
+  if (orderMayExist) {
+    intro.push(
+      `ACHTUNG: WooCommerce hat nicht rechtzeitig geantwortet. Bitte ZUERST in WooCommerce nach der PayPal-Order-ID ${body.paypalOrderId} suchen — die Bestellung kann trotzdem angelegt worden sein.`
+    );
+  }
 
   const message = [
-    'PayPal hat die Zahlung eingezogen, die Bestellung konnte aber NICHT in WooCommerce angelegt werden.',
-    'Bitte die Bestellung manuell anlegen und den Kunden informieren.',
+    ...intro,
     '',
     `Grund: ${reason}${error instanceof Error ? ` (${error.message})` : ''}`,
     '',
@@ -154,11 +222,15 @@ async function handleOrderMissingAfterCapture(params: {
     body.customer_note ? `Kundennotiz:\n${body.customer_note}` : 'Kundennotiz: –',
   ].join('\n');
 
-  const sent = await notifyShop({
-    subject: MISSING_ORDER_SUBJECT,
-    message,
-    replyTo: { name: customerName, email: capture?.payerEmail, phone: capture?.payerPhone },
-  });
+  // notifyShop wirft nie; `false` = nicht zugestellt.
+  const sent = await step('notify-wp', body.paypalOrderId, () =>
+    notifyShop({
+      subject: MISSING_ORDER_SUBJECT,
+      message,
+      replyTo: { name: customerName, email: capture?.payerEmail, phone: capture?.payerPhone },
+      timeoutMs: TIMEOUT_NOTIFY_MS,
+    })
+  );
   if (!sent) {
     console.error('❌ PAYPAL EXPRESS: Benachrichtigungs-Mail an den Shop fehlgeschlagen', {
       paypalOrderId: body.paypalOrderId,
@@ -213,31 +285,53 @@ export async function POST(request: NextRequest) {
   }
 
   // 2. PayPal capturen via WP-Plugin /paypal/express-capture
-  let capture: CaptureResult;
+  let outcome: Awaited<ReturnType<typeof capturePayPalExpressOrder>>;
   try {
-    console.log(`🔄 Capturing PayPal Express Order: ${body.paypalOrderId}`);
-    capture = await capturePayPalExpressOrder(body.paypalOrderId);
+    outcome = await step('capture', body.paypalOrderId, () =>
+      capturePayPalExpressOrder(body.paypalOrderId, TIMEOUT_CAPTURE_MS)
+    );
   } catch (error) {
-    console.error('❌ PayPal Express Capture error:', error);
+    // Wirft nur bei fehlender Proxy-Konfiguration — dann wurde nichts an
+    // PayPal gesendet, also auch nichts eingezogen.
+    console.error('❌ PayPal Express Capture nicht gestartet (Konfiguration):', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Express capture failed',
-      },
+      { success: false, error: 'PayPal ist gerade nicht erreichbar. Bitte versuche es später erneut.' },
       { status: 500 }
     );
   }
 
-  if (!capture.success) {
-    console.error(`❌ PayPal Express capture failed: status=${capture.status}`);
+  console.log(
+    `[express-capture] capture outcome=${outcome.outcome}${
+      outcome.outcome === 'captured' ? '' : ` reason=${outcome.reason}`
+    } paypalOrderId=${body.paypalOrderId}`
+  );
+
+  // Eindeutige Ablehnung durch PayPal: nichts eingezogen, Kunde kann es
+  // erneut versuchen.
+  if (outcome.outcome === 'declined') {
     return NextResponse.json(
       {
         success: false,
-        error: `PayPal capture nicht erfolgreich (Status: ${capture.status ?? 'unknown'})`,
+        error:
+          'PayPal hat die Zahlung abgelehnt. Es wurde nichts abgebucht. Bitte versuche es erneut oder wähle eine andere Zahlungsart.',
+        declineReason: outcome.reason,
       },
-      { status: 502 }
+      { status: 402 }
     );
   }
+
+  // Ausgang unklar (Timeout, Netzwerk, 5xx, kein JSON): kann eingezogen sein
+  // → wie „bezahlt, Bestellung fehlt“ behandeln.
+  if (outcome.outcome === 'unknown') {
+    return await handleOrderMissingAfterCapture({
+      body,
+      capture: null,
+      reason: `Capture-Ausgang unklar: ${outcome.reason}`,
+      captureUnclear: true,
+    });
+  }
+
+  const capture: CaptureResult = outcome.data;
 
   // ── Ab hier ist bezahlt. Jeder Fehler → handleOrderMissingAfterCapture. ──
   try {
@@ -311,13 +405,19 @@ export async function POST(request: NextRequest) {
 
     let wcOrder: Awaited<ReturnType<typeof createWooCommerceOrder>>;
     try {
-      wcOrder = await createWooCommerceOrder(orderData);
+      wcOrder = await step('wc-create', body.paypalOrderId, () =>
+        createWooCommerceOrder(orderData, { timeoutMs: TIMEOUT_WC_CREATE_MS })
+      );
     } catch (error) {
+      const timedOut = error instanceof FetchTimeoutError;
       return await handleOrderMissingAfterCapture({
         body,
         capture,
-        reason: 'WooCommerce hat die Bestellung abgelehnt',
+        reason: timedOut
+          ? 'WooCommerce hat nicht rechtzeitig geantwortet'
+          : 'WooCommerce hat die Bestellung abgelehnt',
         error,
+        orderMayExist: timedOut,
       });
     }
 
@@ -330,13 +430,18 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Lesbare Order-Note (interne Notiz, customer-visible: false)
-    await addOrderNote(
-      wcOrder.id,
-      `PayPal Express Zahlung erfolgreich. PayPal Order ID: ${body.paypalOrderId}, Transaction ID: ${
-        capture.transactionId ?? '–'
-      }, Betrag: ${capture.amount?.value ?? '?'} ${capture.amount?.currency_code ?? 'EUR'}.`,
-      false
-    ).catch((err) => console.error(`[express-capture] Order-Notiz fehlgeschlagen (${wcOrder.id}):`, err));
+    await step('wc-note', body.paypalOrderId, () =>
+      addOrderNote(
+        wcOrder.id,
+        `PayPal Express Zahlung erfolgreich. PayPal Order ID: ${body.paypalOrderId}, Transaction ID: ${
+          capture.transactionId ?? '–'
+        }, Betrag: ${capture.amount?.value ?? '?'} ${capture.amount?.currency_code ?? 'EUR'}.`,
+        false,
+        { timeoutMs: TIMEOUT_WC_NOTE_MS }
+      )
+    ).catch(() => {
+      // bereits von step() geloggt — die Order existiert, also weiter.
+    });
 
     // 7. Summenabgleich: WC-Gesamtsumme ↔ eingezogener PayPal-Betrag
     await checkAmountMismatch({ body, capture, wcOrderId: wcOrder.id, wcTotalRaw: wcOrder.total });
@@ -381,11 +486,16 @@ async function checkAmountMismatch(params: {
         paid: capture.amount?.value,
         wcTotal: wcTotalRaw,
       });
-      await addOrderNote(
-        wcOrderId,
-        `⚠️ Summenabgleich nicht möglich: PayPal-Betrag "${capture.amount?.value ?? '–'}", Bestellsumme "${wcTotalRaw}". Bitte prüfen.`,
-        false
-      ).catch((err) => console.error('[express-capture] Abgleich-Notiz fehlgeschlagen:', err));
+      await step('wc-note-amount', body.paypalOrderId, () =>
+        addOrderNote(
+          wcOrderId,
+          `⚠️ Summenabgleich nicht möglich: PayPal-Betrag "${capture.amount?.value ?? '–'}", Bestellsumme "${wcTotalRaw}". Bitte prüfen.`,
+          false,
+          { timeoutMs: TIMEOUT_WC_NOTE_MS }
+        )
+      ).catch(() => {
+        // bereits von step() geloggt
+      });
       return;
     }
 
@@ -402,12 +512,15 @@ async function checkAmountMismatch(params: {
       captureId: capture.transactionId,
     });
 
-    await addOrderNote(wcOrderId, `⚠️ ${text}`, false).catch((err) =>
-      console.error('[express-capture] Abgleich-Notiz fehlgeschlagen:', err)
-    );
+    await step('wc-note-amount', body.paypalOrderId, () =>
+      addOrderNote(wcOrderId, `⚠️ ${text}`, false, { timeoutMs: TIMEOUT_WC_NOTE_MS })
+    ).catch(() => {
+      // bereits von step() geloggt
+    });
 
     if (diff >= AMOUNT_MAIL_THRESHOLD) {
-      await notifyShop({
+      await step('notify-wp-amount', body.paypalOrderId, () => notifyShop({
+        timeoutMs: TIMEOUT_NOTIFY_MS,
         subject: AMOUNT_MISMATCH_SUBJECT,
         message: [
           `Bestellung #${wcOrderId} (PayPal Express)`,
@@ -423,7 +536,7 @@ async function checkAmountMismatch(params: {
           name: `${capture.payerGivenName ?? ''} ${capture.payerSurname ?? ''}`.trim(),
           email: capture.payerEmail,
         },
-      });
+      }));
     }
   } catch (error) {
     console.error('[express-capture] Summenabgleich fehlgeschlagen:', error);

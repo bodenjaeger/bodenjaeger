@@ -5,6 +5,8 @@
  * Alle API-Calls verwenden Basic Auth mit Consumer Key + Secret
  */
 
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
+
 // ============================================================================
 // TypeScript Interfaces
 // ============================================================================
@@ -179,16 +181,21 @@ function getWCAuthHeaders(): HeadersInit {
  * ```
  */
 export async function createWooCommerceOrder(
-  orderData: WooCommerceOrderData
+  orderData: WooCommerceOrderData,
+  options: { timeoutMs?: number } = {}
 ): Promise<WooCommerceOrder> {
   const url = `${WC_BASE_URL}/wp-json/wc/v3/orders`;
 
   try {
-    const response = await fetch(url, {
+    const init: RequestInit = {
       method: 'POST',
       headers: getWCAuthHeaders(),
       body: JSON.stringify(orderData),
-    });
+    };
+    // Ohne timeoutMs wie bisher ohne eigenes Timeout (normaler Checkout).
+    const response = options.timeoutMs
+      ? await fetchWithTimeout(url, init, options.timeoutMs)
+      : await fetch(url, init);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -359,19 +366,23 @@ export async function updateOrderStatus(
 export async function addOrderNote(
   orderId: number,
   note: string,
-  customerNote: boolean = false
+  customerNote: boolean = false,
+  options: { timeoutMs?: number } = {}
 ): Promise<void> {
   const url = `${WC_BASE_URL}/wp-json/wc/v3/orders/${orderId}/notes`;
 
   try {
-    const response = await fetch(url, {
+    const init: RequestInit = {
       method: 'POST',
       headers: getWCAuthHeaders(),
       body: JSON.stringify({
         note,
         customer_note: customerNote,
       }),
-    });
+    };
+    const response = options.timeoutMs
+      ? await fetchWithTimeout(url, init, options.timeoutMs)
+      : await fetch(url, init);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
