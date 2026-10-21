@@ -32,6 +32,23 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+ENV-UMZUG.txt
+*.bak*
+
+# lokale Tool-Einstellungen
+.claude/settings.local.json
+
+# interne Dokumente und Arbeitsdateien (lokal in _intern/)
+/_intern/
+/*.md
+!README.md
+!CLAUDE.md
+*.xlsx
+*.csv
+/test/
+/Screenshot*.png
+/Unbenannt-*.png
 
 # vercel
 .vercel
