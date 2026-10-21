@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
+// Notschalter für diese Tests einschalten — muss vor dem Import der Route
+// gesetzt sein, weil der Schalter beim Laden des Moduls ausgewertet wird.
+vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_PAYPAL_EXPRESS_ENABLED = 'true';
+});
+
 vi.mock('@/lib/paypal', () => ({
   capturePayPalExpressOrder: vi.fn(),
 }));

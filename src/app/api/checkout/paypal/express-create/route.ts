@@ -32,6 +32,7 @@ import {
   validateOrderLineItems,
   type OrderLineItem,
 } from '@/lib/order-line-items';
+import { PAYPAL_EXPRESS_ENABLED, PAYPAL_EXPRESS_DISABLED_MESSAGE } from '@/lib/paypal-express-flag';
 
 interface ExpressCreateBody {
   line_items: OrderLineItem[];
@@ -39,6 +40,14 @@ interface ExpressCreateBody {
 }
 
 export async function POST(request: NextRequest) {
+  // Notschalter: ausgeschaltet → sofort 503, PayPal wird nicht angesprochen.
+  if (!PAYPAL_EXPRESS_ENABLED) {
+    return NextResponse.json(
+      { success: false, error: PAYPAL_EXPRESS_DISABLED_MESSAGE },
+      { status: 503 }
+    );
+  }
+
   try {
     // 1. Body parsen
     let body: ExpressCreateBody;

@@ -42,6 +42,7 @@ import {
   type OrderLineItem,
 } from '@/lib/order-line-items';
 import { notifyShop } from '@/lib/shop-notification';
+import { PAYPAL_EXPRESS_ENABLED, PAYPAL_EXPRESS_DISABLED_MESSAGE } from '@/lib/paypal-express-flag';
 
 // Capture + WC-Order + Notiz + ggf. Mail — großzügig, weit unter dem Pro-Limit.
 export const maxDuration = 60;
@@ -175,6 +176,14 @@ async function handleOrderMissingAfterCapture(params: {
 }
 
 export async function POST(request: NextRequest) {
+  // Notschalter: ausgeschaltet → sofort 503, KEIN Capture bei PayPal.
+  if (!PAYPAL_EXPRESS_ENABLED) {
+    return NextResponse.json(
+      { success: false, error: PAYPAL_EXPRESS_DISABLED_MESSAGE },
+      { status: 503 }
+    );
+  }
+
   // 1. Body parsen + validieren
   let body: ExpressCaptureBody;
   try {

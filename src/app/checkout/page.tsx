@@ -17,6 +17,7 @@ import type { AppliedCoupon } from '@/types/checkout';
 import type { ValidateCouponResult } from '@/lib/coupon';
 import OrderSummary from '@/components/checkout/OrderSummary';
 import ExpressCheckout from '@/components/checkout/ExpressCheckout';
+import { PAYPAL_EXPRESS_ENABLED } from '@/lib/paypal-express-flag';
 
 type PaymentMethod = 'stripe' | 'paypal' | 'bacs' | 'klarna';
 type ShippingMethod = 'delivery' | 'pickup';
@@ -519,7 +520,8 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {!isVorschauModus && <ExpressCheckout />}
+              {/* Notschalter: ohne NEXT_PUBLIC_PAYPAL_EXPRESS_ENABLED=true kein Express. */}
+              {PAYPAL_EXPRESS_ENABLED && !isVorschauModus && <ExpressCheckout />}
 
               {/* Kontakt */}
               <div className="mb-8">
