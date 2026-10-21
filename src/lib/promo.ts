@@ -50,8 +50,9 @@ export const PAKET_AKTION: PaketAktion = {
   label: 'Jedes 7. Paket gratis',
   everyNth: 7,
   startsAt: '2026-09-12T00:00:00+02:00',
-  // Aktion beendet (Kundenvorgabe): letzter Tag laut Kampagnenmotiv.
-  endsAt: '2026-10-21T23:59:59+02:00',
+  // Aktion beendet: geplant war 21.10.2026 23:59, auf 21:30 vorgezogen,
+  // damit Rabatt und Werbung (Slider, Header, Fachmarkt) gleichzeitig enden.
+  endsAt: '2026-10-21T21:30:00+02:00',
 };
 
 /**
