@@ -17,6 +17,7 @@ import Roomvo from "@/components/Roomvo";
 import { JsonLd } from "@/components/JsonLd";
 import { buildOrganizationSchema, buildWebSiteSchema } from "@/lib/schema";
 import { SITE_URL } from "@/lib/site";
+import { CONSENT_HEAD_SCRIPT } from "@/lib/analytics/track";
 import "./globals.css";
 
 const poppinsRegular = localFont({
@@ -50,14 +51,12 @@ export default function RootLayout({
   return (
     <html lang="de">
       <head>
-        {/* Consent Mode v2 default — MUSS vor gtm.js laufen.
+        {/* Consent Mode v2 default + gespeicherte Entscheidung — MUSS vor gtm.js laufen.
             Synchroner inline-Script im <head> wird beim HTML-Parse
             ausgeführt, also lange vor jedem next/script (afterInteractive). */}
         <script
           id="gtm-consent-default"
-          dangerouslySetInnerHTML={{
-            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{'ad_storage':'denied','ad_user_data':'denied','ad_personalization':'denied','analytics_storage':'denied','functionality_storage':'denied','personalization_storage':'denied','security_storage':'granted','wait_for_update':500});`,
-          }}
+          dangerouslySetInnerHTML={{ __html: CONSENT_HEAD_SCRIPT }}
         />
 
         {/* Preconnect to WooCommerce backend for faster API calls */}

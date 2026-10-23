@@ -26,11 +26,16 @@ function pushEcommerce(event: string, ecommerce: EcommercePayload): void {
   dl.push({ event, ecommerce });
 }
 
-function gtagPush(...args: unknown[]): void {
+// Klassische gtag-Funktion: pusht das `arguments`-Objekt, KEIN Array.
+// GTM wertet nur `arguments`-Objekte als Befehl (z. B. consent update) —
+// ein echtes Array wird stillschweigend ignoriert.
+// Der Rest-Parameter dient nur der Typisierung der Aufrufe.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function gtag(..._args: unknown[]): void {
   const dl = ensureDataLayer();
   if (!dl) return;
-  // Klassische gtag-Signatur: pusht das `arguments`-Objekt; GTM/Consent-Mode-API erwartet genau das.
-  dl.push(args as unknown as Record<string, unknown>);
+  // eslint-disable-next-line prefer-rest-params
+  dl.push(arguments as unknown as Record<string, unknown>);
 }
 
 export const track = {
@@ -132,6 +137,10 @@ export const track = {
 // Wir pushen direkt im gtag-Stil ins dataLayer (kein gtag()-Wrapper nötig),
 // damit das funktioniert, bevor der GTM-Container geladen ist.
 
+/** localStorage-Eintrag des Cookie-Banners (CookieConsentContext). */
+export const CONSENT_STORAGE_KEY = 'bodenjaeger-cookie-consent';
+export const CONSENT_VERSION = 1;
+
 const DEFAULT_DENIED = {
   ad_storage: 'denied',
   ad_user_data: 'denied',
@@ -143,18 +152,40 @@ const DEFAULT_DENIED = {
   wait_for_update: 500,
 } as const;
 
+/**
+ * Inline-Script für den <head> (app/layout.tsx), läuft synchron beim HTML-Parse
+ * und damit vor GTM (next/script afterInteractive):
+ *  a) dataLayer + gtag definieren
+ *  b) consent default (alles denied)
+ *  c) gespeicherte Banner-Entscheidung synchron lesen → consent update
+ * Die Zuordnung in c) MUSS `consent.update` entsprechen (per Unit-Test geprüft).
+ */
+export const CONSENT_HEAD_SCRIPT =
+  `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}` +
+  `gtag('consent','default',${JSON.stringify(DEFAULT_DENIED)});` +
+  `try{var c=JSON.parse(localStorage.getItem(${JSON.stringify(CONSENT_STORAGE_KEY)})||'null');` +
+  `if(c&&c.version===${CONSENT_VERSION}&&c.categories){var k=c.categories;` +
+  `gtag('consent','update',{` +
+  `'analytics_storage':k.analytics?'granted':'denied',` +
+  `'ad_storage':k.marketing?'granted':'denied',` +
+  `'ad_user_data':k.marketing?'granted':'denied',` +
+  `'ad_personalization':k.marketing?'granted':'denied',` +
+  `'functionality_storage':k.functional?'granted':'denied',` +
+  `'personalization_storage':k.functional?'granted':'denied',` +
+  `'security_storage':'granted'});}}catch(e){}`;
+
 /** Woraus die Consent-Entscheidung stammt — für die Auswertung in GA4. */
 export type ConsentDecisionAction = 'accept_all' | 'reject_all' | 'save_preferences';
 
 export const consent = {
   setDefault(): void {
     if (!isBrowser()) return;
-    gtagPush('consent', 'default', DEFAULT_DENIED);
+    gtag('consent', 'default', DEFAULT_DENIED);
   },
 
   update(c: ConsentCategories): void {
     if (!isBrowser()) return;
-    gtagPush('consent', 'update', {
+    gtag('consent', 'update', {
       analytics_storage: c.analytics ? 'granted' : 'denied',
       ad_storage: c.marketing ? 'granted' : 'denied',
       ad_user_data: c.marketing ? 'granted' : 'denied',
