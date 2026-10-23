@@ -125,17 +125,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // 4. Blog — nur wenn es Beiträge gibt (ohne Beiträge steht /blog auf noindex)
   let blogEntries: MetadataRoute.Sitemap = [];
-  const { posts, total } = await wordPressClient.getPosts(1, 100);
-  if (total > 0) {
-    blogEntries = [
-      { url: `${BASE_URL}/blog`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 },
-      ...posts.map((post) => ({
-        url: `${BASE_URL}/blog/${post.slug}`,
-        lastModified: new Date(post.modified || post.date),
-        changeFrequency: 'monthly' as const,
-        priority: 0.5,
-      })),
-    ];
+  try {
+    const { posts, total } = await wordPressClient.getPosts(1, 100);
+    if (total > 0) {
+      blogEntries = [
+        { url: `${BASE_URL}/blog`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 },
+        ...posts.map((post) => ({
+          url: `${BASE_URL}/blog/${post.slug}`,
+          lastModified: new Date(post.modified || post.date),
+          changeFrequency: 'monthly' as const,
+          priority: 0.5,
+        })),
+      ];
+    }
+  } catch (error) {
+    console.error('[sitemap] Failed to fetch blog posts:', error);
   }
 
   return [...staticEntries, ...categoryEntries, ...productEntries, ...blogEntries];
