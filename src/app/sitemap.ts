@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { wooCommerceClient, type StoreApiProduct, type StoreApiCategory } from '@/lib/woocommerce';
+import { wordPressClient } from '@/lib/wordpress';
 import { SITE_URL, productUrl, categoryUrl } from '@/lib/site';
 
 /**
@@ -9,6 +10,10 @@ import { SITE_URL, productUrl, categoryUrl } from '@/lib/site';
  *   - Statische Seiten (Homepage, Service, Fachmarkt-Subseiten, Legal …)
  *   - Alle Kategorien (dynamisch aus WC-Backend)
  *   - Alle Produkte (dynamisch aus Jäger-API, paginiert)
+ *   - Blog + Beiträge, sobald es Beiträge gibt
+ *
+ * Nicht enthalten: per robots.txt gesperrte und noindex-Seiten (/login,
+ * /favoriten, Formulare, Muster), ?page-URLs.
  *
  * Cache: 1 Stunde (revalidate = 3600), damit Backend nicht bei jedem
  * Crawler-Hit kontaktiert wird.
@@ -52,9 +57,8 @@ const STATIC_PAGES: StaticPage[] = [
   // Versand & Service-Info
   { path: '/versand-lieferzeit', priority: 0.6, changeFrequency: 'yearly' },
 
-  // Newsletter & Account
+  // Newsletter (/login steht nicht hier: per robots.txt gesperrt)
   { path: '/newsletter', priority: 0.5, changeFrequency: 'yearly' },
-  { path: '/login', priority: 0.4, changeFrequency: 'yearly' },
 
   // HTML-Sitemap
   { path: '/sitemap-page', priority: 0.4, changeFrequency: 'monthly' },
@@ -70,29 +74,6 @@ const STATIC_PAGES: StaticPage[] = [
 // Seiten stehen auf noindex) und die interne Muster-Kategorie (ebenfalls noindex).
 const EXCLUDED_PRODUCT_PREFIX = 'muster-';
 const EXCLUDED_CATEGORY_SLUGS = new Set(['muster']);
-
-const PRODUCTS_PER_PAGE = 100;
-const MAX_PRODUCT_PAGES = 50; // Safety-Limit (5.000 Produkte max)
-
-async function fetchAllProducts(): Promise<StoreApiProduct[]> {
-  const all: StoreApiProduct[] = [];
-  let page = 1;
-
-  while (page <= MAX_PRODUCT_PAGES) {
-    const batch = await wooCommerceClient.getProducts({
-      per_page: PRODUCTS_PER_PAGE,
-      page,
-    });
-
-    if (batch.length === 0) break;
-    all.push(...batch);
-    if (batch.length < PRODUCTS_PER_PAGE) break;
-
-    page += 1;
-  }
-
-  return all;
-}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -128,7 +109,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 3. Produkte (dynamisch, paginiert)
   let productEntries: MetadataRoute.Sitemap = [];
   try {
-    const products = await fetchAllProducts();
+    const products: StoreApiProduct[] = await wooCommerceClient.getAllProducts();
     productEntries = products
       .filter((p) => typeof p.slug === 'string' && p.slug.length > 0)
       .filter((p) => !p.slug.startsWith(EXCLUDED_PRODUCT_PREFIX))
@@ -142,5 +123,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('[sitemap] Failed to fetch products:', error);
   }
 
-  return [...staticEntries, ...categoryEntries, ...productEntries];
+  // 4. Blog — nur wenn es Beiträge gibt (ohne Beiträge steht /blog auf noindex)
+  let blogEntries: MetadataRoute.Sitemap = [];
+  const { posts, total } = await wordPressClient.getPosts(1, 100);
+  if (total > 0) {
+    blogEntries = [
+      { url: `${BASE_URL}/blog`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 },
+      ...posts.map((post) => ({
+        url: `${BASE_URL}/blog/${post.slug}`,
+        lastModified: new Date(post.modified || post.date),
+        changeFrequency: 'monthly' as const,
+        priority: 0.5,
+      })),
+    ];
+  }
+
+  return [...staticEntries, ...categoryEntries, ...productEntries, ...blogEntries];
 }
