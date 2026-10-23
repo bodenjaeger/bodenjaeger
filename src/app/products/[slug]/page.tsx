@@ -2,7 +2,8 @@ import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { wooCommerceClient, type StoreApiProduct } from "@/lib/woocommerce";
 import ProductPageContent from "@/components/product/ProductPageContent";
 import { JsonLd } from "@/components/JsonLd";
-import { buildProductSchema, buildBreadcrumbSchema, stripHtml } from "@/lib/schema";
+import { buildProductSchema, buildBreadcrumbSchema } from "@/lib/schema";
+import { buildProductMetaDescription } from "@/lib/product-description";
 import { SITE_URL, productUrl, categoryUrl } from "@/lib/site";
 import { KLEBEVINYL_SPARPAKET, SPARPAKET_PRODUKT_IDS } from "@/content/klebevinyl-sparpaket";
 
@@ -307,9 +308,9 @@ export async function generateMetadata({ params }: ProductPageProps) {
       };
     }
 
-    const description = stripHtml(
-      product.short_description || product.description?.substring(0, 160) || ''
-    ) || `${product.name} bei Bodenjäger kaufen`;
+    // Pro Produkt eindeutig (vorher: Kurzbeschreibung, bei ganzen Serien identisch)
+    const details = await wooCommerceClient.getProductDetails(product.id).catch(() => null);
+    const description = buildProductMetaDescription(product, details?.seoDescription);
     const canonicalUrl = productUrl(product.slug);
 
     return {

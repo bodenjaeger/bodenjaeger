@@ -625,15 +625,23 @@ class WooCommerceClient {
 
   /**
    * Zusatzdaten aus der WC-REST-API, die die Jäger-API nicht liefert:
-   * die vollständige Beschreibung (enthält die Eigenschaften-Tabelle).
-   * 5 Minuten im Next-Data-Cache.
+   * die vollständige Beschreibung (enthält die Eigenschaften-Tabelle) und die
+   * individuell gepflegte SEO-Description aus Rank Math.
+   * 5 Minuten im Next-Data-Cache; Seite und generateMetadata teilen sich den Request.
    */
-  async getProductDetails(id: number): Promise<{ description: string | null }> {
-    const wcProduct = await this.makeRestRequest<{ description?: string }>(
-      `/products/${id}?_fields=description`,
+  async getProductDetails(id: number): Promise<{ description: string | null; seoDescription: string | null }> {
+    const wcProduct = await this.makeRestRequest<{
+      description?: string;
+      meta_data?: Array<{ key: string; value: unknown }>;
+    }>(
+      `/products/${id}?_fields=description,meta_data`,
       { next: { revalidate: 300 } }
     );
-    return { description: wcProduct.description || null };
+    const seo = wcProduct.meta_data?.find((m) => m.key === 'rank_math_description')?.value;
+    return {
+      description: wcProduct.description || null,
+      seoDescription: typeof seo === 'string' && seo.trim() ? seo : null,
+    };
   }
 
   /**
