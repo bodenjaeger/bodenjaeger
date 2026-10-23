@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Ein Worker für die statische Generierung: Das Request-Limit in
+    // src/lib/woocommerce.ts (max. 4 gleichzeitige Backend-Requests beim Build)
+    // gilt pro Prozess — mit mehreren Workern würde es sich vervielfachen.
+    cpus: 1,
+  },
   images: {
     remotePatterns: [
       {

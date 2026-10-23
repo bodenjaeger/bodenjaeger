@@ -299,6 +299,50 @@ interface StoreApiCategory {
   count?: number;
 }
 
+// Allgemeine Slug-Bestandteile (Kategorie-/Markennamen) liefern bei der
+// Namenssuche zu viele Treffer (z. B. `rigid`: 167 Produkte, 5 s).
+const GENERIC_SLUG_TOKENS = new Set([
+  'rigid', 'vinyl', 'klebe', 'laminat', 'parkett', 'muster', 'coretec', 'primecore', 'stauf',
+]);
+// Slug-Tokens mit ae/oe/ue/ss stammen oft aus Umlauten/ß (`oelschiefer` ↔ „Ölschiefer“)
+// und werden von der Namenssuche dann nicht gefunden.
+const POSSIBLY_TRANSLITERATED = /ae|oe|ue|ss/;
+
+/** Distinktivstes Such-Token eines Slugs oder null (→ direkter Slug-Lookup). */
+function pickSearchToken(slug: string): string | null {
+  const candidates = slug
+    .split('-')
+    .filter((t) => t.length >= 3 && !/^\d/.test(t))
+    .filter((t) => !GENERIC_SLUG_TOKENS.has(t) && !POSSIBLY_TRANSLITERATED.test(t));
+  if (candidates.length === 0) return null;
+  return candidates.reduce((a, b) => (a.length >= b.length ? a : b));
+}
+
+// Beim Build (Vorrendern aller Produktseiten) höchstens 4 Backend-Requests
+// gleichzeitig — zusammen mit `experimental.cpus: 1` in next.config.ts gilt
+// das Limit für den gesamten Build. Zur Laufzeit ohne Limit.
+const BUILD_MAX_CONCURRENT_REQUESTS = 4;
+let activeBuildRequests = 0;
+const buildRequestQueue: Array<() => void> = [];
+
+async function limitDuringBuild<T>(fn: () => Promise<T>): Promise<T> {
+  if (process.env.NEXT_PHASE !== 'phase-production-build') return fn();
+
+  if (activeBuildRequests >= BUILD_MAX_CONCURRENT_REQUESTS) {
+    // Platz wird beim Freiwerden direkt übergeben (Zähler bleibt gleich).
+    await new Promise<void>((resolve) => buildRequestQueue.push(resolve));
+  } else {
+    activeBuildRequests++;
+  }
+  try {
+    return await fn();
+  } finally {
+    const next = buildRequestQueue.shift();
+    if (next) next();
+    else activeBuildRequests--;
+  }
+}
+
 class WooCommerceClient {
   private config: WooCommerceConfig | null = null;
   private baseApiUrl: string | null = null;
@@ -348,21 +392,23 @@ class WooCommerceClient {
     };
 
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
+      return await limitDuringBuild(async () => {
+        const response = await fetch(url, {
+          ...options,
+          headers,
+        });
+
+        if (!response.ok) {
+          const errorData: StoreApiError = await response.json().catch(() => ({
+            code: 'unknown_error',
+            message: `HTTP ${response.status}: ${response.statusText}`,
+          }));
+
+          throw new Error(`WooCommerce API Error: ${errorData.message} (Code: ${errorData.code})`);
+        }
+
+        return (await response.json()) as T;
       });
-
-      if (!response.ok) {
-        const errorData: StoreApiError = await response.json().catch(() => ({
-          code: 'unknown_error',
-          message: `HTTP ${response.status}: ${response.statusText}`,
-        }));
-
-        throw new Error(`WooCommerce API Error: ${errorData.message} (Code: ${errorData.code})`);
-      }
-
-      return await response.json();
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -394,21 +440,23 @@ class WooCommerceClient {
     };
 
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
+      return await limitDuringBuild(async () => {
+        const response = await fetch(url, {
+          ...options,
+          headers,
+        });
+
+        if (!response.ok) {
+          const errorData: StoreApiError = await response.json().catch(() => ({
+            code: 'unknown_error',
+            message: `HTTP ${response.status}: ${response.statusText}`,
+          }));
+
+          throw new Error(`WooCommerce API Error: ${errorData.message} (Code: ${errorData.code})`);
+        }
+
+        return (await response.json()) as T;
       });
-
-      if (!response.ok) {
-        const errorData: StoreApiError = await response.json().catch(() => ({
-          code: 'unknown_error',
-          message: `HTTP ${response.status}: ${response.statusText}`,
-        }));
-
-        throw new Error(`WooCommerce API Error: ${errorData.message} (Code: ${errorData.code})`);
-      }
-
-      return await response.json();
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -522,70 +570,87 @@ class WooCommerceClient {
       }
 
       // ✅ Search by slug - Jäger API already returns FULL product data with jaeger_meta!
-      // Die API matcht den Produkt-NAMEN, nicht den Slug. Bei Multi-Token-Slugs
-      // mit Umlaut/ß-Mismatches (Slug `weiss` ↔ Name `Weiß`) liefert die AND-
-      // Suche über alle Tokens 0 Treffer. Wir suchen daher nur mit dem längsten
-      // Token (meist distinktiv genug, selten ein Umlaut-Wort) und filtern
-      // danach via exactMatch auf den vollen Slug.
-      const slugTokens = slug.split('-').filter(Boolean);
-      const searchTerm = slugTokens.length > 1
-        ? slugTokens.reduce((a, b) => (a.length >= b.length ? a : b))
-        : slug;
-      const searchResults = await this.getProducts({
-        search: searchTerm,
-        per_page: 100,
-      });
-      const exactMatch = searchResults.find(p => p.slug === slug);
+      // Die API matcht den Produkt-NAMEN, nicht den Slug. Wir suchen daher mit
+      // einem einzelnen, möglichst distinktiven Token und filtern danach via
+      // exactMatch auf den vollen Slug. Kein Treffer → direkter Slug-Lookup
+      // über die WC-REST-API (früher: serieller Scan über bis zu 1.000 Produkte,
+      // der bei Umlaut-Slugs wie `laminat-oelschiefer` in den Timeout lief).
+      const searchTerm = pickSearchToken(slug);
+      let found: StoreApiProduct | null = null;
 
-      if (exactMatch) {
-        // ✅ The search result already has ALL fields including jaeger_meta!
-        // No need to call getProductById() again
+      if (searchTerm) {
+        const searchResults = await this.getProducts({
+          search: searchTerm,
+          per_page: 100,
+        });
+        found = searchResults.find(p => p.slug === slug) ?? null;
+      }
 
+      if (!found) {
+        found = await this.getProductBySlugViaRest(slug);
+      }
+
+      if (found && typeof window === 'undefined') {
         // Cache the result (server-side only)
-        if (typeof window === 'undefined') {
-          try {
-            const { setCachedProduct } = await import('./cache');
-            await setCachedProduct(slug, exactMatch);
-          } catch {
-            // Cache write failed - not critical
-          }
+        try {
+          const { setCachedProduct } = await import('./cache');
+          await setCachedProduct(slug, found);
+        } catch {
+          // Cache write failed - not critical
         }
-        return exactMatch;
       }
 
-      // Second try: Load more products if not found
-      let page = 1;
-      const maxPages = 10; // Limit to prevent infinite loops
-
-      while (page <= maxPages) {
-        const products = await this.getProducts({ per_page: 100, page });
-
-        if (products.length === 0) {
-          break; // No more products
-        }
-
-        const found = products.find(p => p.slug === slug);
-        if (found) {
-          // Cache the result
-          if (typeof window === 'undefined') {
-            try {
-              const { setCachedProduct } = await import('./cache');
-              await setCachedProduct(slug, found);
-            } catch {
-              // Cache write failed - not critical
-            }
-          }
-          return found;
-        }
-
-        page++;
-      }
-
-      return null;
+      return found;
     } catch (error) {
       console.error(`Error fetching product with slug "${slug}":`, error);
       return null;
     }
+  }
+
+  /**
+   * Slug → Produkt über die WC-REST-API (ID per `?slug=`), danach die vollen
+   * Daten inkl. Root-Level-Feldern aus der Jäger-API per `include`.
+   * Zwei Requests statt eines Katalog-Scans.
+   */
+  private async getProductBySlugViaRest(slug: string): Promise<StoreApiProduct | null> {
+    const matches = await this.makeRestRequest<Array<{ id: number }>>(
+      `/products?slug=${encodeURIComponent(slug)}&_fields=id`
+    );
+    const id = matches[0]?.id;
+    if (!id) return null;
+
+    const products = await this.getProducts({ include: String(id), per_page: 1 });
+    return products.find(p => p.slug === slug) ?? null;
+  }
+
+  /**
+   * Zusatzdaten aus der WC-REST-API, die die Jäger-API nicht liefert:
+   * die vollständige Beschreibung (enthält die Eigenschaften-Tabelle).
+   * 5 Minuten im Next-Data-Cache.
+   */
+  async getProductDetails(id: number): Promise<{ description: string | null }> {
+    const wcProduct = await this.makeRestRequest<{ description?: string }>(
+      `/products/${id}?_fields=description`,
+      { next: { revalidate: 300 } }
+    );
+    return { description: wcProduct.description || null };
+  }
+
+  /**
+   * Alle Produkte, seriell paginiert (100 pro Seite).
+   */
+  async getAllProducts(): Promise<StoreApiProduct[]> {
+    const all: StoreApiProduct[] = [];
+    const perPage = 100;
+    const maxPages = 50; // Safety-Limit (5.000 Produkte max)
+
+    for (let page = 1; page <= maxPages; page++) {
+      const batch = await this.getProducts({ per_page: perPage, page });
+      all.push(...batch);
+      if (batch.length < perPage) break;
+    }
+
+    return all;
   }
 
   /**
