@@ -17,6 +17,7 @@ import Einwandbehandlung from '@/components/verlegeservice/Einwandbehandlung'
 import KontaktAlternative from '@/components/verlegeservice/KontaktAlternative'
 import VerlegeFaq from '@/components/verlegeservice/VerlegeFaq'
 import FinalerCta from '@/components/verlegeservice/FinalerCta'
+import { DEFAULT_OG_IMAGE } from '@/lib/seo'
 
 const PAGE_URL = `${SITE_URL}/fachmarkt-hueckelhoven/service/verlegeservice`
 
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
     description: VERLEGE_META.description,
     url: PAGE_URL,
     type: 'website',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 

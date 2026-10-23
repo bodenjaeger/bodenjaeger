@@ -6,6 +6,7 @@ import { SITE_URL } from '@/lib/site'
 import { SERVICE_UNTERSEITEN, SERVICE_UNTERSEITEN_SLUGS } from '@/content/service-unterseiten'
 import ServiceUnterseite from '@/components/service-unterseiten/ServiceUnterseite'
 import ServiceStickyBar from '@/components/shared/ServiceStickyBar'
+import { DEFAULT_OG_IMAGE } from '@/lib/seo'
 
 /**
  * Statische Fachmarkt-Service-Unterseiten (eigene Kundeninhalte, KEIN WordPress).
@@ -39,7 +40,7 @@ export async function generateMetadata(
     title: data.meta.title,
     description: data.meta.description,
     alternates: { canonical: url },
-    openGraph: { title: data.meta.title, description: data.meta.description, url, type: 'website' },
+    openGraph: { title: data.meta.title, description: data.meta.description, url, type: 'website', images: [DEFAULT_OG_IMAGE] },
   }
 }
 

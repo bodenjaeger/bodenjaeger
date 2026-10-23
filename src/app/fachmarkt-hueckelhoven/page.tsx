@@ -20,6 +20,7 @@ import LeistungenSection from '@/components/fachmarkt/LeistungenSection'
 import GoogleReviews from '@/components/fachmarkt/GoogleReviews'
 import TeamSection from '@/components/fachmarkt/TeamSection'
 import AbschlussCta from '@/components/fachmarkt/AbschlussCta'
+import { DEFAULT_OG_IMAGE } from '@/lib/seo'
 
 export const revalidate = 300
 
@@ -38,6 +39,7 @@ export const metadata: Metadata = {
       'Große Ausstellung, persönliche Fachberatung und faire Preise für Laminat, Vinyl und Parkett in Hückelhoven.',
     url: PAGE_URL,
     type: 'website',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 

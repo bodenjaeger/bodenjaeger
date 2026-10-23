@@ -16,6 +16,7 @@ import VerlegeserviceAblauf from '@/components/service/VerlegeserviceAblauf'
 import ServiceOrientierung from '@/components/service/ServiceOrientierung'
 import ServiceFaq from '@/components/service/ServiceFaq'
 import ServiceKontaktCta from '@/components/service/ServiceKontaktCta'
+import { DEFAULT_OG_IMAGE } from '@/lib/seo'
 
 // Umgezogen von /service (Kundenentscheidung: Service unter den Fachmarkt).
 const PAGE_URL = `${SITE_URL}/fachmarkt-hueckelhoven/service`
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
     description: SERVICE_META.description,
     url: PAGE_URL,
     type: 'website',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 

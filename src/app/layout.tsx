@@ -18,6 +18,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { buildOrganizationSchema, buildWebSiteSchema } from "@/lib/schema";
 import { SITE_URL } from "@/lib/site";
 import { CONSENT_HEAD_SCRIPT } from "@/lib/analytics/track";
+import { DEFAULT_OG_IMAGE, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
 
 const poppinsRegular = localFont({
@@ -41,6 +42,18 @@ export const metadata: Metadata = {
   keywords: "Bodenbelag, Vinyl, Laminat, Parkett, COREtec, primeCORE, Rigid-Vinyl, Klebe-Vinyl",
   authors: [{ name: "Bodenjäger" }],
   viewport: "width=device-width, initial-scale=1, maximum-scale=5",
+  // Standardwerte für Seiten ohne eigene Angaben; Seiten mit buildMetadata
+  // (src/lib/seo.ts) setzen Titel, Beschreibung, URL und Bild selbst.
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "de_DE",
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [DEFAULT_OG_IMAGE.url],
+  },
 };
 
 export default function RootLayout({

@@ -4,6 +4,7 @@ import ProductPageContent from "@/components/product/ProductPageContent";
 import { JsonLd } from "@/components/JsonLd";
 import { buildProductSchema, buildBreadcrumbSchema } from "@/lib/schema";
 import { buildProductMetaDescription } from "@/lib/product-description";
+import { buildMetadata } from "@/lib/seo";
 import { SITE_URL, productUrl, categoryUrl } from "@/lib/site";
 import { KLEBEVINYL_SPARPAKET, SPARPAKET_PRODUKT_IDS } from "@/content/klebevinyl-sparpaket";
 
@@ -311,24 +312,15 @@ export async function generateMetadata({ params }: ProductPageProps) {
     // Pro Produkt eindeutig (vorher: Kurzbeschreibung, bei ganzen Serien identisch)
     const details = await wooCommerceClient.getProductDetails(product.id).catch(() => null);
     const description = buildProductMetaDescription(product, details?.seoDescription);
-    const canonicalUrl = productUrl(product.slug);
 
-    return {
+    return buildMetadata({
       title: `${product.name} | Bodenjäger`,
       description,
-      alternates: {
-        canonical: canonicalUrl,
-      },
+      path: `/products/${product.slug}`,
+      image: product.images?.[0]?.src,
       // Muster-Produkte sind nicht verlinkt und nicht in der Sitemap
       ...(product.slug.startsWith('muster-') && { robots: { index: false, follow: true } }),
-      openGraph: {
-        title: product.name,
-        description,
-        images: product.images?.[0]?.src ? [product.images[0].src] : [],
-        type: 'website',
-        url: canonicalUrl,
-      },
-    };
+    });
   } catch {
     return {
       title: 'Bodenjäger - Hochwertige Bodenbeläge'
