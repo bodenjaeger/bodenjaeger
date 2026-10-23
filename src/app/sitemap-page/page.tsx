@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { buildMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
+  path: '/sitemap-page',
   title: 'Sitemap | Bodenjäger',
   description: 'Übersicht aller Seiten auf bodenjäger.de',
-}
+})
 
 export default function SitemapPage() {
   const pages = [

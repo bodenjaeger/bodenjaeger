@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
     // gilt pro Prozess — mit mehreren Workern würde es sich vervielfachen.
     cpus: 1,
   },
+  // Metadaten (Title, Description, Canonical) bei dynamisch gerenderten Seiten
+  // für ALLE User-Agents blockierend in den <head> schreiben. Standard ist
+  // Streaming-Metadata: Title/Canonical landen sonst im <body> (z. B. auf den
+  // Kategorieseiten), was Crawler wie Semrush und teils Google falsch lesen.
+  htmlLimitedBots: /.*/,
   images: {
     remotePatterns: [
       {

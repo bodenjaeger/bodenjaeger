@@ -4,8 +4,9 @@ import { wooCommerceClient } from '@/lib/woocommerce';
 import { JsonLd } from '@/components/JsonLd';
 import { buildBreadcrumbSchema } from '@/lib/schema';
 import { SITE_URL, categoryUrl } from '@/lib/site';
-import { parseListingParams, listingHref } from '@/lib/category-listing';
-import { loadListing } from '@/lib/category-listing-server';
+import { parseListingParams, listingHref, pageSuffix } from '@/lib/category-listing';
+import { loadListingPage } from '@/lib/category-listing-server';
+import { buildMetadata } from '@/lib/seo';
 
 // Interne Muster-Kategorie: nicht indexieren (steht auch nicht in der Sitemap)
 const NOINDEX_CATEGORIES = new Set(['muster']);
@@ -44,20 +45,18 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/cat
   const categoryData = await wooCommerceClient.getCategoryBySlug(slug).catch(() => null);
   const name = categoryData?.name || categoryNames[slug] || slug;
 
-  return {
-    title: `${name} – Bodenbeläge online kaufen | Bodenjäger`,
-    description: `${name} in großer Auswahl bei Bodenjäger – Top-Qualität, schnelle Lieferung und persönliche Beratung.`,
-    alternates: {
-      canonical: `${SITE_URL}${listingHref(`/category/${slug}`, page)}`,
-    },
+  return buildMetadata({
+    // Ab Seite 2 „– Seite N“, damit Title/Description nicht Seite 1 doppeln
+    title: `${name} – Bodenbeläge online kaufen${pageSuffix(page)} | Bodenjäger`,
+    description: `${name} in großer Auswahl bei Bodenjäger – Top-Qualität, schnelle Lieferung und persönliche Beratung${pageSuffix(page)}.`,
+    path: listingHref(`/category/${slug}`, page),
     ...(NOINDEX_CATEGORIES.has(slug) && { robots: { index: false, follow: true } }),
-  };
+  });
 }
 
 export default async function CategoryPage({ params, searchParams }: PageProps<'/category/[slug]'>) {
   const { slug } = await params;
-  const { page, sort } = parseListingParams(await searchParams);
-  const listing = await loadListing(slug, page, sort);
+  const { listing, page, sort } = await loadListingPage(`/category/${slug}`, slug, await searchParams);
 
   // Try to fetch category information from WordPress
   let categoryData = null;

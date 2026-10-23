@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getWordPressPage } from '@/lib/wordpress'
 import FachmarktSubpage from '@/components/FachmarktSubpage'
+import { buildMetadata } from '@/lib/seo'
 
 export const revalidate = 30
 
@@ -37,10 +38,11 @@ export async function generateMetadata(
     ? `${page.title.rendered.replace(/&#038;/g, '&').replace(/&#8211;/g, '–')} | Fachmarkt Hückelhoven | Bodenjäger`
     : `${entry.label} | Fachmarkt Hückelhoven | Bodenjäger`
 
-  return {
+  return buildMetadata({
+    path: `/fachmarkt-hueckelhoven/${slug}`,
     title,
     description: `${entry.label} – Service im Fachmarkt Hückelhoven bei Bodenjäger`,
-  }
+  })
 }
 
 export default async function FachmarktSubpagePage(

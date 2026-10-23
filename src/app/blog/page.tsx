@@ -2,11 +2,7 @@ import type { Metadata } from 'next';
 import { wordPressClient } from '@/lib/wordpress';
 import Image from 'next/image';
 import Link from 'next/link';
-
-export const metadata: Metadata = {
-  title: 'Ratgeber & Blog rund um Bodenbeläge | Bodenjäger',
-  description: 'Tipps zu Auswahl, Verlegung und Pflege von Vinyl, Laminat und Parkett – der Bodenjäger-Blog mit Praxiswissen aus dem Fachmarkt.',
-};
+import { buildMetadata } from '@/lib/seo';
 
 export const revalidate = 300; // 5 minutes
 
@@ -14,6 +10,17 @@ interface BlogPageProps {
   searchParams: Promise<{
     page?: string;
   }>;
+}
+
+export async function generateMetadata({ searchParams }: BlogPageProps): Promise<Metadata> {
+  const { page } = await searchParams;
+  const currentPage = Number(page) || 1;
+
+  return buildMetadata({
+    path: currentPage > 1 ? `/blog?page=${currentPage}` : '/blog',
+    title: 'Ratgeber & Blog rund um Bodenbeläge | Bodenjäger',
+    description: 'Tipps zu Auswahl, Verlegung und Pflege von Vinyl, Laminat und Parkett – der Bodenjäger-Blog mit Praxiswissen aus dem Fachmarkt.',
+  });
 }
 
 export default async function BlogPage({ searchParams }: BlogPageProps) {
