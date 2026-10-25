@@ -70,12 +70,23 @@ export const PROMO_RED = '#d11820';
 // Laufzeit
 // ============================================================================
 
+/** Branch, dessen Vercel-Previews die Aktion automatisch zeigen. */
+const PROMO_PREVIEW_BRANCH = 'feature/black-weeks-2026';
+
 /**
- * Vorschau: `PROMO_PREVIEW=true` aktiviert die Aktion unabhängig vom Datum.
- * Nur auf Preview-Deployments bzw. lokal setzen, in Production nie.
+ * Vorschau — Aktion unabhängig vom Datum aktiv:
+ *  1. `PROMO_PREVIEW=true` (manuell, z. B. lokal). In Production nie setzen.
+ *  2. Automatisch auf Vercel-Previews des Aktions-Branches. Vercel setzt
+ *     `VERCEL_ENV` und `VERCEL_GIT_COMMIT_REF` selbst; in Production ist
+ *     `VERCEL_ENV === 'production'`, dort greift das also nie — auch nicht
+ *     nach dem Merge nach `main`.
  */
 export function isPromoPreview(): boolean {
-  return process.env.PROMO_PREVIEW === 'true';
+  if (process.env.PROMO_PREVIEW === 'true') return true;
+  return (
+    process.env.VERCEL_ENV === 'preview' &&
+    process.env.VERCEL_GIT_COMMIT_REF === PROMO_PREVIEW_BRANCH
+  );
 }
 
 /** UTC-Offset von Europe/Berlin an einem Kalendertag, z. B. `+01:00`. */
