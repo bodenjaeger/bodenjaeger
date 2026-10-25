@@ -101,17 +101,22 @@ export function isAktionForced(): boolean {
  *
  * `now` ist injizierbar, damit sich der Start ohne Systemuhr-Trickserei
  * prüfen lässt.
+ *
+ * Das Ende gilt auch im Vorschau-Modus: `isAktionForced()` überspringt nur den
+ * Start (Test vor Beginn), sonst liefe eine beendete Aktion auf jedem
+ * Preview-Deployment weiter. `isAktionForced()` selbst bleibt unverändert,
+ * weil der Checkout damit Preview-Bestellungen als Test markiert.
  */
 export function isAktionActive(now: Date = new Date()): boolean {
-  if (isAktionForced()) return true;
-
-  const start = new Date(PAKET_AKTION.startsAt).getTime();
-  if (Number.isNaN(start) || now.getTime() < start) return false;
-
   if (PAKET_AKTION.endsAt) {
     const end = new Date(PAKET_AKTION.endsAt).getTime();
     if (!Number.isNaN(end) && now.getTime() > end) return false;
   }
+
+  if (isAktionForced()) return true;
+
+  const start = new Date(PAKET_AKTION.startsAt).getTime();
+  if (Number.isNaN(start) || now.getTime() < start) return false;
 
   return true;
 }

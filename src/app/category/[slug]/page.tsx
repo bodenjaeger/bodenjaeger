@@ -7,6 +7,7 @@ import { SITE_URL, categoryUrl } from '@/lib/site';
 import { parseListingParams, listingHref, pageSuffix } from '@/lib/category-listing';
 import { loadListingPage } from '@/lib/category-listing-server';
 import { buildMetadata } from '@/lib/seo';
+import { getPromoTileListing } from '@/lib/black-weeks';
 
 // Interne Muster-Kategorie: nicht indexieren (steht auch nicht in der Sitemap)
 const NOINDEX_CATEGORIES = new Set(['muster']);
@@ -56,7 +57,8 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/cat
 
 export default async function CategoryPage({ params, searchParams }: PageProps<'/category/[slug]'>) {
   const { slug } = await params;
-  const { listing, page, sort } = await loadListingPage(`/category/${slug}`, slug, await searchParams);
+  const { showPromoTile, perPage } = getPromoTileListing(slug);
+  const { listing, page, sort } = await loadListingPage(`/category/${slug}`, slug, await searchParams, perPage);
 
   // Try to fetch category information from WordPress
   let categoryData = null;
@@ -91,6 +93,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<'
         currentPage={page}
         sortBy={sort}
         error={listing.error}
+        showPromoTile={showPromoTile}
       />
     </>
   );

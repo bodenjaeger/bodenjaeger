@@ -18,18 +18,21 @@ export interface ListingData {
  * Wie loadListing, erzwingt aber saubere Seiten-URLs:
  * `?page=1` → Weiterleitung auf die URL ohne Parameter, Seiten hinter der
  * letzten Seite → 404 (sonst entstehen leere Duplikate wie ?page=99).
+ *
+ * `perPage`: Mit Black-Weeks-Kachel 11 statt 12, damit das Raster voll bleibt.
  */
 export async function loadListingPage(
   basePath: string,
   category: string,
-  searchParams: Record<string, string | string[] | undefined>
+  searchParams: Record<string, string | string[] | undefined>,
+  perPage: number = PRODUCTS_PER_PAGE
 ): Promise<{ listing: ListingData; page: number; sort: string }> {
   const { page, sort } = parseListingParams(searchParams);
   if (hasExplicitFirstPage(searchParams)) {
     permanentRedirect(listingHref(basePath, 1, sort));
   }
 
-  const listing = await loadListing(category, page, sort);
+  const listing = await loadListing(category, page, sort, perPage);
   if (!listing.error && page > 1 && page > listing.totalPages) {
     notFound();
   }
@@ -41,14 +44,19 @@ export async function loadListingPage(
  * Lädt eine Seite einer Produktliste serverseitig, damit Produktkacheln und
  * Paginierung ohne JavaScript im HTML stehen (Crawlbarkeit).
  */
-export async function loadListing(category: string, page: number, sort: string): Promise<ListingData> {
+export async function loadListing(
+  category: string,
+  page: number,
+  sort: string,
+  perPage: number = PRODUCTS_PER_PAGE
+): Promise<ListingData> {
   const [orderby, order] = sort.split('-');
 
   try {
     const result = await wooCommerceClient.getProductsPage({
       category,
       page,
-      per_page: PRODUCTS_PER_PAGE,
+      per_page: perPage,
       orderby,
       order,
     });

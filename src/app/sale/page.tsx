@@ -3,13 +3,15 @@ import CategoryPageClient from '@/components/category/CategoryPageClient';
 import { parseListingParams, listingHref, pageSuffix } from '@/lib/category-listing';
 import { loadListingPage } from '@/lib/category-listing-server';
 import { buildMetadata } from '@/lib/seo';
+import { getPromoTileListing } from '@/lib/black-weeks';
 
 /**
  * Sale-Übersichtsseite
  * Zeigt alle Produkte im Sale
  */
 export default async function SalePage({ searchParams }: PageProps<'/sale'>) {
-  const { listing, page, sort } = await loadListingPage('/sale', 'sale', await searchParams);
+  const { showPromoTile, perPage } = getPromoTileListing('sale');
+  const { listing, page, sort } = await loadListingPage('/sale', 'sale', await searchParams, perPage);
 
   return (
     <CategoryPageClient
@@ -23,6 +25,7 @@ export default async function SalePage({ searchParams }: PageProps<'/sale'>) {
       currentPage={page}
       sortBy={sort}
       error={listing.error}
+      showPromoTile={showPromoTile}
     />
   );
 }

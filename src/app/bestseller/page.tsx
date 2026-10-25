@@ -3,13 +3,15 @@ import CategoryPageClient from '@/components/category/CategoryPageClient';
 import { parseListingParams, listingHref, pageSuffix } from '@/lib/category-listing';
 import { loadListingPage } from '@/lib/category-listing-server';
 import { buildMetadata } from '@/lib/seo';
+import { getPromoTileListing } from '@/lib/black-weeks';
 
 /**
  * Bestseller-Übersichtsseite
  * Zeigt die beliebtesten Produkte
  */
 export default async function BestsellerPage({ searchParams }: PageProps<'/bestseller'>) {
-  const { listing, page, sort } = await loadListingPage('/bestseller', 'bestseller', await searchParams);
+  const { showPromoTile, perPage } = getPromoTileListing('bestseller');
+  const { listing, page, sort } = await loadListingPage('/bestseller', 'bestseller', await searchParams, perPage);
 
   return (
     <CategoryPageClient
@@ -23,6 +25,7 @@ export default async function BestsellerPage({ searchParams }: PageProps<'/bests
       currentPage={page}
       sortBy={sort}
       error={listing.error}
+      showPromoTile={showPromoTile}
     />
   );
 }

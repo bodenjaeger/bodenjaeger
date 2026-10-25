@@ -19,6 +19,7 @@ import { buildOrganizationSchema, buildWebSiteSchema } from "@/lib/schema";
 import { SITE_URL } from "@/lib/site";
 import { CONSENT_HEAD_SCRIPT } from "@/lib/analytics/track";
 import { DEFAULT_OG_IMAGE, SITE_NAME } from "@/lib/seo";
+import { formatPromoEnd, isPromoActive } from "@/lib/black-weeks";
 import "./globals.css";
 
 const poppinsRegular = localFont({
@@ -61,6 +62,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Black-Weeks-Leiste serverseitig entscheiden (src/lib/black-weeks.ts),
+  // damit sie im HTML steht und nicht nachträglich einspringt.
+  const promoBanner = isPromoActive() ? { endLabel: formatPromoEnd() } : null;
+
   return (
     <html lang="de">
       <head>
@@ -99,7 +104,7 @@ export default function RootLayout({
                 <CookieConsent />
                 {/* Gelbes SummerSALE-Banner entfernt — die Aktion läuft jetzt
                     über den Nav-Punkt „Angebote" (/sale). */}
-                <HeaderWrapper />
+                <HeaderWrapper promoBanner={promoBanner} />
                 <FloatingContactButton />
                 {children}
                 <Footer />
