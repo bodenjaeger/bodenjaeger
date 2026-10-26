@@ -19,10 +19,13 @@ import { track } from '@/lib/analytics/track';
 import { mapProductToItem } from '@/lib/analytics/mapItem';
 import ImageGallery from './ImageGallery';
 import ZahlungsIcons from './ZahlungsIcons';
-import ProductInfo from './ProductInfo';
+import { ProductInfoKopf, ProductSetAngebot } from './ProductInfo';
+import { STANDORT } from '@/content/fachmarkt';
 import QuantitySelector from './QuantitySelector';
 import TotalPrice from './TotalPrice';
 import ZubehoerSlider from './ZubehoerSlider';
+import ProduktBreadcrumb from './ProduktBreadcrumb';
+import ProduktDetails from './ProduktDetails';
 
 interface ProductPageContentProps {
   product: StoreApiProduct;
@@ -300,96 +303,23 @@ export default function ProductPageContent({
     setSelectedSockelleiste(sockelleiste);
   }, []);
 
-  // ========== PRODUCT TABS (Beschreibung / Eigenschaften) ==========
-
-  const ProductTabs = ({ product }: { product: StoreApiProduct }) => {
-    const [activeTab, setActiveTab] = useState<'beschreibung' | 'eigenschaften' | null>('beschreibung');
-
-    const rawBeschreibung = product.artikelbeschreibung || '';
-    // ChatGPT-UI-HTML bereinigen: Nur <p>, <strong>, <em>, <br>, <ul>, <li>, <ol> behalten
-    const cleanHtml = (html: string): string => {
-      // Entferne alle div-Wrapper (ChatGPT kopiert UI-Container mit)
-      let cleaned = html.replace(/<div[^>]*>/gi, '').replace(/<\/div>/gi, '');
-      // Entferne class/style/data-Attribute von allen Tags
-      cleaned = cleaned.replace(/<(\w+)\s+[^>]*?>/gi, '<$1>');
-      return cleaned.trim();
-    };
-    const cleanedBeschreibung = cleanHtml(rawBeschreibung);
-    const beschreibung = cleanedBeschreibung.includes('<p')
-      ? cleanedBeschreibung
-      : cleanedBeschreibung.replace(/\r?\n\r?\n/g, '<br/><br/>').replace(/\r?\n/g, '<br/>');
-    const descriptionHtml = product.description || '';
-    const hasBeschreibung = !!beschreibung;
-    const hasEigenschaften = descriptionHtml.includes('<table') || descriptionHtml.includes('bj-specs');
-
-    if (!hasBeschreibung && !hasEigenschaften) return null;
-
-    const toggleTab = (tab: 'beschreibung' | 'eigenschaften') => {
-      setActiveTab(activeTab === tab ? null : tab);
-    };
-
-    return (
-      <div style={{ width: '100%' }}>
-        {/* Tab Buttons */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '0' }}>
-          {hasBeschreibung && (
-            <button
-              onClick={() => toggleTab('beschreibung')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '10px 32px', borderRadius: '9999px',
-                fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: 'none',
-                backgroundColor: activeTab === 'beschreibung' ? '#e5e5e5' : '#fff',
-                color: '#2e2d32',
-                outline: activeTab === 'beschreibung' ? 'none' : '1px solid #d1d5db',
-              }}
-            >
-              Artikelbeschreibung
-              <svg style={{ width: '16px', height: '16px', transform: activeTab === 'beschreibung' ? 'rotate(0)' : 'rotate(-90deg)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          )}
-          {hasEigenschaften && (
-            <button
-              onClick={() => toggleTab('eigenschaften')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '10px 32px', borderRadius: '9999px',
-                fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: 'none',
-                backgroundColor: activeTab === 'eigenschaften' ? '#e5e5e5' : '#fff',
-                color: '#2e2d32',
-                outline: activeTab === 'eigenschaften' ? 'none' : '1px solid #d1d5db',
-              }}
-            >
-              Weitere Artikeldetails
-              <svg style={{ width: '16px', height: '16px', transform: activeTab === 'eigenschaften' ? 'rotate(0)' : 'rotate(-90deg)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        {/* Tab Content */}
-        {activeTab && (
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: 'clamp(16px, 4vw, 32px)', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-            {activeTab === 'beschreibung' && hasBeschreibung && (
-              <div
-                style={{ color: '#2e2d32', fontSize: '14px', lineHeight: '1.75' }}
-                dangerouslySetInnerHTML={{ __html: beschreibung }}
-              />
-            )}
-
-            {activeTab === 'eigenschaften' && hasEigenschaften && (
-              <div
-                className="bj-specs-table"
-                dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-              />
-            )}
-          </div>
-        )}
-      </div>
-    );
+  // Props für Info-Kopf und Set-Box (beide früher gemeinsam an ProductInfo übergeben)
+  const setAngebotProps = {
+    product,
+    daemmungProduct,
+    sockelleisteProduct,
+    daemmungOptions,
+    sockelleisteOptions,
+    onProductSelection: handleProductSelection,
+    comparisonPriceTotal: prices?.comparisonPriceTotal || undefined,
+    totalDisplayPrice: prices?.totalDisplayPrice,
+    savingsAmount: prices?.savings || undefined,
+    savingsPercent: prices?.savingsPercent,
+    daemmungSetPricePerUnit: prices?.daemmungSetPricePerUnit || 0,
+    daemmungRegularPricePerUnit: prices?.daemmungRegularPricePerUnit || 0,
+    sockelleisteSetPricePerUnit: prices?.sockelleisteSetPricePerUnit || 0,
+    sockelleisteRegularPricePerUnit: prices?.sockelleisteRegularPricePerUnit || 0,
+    sparpaket: sparpaketAnzeige,
   };
 
   // ========== SIMPLE PRODUCT LAYOUT COMPONENTS (for Accessories) ==========
@@ -884,28 +814,34 @@ export default function ProductPageContent({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 overflow-x-hidden">
+    <div className={`min-h-screen ${isAccessory ? 'bg-gray-50' : 'bg-white'} py-8 overflow-x-hidden`}>
       <div className="content-container">
         {isAccessory ? (
           // ========== SIMPLE PRODUCT LAYOUT for Accessories ==========
           <SimpleProductLayout />
         ) : (
-          // ========== SET-ANGEBOT LAYOUT for Main Products (100% UNCHANGED) ==========
+          // ========== SET-ANGEBOT LAYOUT for Main Products ==========
           <>
-        {/* Main Product Section - 2 Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-8 mb-12 w-full">
-          {/* LEFT COLUMN - Image Gallery */}
-          <div className="space-y-6">
-            <ImageGallery product={product} rabattProzent={hasSparpaket ? prices?.savingsPercent : undefined} />
+        <ProduktBreadcrumb product={product} />
 
+        {/* Hauptbereich – Mobil: eine Spalte in DOM-Reihenfolge (Galerie, Info, Karte, Zubehör);
+            lg: zwei Spalten; xl: drei Spalten, die Karte reicht neben das Zubehör */}
+        <div className="grid grid-cols-1 gap-8 mb-0 lg:mb-12 w-full items-start lg:grid-cols-[55%_minmax(0,1fr)] lg:grid-rows-[auto_auto_1fr] lg:[grid-template-areas:'galerie_info'_'galerie_karte'_'zubehoer_karte'] xl:grid-cols-[minmax(0,5fr)_minmax(0,3.5fr)_minmax(0,3.5fr)] xl:grid-rows-[auto_1fr] xl:[grid-template-areas:'galerie_info_karte'_'zubehoer_zubehoer_karte']">
+          <div className="min-w-0 lg:[grid-area:galerie]">
+            <ImageGallery product={product} rabattProzent={hasSparpaket ? prices?.savingsPercent : undefined} variante="neu" />
+          </div>
+
+          <div className="min-w-0 lg:[grid-area:info]">
+            <ProductInfoKopf {...setAngebotProps}>
             {/* Action Buttons - Only for floor products */}
             {isFloorProduct && (
-              <div className="w-full">
+              // flex-col + order-first: Roomvo fügt „Boden virtuell verlegen“ direkt VOR dem
+              // Muster-Button ein (button:has(img[alt='Musterbox'])); laut Entwurf steht Muster oben.
+              <div className="w-full flex flex-col gap-3">
                 <button
                   onClick={handleOrderSample}
                   disabled={isOrderingSample}
-                  className="w-full px-3 sm:px-4 py-3 rounded-lg text-white text-sm sm:text-base font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: 'var(--color-bg-darkest)' }}
+                  className="order-first w-full px-3 sm:px-4 py-3 rounded-lg bg-success text-white text-sm sm:text-base font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isOrderingSample ? (
                     <>
@@ -930,74 +866,15 @@ export default function ProductPageContent({
                 </button>
               </div>
             )}
-
-            {/* Service Icons - only on desktop (on mobile shown after Zahlungsarten) */}
-            <div className="hidden lg:block space-y-0 text-base sm:text-lg lg:text-2xl text-gray-700">
-              <div className="flex items-center gap-2 sm:gap-3 pb-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/telefon-schieferschwarz.png"
-                  alt="Telefon"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Persönliche Beratung unter 02433938884</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/lager-schieferschwarz.png"
-                  alt="Lager"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Kostenlose Einlagerung bis zu 12 Monate</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/termin-schieferschwarz.png"
-                  alt="Termin"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Lieferung zum Wunschtermin</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 pt-3">
-                <Image
-                  src="/images/Icons/lieferung-schieferschwarz.png"
-                  alt="Lieferung"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Kostenlose Lieferung ab 999€</span>
-              </div>
-            </div>
+            </ProductInfoKopf>
           </div>
 
-          {/* RIGHT COLUMN - Product Info & Cart */}
-          <div className="space-y-6">
-            <ProductInfo
-              product={product}
-              daemmungProduct={daemmungProduct}
-              sockelleisteProduct={sockelleisteProduct}
-              daemmungOptions={daemmungOptions}
-              sockelleisteOptions={sockelleisteOptions}
-              onProductSelection={handleProductSelection}
-              comparisonPriceTotal={prices?.comparisonPriceTotal || undefined}
-              totalDisplayPrice={prices?.totalDisplayPrice}
-              savingsAmount={prices?.savings || undefined}
-              savingsPercent={prices?.savingsPercent}
-              daemmungSetPricePerUnit={prices?.daemmungSetPricePerUnit || 0}
-              daemmungRegularPricePerUnit={prices?.daemmungRegularPricePerUnit || 0}
-              sockelleisteSetPricePerUnit={prices?.sockelleisteSetPricePerUnit || 0}
-              sockelleisteRegularPricePerUnit={prices?.sockelleisteRegularPricePerUnit || 0}
-              sparpaket={sparpaketAnzeige}
-            />
+          {/* Karte: Set-Box, Stepper, Gesamtsumme, Service, Zahlungsarten.
+              data-kaufbox: FloatingContactButton blendet sich aus, solange die Karte im Viewport ist */}
+          <div data-kaufbox className="min-w-0 lg:[grid-area:karte] bg-white md:border md:border-ash md:rounded-xl md:shadow-sm md:p-5 space-y-5">
+            <ProductSetAngebot {...setAngebotProps} />
 
-            {/* Quantity + Price Container with Gray Background */}
-            <div className="bg-ash rounded-md p-4">
+            <div>
               {/* Quantity Selector */}
               <QuantitySelector
                 paketinhalt={paketinhalt}
@@ -1022,63 +899,66 @@ export default function ProductPageContent({
                 lieferzeit={product.lieferzeit || '3-7 Arbeitstage'}
                 showLieferzeit={!!product.show_lieferzeit}
               />
-            </div>
 
-            {/* Zahlungsarten – kleine Logo-Reihe wie im Footer */}
-            <ZahlungsIcons />
-
-            {/* Service Icons - mobile only (on desktop shown in left column) */}
-            <div className="lg:hidden space-y-0 text-base sm:text-lg text-gray-700">
-              <div className="flex items-center gap-2 sm:gap-3 pb-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/telefon-schieferschwarz.png"
-                  alt="Telefon"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Persönliche Beratung unter 02433938884</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
+            {/* Service-Zeilen (Lieferzeit steht in TotalPrice direkt darüber) */}
+            <ul className="space-y-3 text-sm text-gray-700 mt-3">
+              <li className="flex items-center gap-3">
                 <Image
                   src="/images/Icons/lager-schieferschwarz.png"
                   alt="Lager"
                   width={24}
                   height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
+                  className="w-5 h-5 object-contain flex-shrink-0"
                 />
                 <span className="break-words">Kostenlose Einlagerung bis zu 12 Monate</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
+              </li>
+              <li className="flex items-center gap-3">
+                <Image
+                  src="/images/Icons/telefon-schieferschwarz.png"
+                  alt="Telefon"
+                  width={24}
+                  height={24}
+                  className="w-5 h-5 object-contain flex-shrink-0"
+                />
+                <span className="break-words">
+                  Persönliche Beratung unter{' '}
+                  <a href={STANDORT.telefonLink} className="hover:text-brand transition-colors">{STANDORT.telefonAnzeige}</a>
+                </span>
+              </li>
+              <li className="flex items-center gap-3">
                 <Image
                   src="/images/Icons/termin-schieferschwarz.png"
                   alt="Termin"
                   width={24}
                   height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
+                  className="w-5 h-5 object-contain flex-shrink-0"
                 />
                 <span className="break-words">Lieferung zum Wunschtermin</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 pt-3">
+              </li>
+              <li className="flex items-center gap-3">
                 <Image
                   src="/images/Icons/lieferung-schieferschwarz.png"
                   alt="Lieferung"
                   width={24}
                   height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
+                  className="w-5 h-5 object-contain flex-shrink-0"
                 />
                 <span className="break-words">Kostenlose Lieferung ab 999€</span>
-              </div>
+              </li>
+            </ul>
             </div>
+
+            {/* Zahlungsarten */}
+            <ZahlungsIcons variante="raster" />
+          </div>
+
+          {/* Zubehör Slider Section – ID bleibt Sprungziel nach „In den Warenkorb“ (TotalPrice) */}
+          <div id="zubehoer-section" className="min-w-0 lg:[grid-area:zubehoer]">
+            <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
           </div>
         </div>
 
-        {/* Zubehör Slider Section */}
-        <div id="zubehoer-section" className="mb-8">
-          <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
-        </div>
-
-        <ProductTabs product={product} />
+        <ProduktDetails product={product} />
           </>
         )}
       </div>

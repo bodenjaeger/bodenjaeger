@@ -15,8 +15,46 @@ export default function FloatingContactButton() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  // Boden-Produktseiten: Buttons ausblenden, solange die Kaufbox ([data-kaufbox]) im Viewport ist –
+  // sie würden sonst Preise/Stepper am rechten Rand verdecken. Die Kaufbox gibt es nur im
+  // Boden-Layout, Zubehörseiten und alle anderen Seiten bleiben unverändert.
+  const [kaufboxSichtbar, setKaufboxSichtbar] = useState(false);
+  useEffect(() => {
+    setKaufboxSichtbar(false);
+    if (!pathname?.startsWith('/products/')) return;
+
+    let intersection: IntersectionObserver | null = null;
+    let mutation: MutationObserver | null = null;
+
+    const beobachten = (): boolean => {
+      const kaufbox = document.querySelector('[data-kaufbox]');
+      if (!kaufbox) return false;
+      intersection = new IntersectionObserver(([entry]) => setKaufboxSichtbar(entry.isIntersecting));
+      intersection.observe(kaufbox);
+      return true;
+    };
+
+    // Die Seite kann nach diesem Effekt gestreamt werden – dann auf die Kaufbox warten
+    if (!beobachten()) {
+      mutation = new MutationObserver(() => {
+        if (beobachten()) {
+          mutation?.disconnect();
+          mutation = null;
+        }
+      });
+      mutation.observe(document.body, { childList: true, subtree: true });
+    }
+
+    return () => {
+      intersection?.disconnect();
+      mutation?.disconnect();
+    };
+  }, [pathname]);
+
   // Auf allen Fachmarkt-Seiten (Landing + Unterseiten) keine Floating-Buttons.
   if (isFachmarktRoute(pathname)) return null;
+
+  const ausgeblendet = isCartDrawerOpen || kaufboxSichtbar;
 
   return (
     <>
@@ -27,9 +65,10 @@ export default function FloatingContactButton() {
           bei offenem Menü (body.nav-menu-open) auszublenden. */}
       <div
         data-floating-actions
-        className={`fixed right-8 bottom-6 md:right-6 md:bottom-6 z-30 flex flex-col gap-3 transition-opacity duration-300 ${
-          isCartDrawerOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        className={`fixed right-8 bottom-6 md:right-6 md:bottom-6 z-30 flex flex-col gap-3 transition-[opacity,transform] duration-300 ${
+          ausgeblendet ? 'opacity-0 translate-y-2 pointer-events-none' : 'opacity-100 translate-y-0'
         }`}
+        inert={ausgeblendet}
       >
         {/* Kontakt Button */}
         <button

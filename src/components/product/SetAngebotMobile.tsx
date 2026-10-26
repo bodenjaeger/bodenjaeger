@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import Image from 'next/image';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import type { SparpaketAnzeige } from './SetAngebot';
@@ -100,180 +100,127 @@ export default function SetAngebotMobile({
   // ✅ Backend-Wert verwenden (savingsPercent = setangebot_ersparnis_prozent)
   const ersparnisProzent = savingsPercent || 0;
 
+  // Eine Set-Zeile: Bild links, „Label - Name“ mit Streichpreis darunter, Set-Preis rechts
+  const zeile = (z: {
+    key: string;
+    bild: string;
+    label: string;
+    name: string;
+    streichpreis?: string;
+    setPreis: string;
+    zusatz?: ReactNode;
+    gedimmt?: boolean;
+  }) => (
+    <div key={z.key} className={`grid grid-cols-[auto_1fr_auto] gap-2.5 items-start py-2${z.gedimmt ? ' opacity-50' : ''}`}>
+      <div className="w-10 h-10 relative overflow-hidden rounded bg-pale">
+        <Image src={z.bild} alt={z.name} fill className="object-cover" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] text-dark break-words leading-snug">{z.label} - {z.name}</p>
+        {z.streichpreis && (
+          <p className="text-[11px] text-mid line-through whitespace-nowrap mt-0.5">{z.streichpreis}</p>
+        )}
+        {z.zusatz}
+      </div>
+      <span className="text-xs font-bold text-dark whitespace-nowrap">{z.setPreis}</span>
+    </div>
+  );
+
   return (
-    <div className="bg-ash rounded-lg p-3">
-      {/* Badge Header */}
-      <div className="inline-flex items-center px-3 py-1 mb-3 text-sm font-semibold text-white bg-brand rounded">
-        {setangebotTitel}
+    <div className="w-full">
+      {/* Kopf: Set-Titel links, Ersparnis-Badge rechts */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="inline-flex items-center px-3 py-1 text-sm font-bold text-white bg-brand rounded">
+          {setangebotTitel}
+        </div>
+        {ersparnisProzent > 0 && (
+          <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-bold text-white bg-dark rounded-full whitespace-nowrap">
+            -{Math.round(ersparnisProzent)}%
+          </span>
+        )}
       </div>
 
-      {/* Produktkarten */}
-      <div className="flex flex-col gap-2">
+      {/* Produktliste */}
+      <div className="flex flex-col divide-y divide-ash">
         {/* Boden */}
-        <div className="grid grid-cols-[auto_1fr_auto] gap-2 p-3 rounded-lg items-stretch">
-          {/* 1. Bild */}
-          <div className="w-12 relative overflow-hidden rounded">
-            <Image
-              src={productImage}
-              alt={productName}
-              fill
-              className="object-cover"
-            />
-          </div>
-          {/* 2. Kategorie + Name */}
-          <div className="min-w-0">
-            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Boden</h3>
-            <p className="text-xs text-dark break-words leading-tight">{productName}</p>
-          </div>
-          {/* 3. Preise */}
-          <div className="flex flex-col items-end flex-shrink-0">
-            {regularPrice > basePrice && (
-              <span className="text-[10px] text-mid line-through whitespace-nowrap">
-                {regularPrice.toFixed(2).replace('.', ',')} €/{einheit}
-              </span>
-            )}
-            <span className="text-[11px] font-semibold text-brand whitespace-nowrap">
-              {basePrice.toFixed(2).replace('.', ',')} €/{einheit}
-            </span>
-          </div>
-        </div>
+        {zeile({
+          key: 'boden',
+          bild: productImage,
+          label: 'Boden',
+          name: productName,
+          streichpreis: regularPrice > basePrice ? `${regularPrice.toFixed(2).replace('.', ',')} €/${einheit}` : undefined,
+          setPreis: `${basePrice.toFixed(2).replace('.', ',')} €/${einheit}`,
+        })}
 
         {/* Dämmung */}
-        {hasDaemmung && (
-          <div className="grid grid-cols-[auto_1fr_auto] gap-2 p-3 rounded-lg items-stretch">
-            {/* 1. Bild */}
-            <div className="w-12 relative overflow-hidden rounded">
-              <Image
-                src={selectedDaemmung?.images?.[0]?.src || daemmungImage}
-                alt={selectedDaemmung?.name || daemmungName}
-                fill
-                className="object-cover"
-              />
-            </div>
-            {/* 2. Kategorie + Name + Button */}
-            <div className="min-w-0">
-              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Dämmung</h3>
-              <p className="text-xs text-dark break-words leading-tight">{selectedDaemmung?.name || daemmungName}</p>
-              {daemmungOptions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => openModal('daemmung')}
-                  className="mt-1.5 bg-dark text-white text-[10px] font-semibold py-1.5 px-3 rounded hover:bg-[#1a1a1d] transition-colors"
-                >
-                  Andere Dämmung &gt;
-                </button>
-              )}
-            </div>
-            {/* 3. Preise */}
-            <div className="flex flex-col items-end flex-shrink-0">
-              <span className="text-[10px] text-mid line-through whitespace-nowrap">
-                {daemmungRegularPricePerUnit.toFixed(2).replace('.', ',')} €
-              </span>
-              <span className="text-[11px] font-semibold text-brand whitespace-nowrap">
-                {daemmungSetPricePerUnit <= 0
-                  ? `0,00 €/${selectedDaemmung?.einheit_short || einheit}`
-                  : `+${daemmungSetPricePerUnit.toFixed(2).replace('.', ',')} €/${selectedDaemmung?.einheit_short || einheit}`
-                }
-              </span>
-            </div>
-          </div>
-        )}
+        {hasDaemmung && zeile({
+          key: 'daemmung',
+          bild: selectedDaemmung?.images?.[0]?.src || daemmungImage,
+          label: 'Dämmung',
+          name: selectedDaemmung?.name || daemmungName,
+          streichpreis: `${daemmungRegularPricePerUnit.toFixed(2).replace('.', ',')} €`,
+          setPreis: daemmungSetPricePerUnit <= 0
+            ? `0,00 €/${selectedDaemmung?.einheit_short || einheit}`
+            : `+${daemmungSetPricePerUnit.toFixed(2).replace('.', ',')} €/${selectedDaemmung?.einheit_short || einheit}`,
+          zusatz: daemmungOptions.length > 0 && (
+            <button
+              type="button"
+              onClick={() => openModal('daemmung')}
+              className="mt-1 border border-dark text-dark text-[10px] font-semibold py-1 px-2 rounded"
+            >
+              Andere Dämmung &gt;
+            </button>
+          ),
+        })}
 
         {/* Sockelleiste */}
-        {hasSockelleiste && (
-          <div className="grid grid-cols-[auto_1fr_auto] gap-2 p-3 rounded-lg items-stretch">
-            {/* 1. Bild */}
-            <div className="w-12 relative overflow-hidden rounded">
-              <Image
-                src={selectedSockelleiste?.images?.[0]?.src || sockelleisteImage}
-                alt={selectedSockelleiste?.name || sockelleisteName}
-                fill
-                className="object-cover"
-              />
-            </div>
-            {/* 2. Kategorie + Name + Button */}
-            <div className="min-w-0">
-              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Sockelleiste</h3>
-              <p className="text-xs text-dark break-words leading-tight">{selectedSockelleiste?.name || sockelleisteName}</p>
-              {sockelleisteOptions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => openModal('sockelleiste')}
-                  className="mt-1.5 bg-dark text-white text-[10px] font-semibold py-1.5 px-3 rounded hover:bg-[#1a1a1d] transition-colors"
-                >
-                  Andere Sockelleiste &gt;
-                </button>
-              )}
-            </div>
-            {/* 3. Preise */}
-            <div className="flex flex-col items-end flex-shrink-0">
-              <span className="text-[10px] text-mid line-through whitespace-nowrap">
-                {sockelleisteRegularPricePerUnit.toFixed(2).replace('.', ',')} €
-              </span>
-              <span className="text-[11px] font-semibold text-brand whitespace-nowrap">
-                {sockelleisteSetPricePerUnit <= 0
-                  ? `0,00 €/${selectedSockelleiste?.einheit_short || sockelleisteEinheit}`
-                  : `+${sockelleisteSetPricePerUnit.toFixed(2).replace('.', ',')} €/${selectedSockelleiste?.einheit_short || sockelleisteEinheit}`
-                }
-              </span>
-            </div>
-          </div>
-        )}
+        {hasSockelleiste && zeile({
+          key: 'sockelleiste',
+          bild: selectedSockelleiste?.images?.[0]?.src || sockelleisteImage,
+          label: 'Sockelleiste',
+          name: selectedSockelleiste?.name || sockelleisteName,
+          streichpreis: `${sockelleisteRegularPricePerUnit.toFixed(2).replace('.', ',')} €`,
+          setPreis: sockelleisteSetPricePerUnit <= 0
+            ? `0,00 €/${selectedSockelleiste?.einheit_short || sockelleisteEinheit}`
+            : `+${sockelleisteSetPricePerUnit.toFixed(2).replace('.', ',')} €/${selectedSockelleiste?.einheit_short || sockelleisteEinheit}`,
+          zusatz: sockelleisteOptions.length > 0 && (
+            <button
+              type="button"
+              onClick={() => openModal('sockelleiste')}
+              className="mt-1 border border-dark text-dark text-[10px] font-semibold py-1 px-2 rounded"
+            >
+              Andere Sockelleiste &gt;
+            </button>
+          ),
+        })}
+
         {/* Klebe-Vinyl Sparpaket */}
-        {sparpaket?.zeilen.map((zeile) => (
-          <div
-            key={zeile.typ}
-            className={`grid grid-cols-[auto_1fr_auto] gap-2 p-3 rounded-lg items-stretch${sparpaket.aktiv ? '' : ' opacity-50'}`}
-          >
-            {/* 1. Bild */}
-            <div className="w-12 relative overflow-hidden rounded">
-              <Image
-                src={zeile.image}
-                alt={zeile.name}
-                fill
-                className="object-cover"
-              />
-            </div>
-            {/* 2. Kategorie + Name */}
-            <div className="min-w-0">
-              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{zeile.label}</h3>
-              <p className="text-xs text-dark break-words leading-tight">{zeile.name}</p>
-              {!sparpaket.aktiv && (
-                <p className="mt-0.5 text-[10px] text-mid">Kostenlos ab {sparpaket.mindestPakete} Paketen</p>
-              )}
-            </div>
-            {/* 3. Preise */}
-            <div className="flex flex-col items-end flex-shrink-0">
-              <span className="text-[10px] text-mid line-through whitespace-nowrap">
-                {zeile.regularPreisProM2.toFixed(2).replace('.', ',')} €
-              </span>
-              <span className="text-[11px] font-semibold text-brand whitespace-nowrap">
-                0,00 €/{einheit}
-              </span>
-            </div>
-          </div>
-        ))}
+        {sparpaket?.zeilen.map((z) => zeile({
+          key: z.typ,
+          bild: z.image,
+          label: z.label,
+          name: z.name,
+          streichpreis: `${z.regularPreisProM2.toFixed(2).replace('.', ',')} €`,
+          setPreis: `0,00 €/${einheit}`,
+          gedimmt: !sparpaket.aktiv,
+          zusatz: !sparpaket.aktiv && (
+            <p className="mt-0.5 text-[10px] text-mid">Kostenlos ab {sparpaket.mindestPakete} Paketen</p>
+          ),
+        }))}
       </div>
 
-      {/* Gesamt-Block */}
-      <div className="mt-3 pt-3 border-t-2 border-gray-300">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-bold text-dark flex-shrink-0">Gesamt</span>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {vergleichspreisProM2 > setAngebotPreisProM2 && (
-              <span className="line-through text-[10px] text-mid whitespace-nowrap">
-                {vergleichspreisProM2.toFixed(2).replace('.', ',')} €/{einheit}
-              </span>
-            )}
-            <span className="text-sm font-bold text-brand whitespace-nowrap">
-              {setAngebotPreisProM2.toFixed(2).replace('.', ',')} €/{einheit}
+      {/* Set-Preis (STATISCHER M²-PREIS) */}
+      <div className="mt-2 pt-2 border-t border-ash">
+        <div className="text-right text-[11px] font-bold text-dark uppercase tracking-wide">Set-Preis</div>
+        <div className="flex items-end justify-between gap-2">
+          {vergleichspreisProM2 > setAngebotPreisProM2 ? (
+            <span className="line-through text-xs text-mid whitespace-nowrap">
+              {vergleichspreisProM2.toFixed(2).replace('.', ',')} €/{einheit}
             </span>
-            {ersparnisProzent > 0 && (
-              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-white bg-brand rounded whitespace-nowrap">
-                -{Math.round(ersparnisProzent)}%
-              </span>
-            )}
-          </div>
+          ) : <span />}
+          <span className="text-2xl font-bold text-dark whitespace-nowrap">
+            {setAngebotPreisProM2.toFixed(2).replace('.', ',')} €/{einheit}
+          </span>
         </div>
       </div>
 

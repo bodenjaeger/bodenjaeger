@@ -182,6 +182,85 @@ body.nav-menu-open [id^='trustbadge-container-'] {
   pointer-events: none !important;
 }
 
+/* ===== Roomvo „Boden virtuell verlegen“ (Produktseite Böden) =====
+   Den Button fügt das Roomvo-Skript selbst ein (button#detail-btn.roomvo-stimr, vor dem
+   Muster-Button) und setzt die Optik per Inline-Style. Deshalb hier nur CSS mit !important,
+   Skript und Markup bleiben unverändert. */
+button#detail-btn.roomvo-stimr {
+  height: 48px !important;
+  margin-bottom: 0 !important;
+  border: 1px solid var(--color-primary) !important;
+  border-radius: 8px !important;
+  color: var(--color-primary) !important;
+  background-color: var(--color-bg-white) !important;
+}
+
+button#detail-btn.roomvo-stimr svg {
+  stroke: var(--color-primary) !important;
+}
+
+/* Für das Produkt ausgeblendeter Button soll keinen Leerraum hinterlassen */
+.roomvo-stimr[style*="visibility: hidden"] {
+  display: none !important;
+}
+
+/* ===== Artikelbeschreibung (Produktseite Böden, Design 2026) =====
+   Nur Darstellung – das HTML aus dem Backend bleibt unverändert. */
+.bj-beschreibung p {
+  margin: 0 0 1em;
+}
+
+.bj-beschreibung h2,
+.bj-beschreibung h3,
+.bj-beschreibung h4 {
+  font-size: 1.25rem;
+  line-height: 1.35;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 1.5em 0 0.5em;
+}
+
+.bj-beschreibung > :first-child {
+  margin-top: 0;
+}
+
+/* Ältere Beschreibungen: fette erste Zeile im Fließtext als Überschrift */
+.bj-beschreibung > strong:first-child {
+  display: inline-block;
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+/* Listen mit roten Häkchen wie bei den Vorteilen oben */
+.bj-beschreibung ul {
+  margin: 0 0 1em;
+  padding: 0;
+  list-style: none;
+}
+
+.bj-beschreibung ul li {
+  position: relative;
+  padding-left: 30px;
+  margin-bottom: 0.5em;
+}
+
+.bj-beschreibung ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.2em;
+  width: 20px;
+  height: 20px;
+  background: url('/images/Icons/haken-rot.png') no-repeat center / contain;
+}
+
+/* Trennlinie aus dem Backend dezent statt als harter Strich */
+.bj-beschreibung hr {
+  border: 0;
+  border-top: 1px solid var(--color-bg-gray);
+  margin: 1.5em 0;
+}
+
 /* ===== Artikeleigenschaften Tabelle (Weitere Artikeldetails) ===== */
 .bj-specs-table {
   color: var(--color-text-primary);
@@ -191,16 +270,20 @@ body.nav-menu-open [id^='trustbadge-container-'] {
 
 .bj-specs-table h2,
 .bj-specs-table h3 {
-  font-size: 1.5rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--color-text-primary);
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
+/* Design 2026: abgerundeter Rahmen um die Tabelle */
 .bj-specs-table table {
   width: 100%;
-  border-collapse: collapse;
-  border-top: 1px solid var(--color-bg-gray);
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--color-bg-gray);
+  border-radius: 12px;
+  overflow: hidden;
   table-layout: fixed;
 }
 
@@ -218,18 +301,26 @@ body.nav-menu-open [id^='trustbadge-container-'] {
 
 .bj-specs-table table td,
 .bj-specs-table table th {
-  padding: 12px 16px;
+  padding: 10px 16px;
   text-align: left;
   vertical-align: top;
   border: none;
+  border-bottom: 1px solid var(--color-bg-gray);
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
 }
 
+.bj-specs-table table tr:last-child td,
+.bj-specs-table table tr:last-child th {
+  border-bottom: none;
+}
+
+/* Label grau (Design 2026), Wert in Textfarbe */
 .bj-specs-table table td:first-child,
 .bj-specs-table table th:first-child {
-  font-weight: 700;
+  font-weight: 400;
+  color: var(--color-text-dark);
   width: 45%;
 }
 
@@ -237,6 +328,40 @@ body.nav-menu-open [id^='trustbadge-container-'] {
 .bj-specs-table table th:last-child {
   font-weight: 400;
   width: 55%;
+}
+
+/* Leere Zeilen aus dem Backend (z. B. leere Schlusszeile) nicht anzeigen */
+.bj-specs-table table tr:not(:has(td:not(:empty), th:not(:empty))) {
+  display: none;
+}
+
+/* Desktop: Zeilen spaltenweise auf zwei Spalten verteilen (Design 2026) */
+@media (min-width: 1024px) {
+  .bj-specs-table table {
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .bj-specs-table table tbody {
+    display: block;
+    column-count: 2;
+    column-gap: 2rem;
+  }
+
+  /* Voller Rahmen je Zeile, überlappend (-1px), damit auch die erste Zeile
+     der zweiten Spalte oben eine Linie hat */
+  .bj-specs-table table tr {
+    display: flex;
+    break-inside: avoid;
+    border: 1px solid var(--color-bg-gray);
+    margin-top: -1px;
+  }
+
+  .bj-specs-table table td,
+  .bj-specs-table table th {
+    border-bottom: 0;
+  }
 }
 
 /* Mobil: Zellen untereinander (Label oben, Wert unten) */

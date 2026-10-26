@@ -1,9 +1,11 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import Image from 'next/image';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import SetAngebot, { type SparpaketAnzeige } from './SetAngebot';
 import SetAngebotMobile from './SetAngebotMobile';
+import { getBodenKategorie } from './ProduktBreadcrumb';
 
 interface ProductInfoProps {
   product: StoreApiProduct;
@@ -25,21 +27,12 @@ interface ProductInfoProps {
   sparpaket?: SparpaketAnzeige | null;  // Klebe-Vinyl Sparpaket
 }
 
-export default function ProductInfo({
+// Kopf (Titel, Art.-Nr., Vorteile) und Set-Box stehen im Layout in getrennten Spalten.
+// Beide bekommen dieselben Props wie früher ProductInfo; die Ableitung unten ist unverändert.
+function ableiten({
   product,
   daemmungProduct,
   sockelleisteProduct,
-  daemmungOptions = [],
-  sockelleisteOptions = [],
-  onProductSelection,
-  comparisonPriceTotal,
-  totalDisplayPrice,
-  savingsAmount,
-  savingsPercent,
-  daemmungSetPricePerUnit = 0,
-  daemmungRegularPricePerUnit = 0,
-  sockelleisteSetPricePerUnit = 0,
-  sockelleisteRegularPricePerUnit = 0,
   sparpaket = null
 }: ProductInfoProps) {
   // Klebe-Vinyl: Titel "Sparpaket" statt Backend-Titel ("Komplett-Set")
@@ -122,21 +115,49 @@ export default function ProductInfo({
   // ✅ PREISE KOMMEN VON PARENT (ProductPageContent) - KEINE lokale Berechnung!
   // Diese Werte wurden bereits im Parent korrekt berechnet
 
+  return {
+    setangebotTitel,
+    features,
+    basePrice,
+    regularPrice,
+    gesamtVergleichspreisProM2,
+    einheit,
+    productImage,
+    daemmungName,
+    daemmungImage,
+    daemmungVE,
+    sockelleisteName,
+    sockelleisteImage,
+    sockelleisteVE,
+    sockelleisteEinheit,
+  };
+}
+
+export function ProductInfoKopf({ children, ...props }: ProductInfoProps & { children?: ReactNode }) {
+  const { product } = props;
+  const { features } = ableiten(props);
+  const kategorie = getBodenKategorie(product);
+
   return (
-    <div className="space-y-6">
+    <div>
+      {/* Kategorie-Label steht VOR der H1: Roomvo liest die Art.-Nr. aus `h1 + div.text-sm.text-gray-600` */}
+      {kategorie && (
+        <div className="text-sm text-mid mb-1">{kategorie.name}</div>
+      )}
+
       {/* Product Title */}
-      <h1 className="text-3xl lg:text-4xl font-bold text-gray-900">
+      <h1 className="text-3xl xl:text-4xl font-bold text-dark">
         {product.name}
       </h1>
 
-      {/* Article Number */}
-      <div className="text-sm text-gray-600">
+      {/* Article Number – muss direkt auf die H1 folgen (Roomvo-Produktkennung) */}
+      <div className="text-sm text-gray-600 mt-2">
         Art.Nr.: {product.sku || 'N/A'}
       </div>
 
       {/* Features List */}
       {features.length > 0 && (
-        <div className="space-y-2 pt-2">
+        <div className="space-y-2 mt-5">
           {features.map((feature, index) => (
             <div key={index} className="flex items-start gap-3">
               <Image
@@ -154,28 +175,53 @@ export default function ProductInfo({
         </div>
       )}
 
+      {children && <div className="mt-6">{children}</div>}
+    </div>
+  );
+}
+
+export function ProductSetAngebot(props: ProductInfoProps) {
+  const {
+    daemmungOptions = [],
+    sockelleisteOptions = [],
+    onProductSelection,
+    comparisonPriceTotal,
+    totalDisplayPrice,
+    savingsAmount,
+    savingsPercent,
+    daemmungSetPricePerUnit = 0,
+    daemmungRegularPricePerUnit = 0,
+    sockelleisteSetPricePerUnit = 0,
+    sockelleisteRegularPricePerUnit = 0,
+    sparpaket = null,
+    product,
+  } = props;
+  const d = ableiten(props);
+
+  return (
+    <>
       {/* Set Angebot Component - Desktop */}
-      <div className="mt-6 hidden md:block">
+      <div className="hidden md:block">
         <SetAngebot
-          setangebotTitel={setangebotTitel}
+          setangebotTitel={d.setangebotTitel}
           productName={product.name}
-          productImage={productImage}
-          basePrice={basePrice}
-          regularPrice={regularPrice}
-          gesamtVergleichspreisProM2={gesamtVergleichspreisProM2}
-          einheit={einheit}
-          daemmungName={daemmungName}
-          daemmungImage={daemmungImage}
+          productImage={d.productImage}
+          basePrice={d.basePrice}
+          regularPrice={d.regularPrice}
+          gesamtVergleichspreisProM2={d.gesamtVergleichspreisProM2}
+          einheit={d.einheit}
+          daemmungName={d.daemmungName}
+          daemmungImage={d.daemmungImage}
           daemmungSetPricePerUnit={daemmungSetPricePerUnit}
           daemmungRegularPricePerUnit={daemmungRegularPricePerUnit}
-          daemmungVE={daemmungVE}
+          daemmungVE={d.daemmungVE}
           daemmungOptions={daemmungOptions}
-          sockelleisteName={sockelleisteName}
-          sockelleisteImage={sockelleisteImage}
+          sockelleisteName={d.sockelleisteName}
+          sockelleisteImage={d.sockelleisteImage}
           sockelleisteSetPricePerUnit={sockelleisteSetPricePerUnit}
           sockelleisteRegularPricePerUnit={sockelleisteRegularPricePerUnit}
-          sockelleisteVE={sockelleisteVE}
-          sockelleisteEinheit={sockelleisteEinheit}
+          sockelleisteVE={d.sockelleisteVE}
+          sockelleisteEinheit={d.sockelleisteEinheit}
           sockelleisteOptions={sockelleisteOptions}
           onProductSelection={onProductSelection}
           comparisonPriceTotal={comparisonPriceTotal}
@@ -187,23 +233,23 @@ export default function ProductInfo({
       </div>
 
       {/* Set Angebot Component - Mobile */}
-      <div className="mt-6 md:hidden">
+      <div className="md:hidden">
         <SetAngebotMobile
-          setangebotTitel={setangebotTitel}
+          setangebotTitel={d.setangebotTitel}
           productName={product.name}
-          productImage={productImage}
-          basePrice={basePrice}
-          regularPrice={regularPrice}
-          einheit={einheit}
-          daemmungName={daemmungName}
-          daemmungImage={daemmungImage}
+          productImage={d.productImage}
+          basePrice={d.basePrice}
+          regularPrice={d.regularPrice}
+          einheit={d.einheit}
+          daemmungName={d.daemmungName}
+          daemmungImage={d.daemmungImage}
           daemmungSetPricePerUnit={daemmungSetPricePerUnit}
           daemmungRegularPricePerUnit={daemmungRegularPricePerUnit}
-          sockelleisteName={sockelleisteName}
-          sockelleisteImage={sockelleisteImage}
+          sockelleisteName={d.sockelleisteName}
+          sockelleisteImage={d.sockelleisteImage}
           sockelleisteSetPricePerUnit={sockelleisteSetPricePerUnit}
           sockelleisteRegularPricePerUnit={sockelleisteRegularPricePerUnit}
-          sockelleisteEinheit={sockelleisteEinheit}
+          sockelleisteEinheit={d.sockelleisteEinheit}
           comparisonPriceTotal={comparisonPriceTotal}
           totalDisplayPrice={totalDisplayPrice}
           savingsPercent={savingsPercent}
@@ -213,6 +259,6 @@ export default function ProductInfo({
           sparpaket={sparpaket}
         />
       </div>
-    </div>
+    </>
   );
 }

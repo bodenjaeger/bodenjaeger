@@ -55,7 +55,21 @@ export default function ZubehoerSlider({
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [addedProductId, setAddedProductId] = useState<number | null>(null);
 
-  const { addToCart, openCartDrawer } = useCart();
+  const { addToCart, openCartDrawer, cartItems } = useCart();
+
+  // Mobil: Akkordeon, standardmäßig zu. Öffnet sich, sobald ein neues Set mit diesem Boden
+  // im Warenkorb landet – TotalPrice scrollt danach zu #zubehoer-section (unverändert).
+  const [mobilOffen, setMobilOffen] = useState(false);
+  const setAnzahl = cartItems.filter(
+    (item) => item.isSetItem && item.setItemType === 'floor' && item.id === product?.id
+  ).length;
+  const vorherigeSetAnzahl = useRef<number | null>(null);
+  useEffect(() => {
+    if (vorherigeSetAnzahl.current !== null && setAnzahl > vorherigeSetAnzahl.current) {
+      setMobilOffen(true);
+    }
+    vorherigeSetAnzahl.current = setAnzahl;
+  }, [setAnzahl]);
 
   // Hilfsfunktion: Für "Zubehör für Sockelleisten" die ausgewählte Sockelleiste nutzen,
   // für alle anderen Kategorien das Hauptprodukt
@@ -175,6 +189,22 @@ export default function ZubehoerSlider({
     };
   }, [products]);
 
+  // Tab-Leiste: prüfen, ob rechts noch Tabs verdeckt sind (für den Verlauf)
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [tabsMehrRechts, setTabsMehrRechts] = useState(false);
+  useEffect(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+    const pruefen = () => setTabsMehrRechts(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+    pruefen();
+    el.addEventListener('scroll', pruefen);
+    window.addEventListener('resize', pruefen);
+    return () => {
+      el.removeEventListener('scroll', pruefen);
+      window.removeEventListener('resize', pruefen);
+    };
+  }, [availableCategories.length, mobilOffen]);
+
   // Scroll nach links
   const scrollLeft = () => {
     if (!scrollContainerRef.current) return;
@@ -220,64 +250,66 @@ export default function ZubehoerSlider({
   }
 
   return (
-    <section className="bg-white rounded-lg shadow-md">
-      <div className="flex flex-col lg:flex-row">
-        {/* LINKE SEITE - Info Box (Fixed) */}
-        <div className="lg:w-[280px] flex-shrink-0 bg-ash p-6 lg:sticky lg:top-0 lg:self-start">
-          <h2 className="text-2xl font-bold text-dark mb-4">
-            Passendes Zubehör:
-          </h2>
+    <section className="bg-white lg:bg-pale lg:rounded-xl lg:border lg:border-ash">
+      {/* Mobil: Akkordeon-Kopf */}
+      <button
+        type="button"
+        onClick={() => setMobilOffen(!mobilOffen)}
+        aria-expanded={mobilOffen}
+        className="lg:hidden w-full flex items-center justify-between py-4 border-b border-ash text-left"
+      >
+        <span className="text-base font-bold text-dark">Passendes Zubehör</span>
+        <svg className={`w-5 h-5 text-dark transition-transform ${mobilOffen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
 
-          <p className="text-base text-gray-700 mb-4">
-            Hier findest du unsere Vorauswahl der passenden Zubehörprodukte zu deiner obigen Produktauswahl.
-          </p>
+      <div className={`${mobilOffen ? '' : 'hidden'} lg:block py-4 lg:p-6`}>
+        {/* Überschrift + Infotexte */}
+        <h2 className="hidden lg:block text-xl font-bold text-dark mb-1">
+          Passendes Zubehör
+        </h2>
+        <p className="text-sm text-gray-700">
+          Hier findest du unsere Vorauswahl der passenden Zubehörprodukte zu deiner obigen Produktauswahl.{' '}
+          <span className="text-gray-600">Die Anzahl der Produkte kannst du ganz einfach im Warenkorb anpassen.</span>
+        </p>
 
-          <p className="text-sm text-gray-600 mb-6">
-            Die Anzahl der Produkte kannst du ganz einfach im Warenkorb anpassen.
-          </p>
-
-          <button
-            onClick={openCartDrawer}
-            className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg text-white font-bold hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: 'var(--color-bg-darkest)' }}
-          >
-            Weiter zum Warenkorb
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-
-        {/* RECHTE SEITE - Kategorien + Slider */}
-        <div className="flex-1 p-6 lg:p-8">
-          {/* Kategorie-Navigation */}
+        <div className="min-w-0 mt-4">
+          {/* Kategorie-Navigation als Tab-Leiste */}
           {availableCategories.length > 0 && (
-            <div className="mb-6 overflow-x-auto scrollbar-hide">
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 min-w-min">
+            <div className="relative mb-5">
+            <div ref={tabsRef} className="overflow-x-auto scrollbar-hide border-b border-ash">
+              <div className="flex gap-1 min-w-min" role="tablist">
                 {availableCategories.map((category) => (
                   <button
                     key={category.metaKey}
+                    role="tab"
+                    aria-selected={activeCategory === category.metaKey}
                     onClick={() => setActiveCategory(category.metaKey)}
-                    className={`px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center justify-between gap-1.5 ${
+                    className={`px-3 py-2.5 -mb-px border-b-2 text-xs sm:text-sm whitespace-nowrap transition-colors ${
                       activeCategory === category.metaKey
-                        ? 'bg-gray-200 font-semibold text-gray-900'
-                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                        ? 'border-brand font-semibold text-dark'
+                        : 'border-transparent text-mid hover:text-dark'
                     }`}
                   >
-                    <span className="flex-1 text-left">
-                      {category.name}
-                    </span>
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                    {category.name}
                   </button>
                 ))}
               </div>
             </div>
+            {/* Scroll-Hinweis: Verlauf rechts, solange weitere Tabs verdeckt sind */}
+            {tabsMehrRechts && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute right-0 top-0 bottom-px w-12 bg-gradient-to-l from-white lg:from-pale to-transparent"
+              />
+            )}
+            </div>
           )}
 
           {/* Produkt-Slider */}
-          <div className="relative px-0 md:px-6">
+          {/* md:px-14: Pfeile (w-10) liegen im Randbereich, nicht über den Karten */}
+          <div className="relative px-0 md:px-14">
             {/* Loading State */}
             {loading && (
               <div className="flex items-center justify-center py-12">
@@ -407,10 +439,10 @@ export default function ZubehoerSlider({
                 {/* Scroll Left Button */}
                 <button
                   onClick={scrollLeft}
-                  className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full shadow-lg hover:shadow-xl items-center justify-center transition-all z-10 ${
+                  className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-lg hover:shadow-xl items-center justify-center transition-all z-10 ${
                     canScrollLeft
-                      ? 'bg-dark text-brand cursor-pointer'
-                      : 'bg-dark/50 text-brand/40 cursor-not-allowed'
+                      ? 'bg-dark text-white cursor-pointer'
+                      : 'bg-dark/40 text-white/60 cursor-not-allowed'
                   }`}
                   disabled={!canScrollLeft}
                   aria-label="Zurück"
@@ -423,10 +455,10 @@ export default function ZubehoerSlider({
                 {/* Scroll Right Button */}
                 <button
                   onClick={scrollRight}
-                  className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full shadow-lg hover:shadow-xl items-center justify-center transition-all z-10 ${
+                  className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full shadow-lg hover:shadow-xl items-center justify-center transition-all z-10 ${
                     canScrollRight
-                      ? 'bg-dark text-brand cursor-pointer'
-                      : 'bg-dark/50 text-brand/40 cursor-not-allowed'
+                      ? 'bg-dark text-white cursor-pointer'
+                      : 'bg-dark/40 text-white/60 cursor-not-allowed'
                   }`}
                   disabled={!canScrollRight}
                   aria-label="Weitere Produkte"
@@ -444,6 +476,18 @@ export default function ZubehoerSlider({
                 Keine Produkte in dieser Kategorie gefunden.
               </div>
             )}
+          </div>
+
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={openCartDrawer}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-dark text-white text-sm font-bold hover:opacity-90 transition-opacity"
+            >
+              Weiter zum Warenkorb
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>

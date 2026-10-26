@@ -17,14 +17,17 @@ import { PAYMENT_BADGES } from '@/lib/footer-nav';
 // Seitenhintergrund (im dunklen Footer nicht nötig).
 const KACHEL = 'h-6 rounded-[3px] ring-1 ring-ash';
 
-export default function ZahlungsIcons() {
+// 'raster' = Bodenseiten-Design 2026: Logos in einer 6er-Reihe, Textkacheln darunter doppelt breit.
+export default function ZahlungsIcons({ variante = 'standard' }: { variante?: 'standard' | 'raster' }) {
   const badges = PAYMENT_BADGES.filter((badge) => badge.enabled);
+  const isRaster = variante === 'raster';
+  const kachel = isRaster ? 'h-8 rounded-[4px] ring-1 ring-ash' : KACHEL;
 
   return (
-    <ul className="flex flex-wrap gap-1.5" aria-label="Zahlungsarten">
+    <ul className={isRaster ? 'grid grid-cols-6 gap-2' : 'flex flex-wrap gap-1.5'} aria-label="Zahlungsarten">
       {badges.map((badge) => (
         // „PayPal" kommt zweimal vor (Logo und „Später Bezahlen"), daher sublabel im Key
-        <li key={`${badge.label}-${badge.sublabel ?? ''}`}>
+        <li key={`${badge.label}-${badge.sublabel ?? ''}`} className={isRaster && !badge.src ? 'col-span-2' : undefined}>
           {badge.src ? (
             <Image
               src={badge.src}
@@ -32,10 +35,10 @@ export default function ZahlungsIcons() {
               width={128}
               height={64}
               unoptimized
-              className={`${KACHEL} w-auto`}
+              className={`${kachel} ${isRaster ? 'w-full object-contain bg-white' : 'w-auto'}`}
             />
           ) : (
-            <div className={`${KACHEL} flex items-center justify-center bg-white px-1.5`}>
+            <div className={`${kachel} flex items-center justify-center bg-white px-1.5`}>
               <span className="flex flex-col items-center text-center leading-none text-dark">
                 <span className="text-[9px] font-bold">{badge.label}</span>
                 {badge.sublabel && (

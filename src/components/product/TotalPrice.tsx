@@ -240,14 +240,25 @@ export default function TotalPrice({
   };
 
   return (
-    <div className="p-0">
-      {/* 1. GESAMTSUMMEN-HEADER */}
-      <div className="flex items-center justify-between mb-4 gap-2">
-        <span className="text-dark text-sm sm:text-xl md:text-2xl lg:text-3xl font-bold min-w-0">
-          Gesamtsumme <span className="text-[10px] sm:text-sm md:text-base font-normal">(inkl. MwSt.)</span>
-        </span>
+    <div className="p-0 pt-4 border-t border-ash">
+      {/* 1. GESAMTSUMME – links Label + Ersparnis, rechts Betrag */}
+      <div className="flex items-center justify-between mb-3 gap-3">
+        <div className="min-w-0">
+          <span className="text-dark text-sm font-bold">
+            Gesamtsumme <span className="text-xs font-normal">(inkl. MwSt.)</span>
+          </span>
+          {/* 2. ERSPARNIS */}
+          {hasSavings && (
+            <div
+              className="font-semibold text-xs sm:text-sm mt-0.5"
+              style={{ color: 'var(--color-success)' }}
+            >
+              Du sparst {savings?.toFixed(2).replace('.', ',')}€ ({Math.round(savingsPercent || 0)}%)
+            </div>
+          )}
+        </div>
         <div className="text-right flex-shrink-0">
-          <div className="text-[#000000] font-bold text-xl sm:text-2xl md:text-[28px] lg:text-[32px] leading-tight">
+          <div className="text-dark font-bold text-2xl sm:text-3xl leading-tight">
             {endpreis.toFixed(2).replace('.', ',')}€
           </div>
         </div>
@@ -255,21 +266,9 @@ export default function TotalPrice({
 
       {/* Aktion: Gratis-Pakete */}
       {aktion.freePackages > 0 && (
-        <div className="font-semibold text-sm md:text-base text-brand">
+        <div className="font-semibold text-sm md:text-base text-brand mb-3">
           {aktion.freePackages === 1 ? '1 Paket' : `${aktion.freePackages} Pakete`} gratis – du sparst{' '}
           {aktion.discount.toFixed(2).replace('.', ',')}€
-        </div>
-      )}
-
-      {/* 2. ERSPARNIS-BOX */}
-      {hasSavings && (
-        <div className="py-2 my-4">
-          <div
-            className="font-semibold text-sm md:text-base"
-            style={{ color: 'var(--color-success)' }}
-          >
-            Du sparst {savings?.toFixed(2).replace('.', ',')}€ ({Math.round(savingsPercent || 0)}%)
-          </div>
         </div>
       )}
 
@@ -285,27 +284,18 @@ export default function TotalPrice({
         </div>
       )}
 
-      {/* 4. CTA BUTTONS */}
-      <div className="grid grid-cols-2 gap-3 mt-5 mb-4">
-        {/* Sekundär-Button: Individuelles Angebot */}
-        <button
-          type="button"
-          onClick={handleRequestQuote}
-          className="w-full bg-transparent border border-dark hover:bg-[#f5f5f5] text-dark font-semibold text-[9px] sm:text-[10px] md:text-xs text-center leading-tight rounded-md transition-colors" style={{ padding: '5px' }}
-        >
-          Individuelles Angebot anfragen
-        </button>
-
+      {/* 4. CTA BUTTONS – Warenkorb oben, Angebot darunter (volle Breite) */}
+      <div className="flex flex-col gap-2.5 mt-4 mb-4">
         {/* Primär-Button: In den Warenkorb */}
         <button
           type="button"
           onClick={handleAddToCart}
           disabled={addedToCart}
-          className={`w-full font-semibold text-[9px] sm:text-[10px] md:text-xs text-center leading-tight rounded-lg transition-all ${
+          className={`w-full h-12 font-bold text-base text-center leading-tight rounded-lg transition-all ${
             addedToCart
               ? 'bg-[#155724] hover:bg-[#0f4419] text-white'
               : 'bg-dark hover:bg-[#1a1a1d] active:scale-[0.98] text-white'
-          }`} style={{ padding: '5px' }}
+          }`}
         >
           {addedToCart ? (
             <span className="flex items-center justify-center">
@@ -327,17 +317,27 @@ export default function TotalPrice({
             </span>
           )}
         </button>
+
+        {/* Sekundär-Button: Individuelles Angebot */}
+        <button
+          type="button"
+          onClick={handleRequestQuote}
+          className="w-full h-11 bg-transparent border border-dark hover:bg-pale text-dark font-semibold text-sm text-center leading-tight rounded-lg transition-colors"
+        >
+          Individuelles Angebot anfragen
+        </button>
       </div>
 
       {/* 5. LIEFERHINWEIS — nur wenn show_lieferzeit aktiv */}
       {showLieferzeit && (
-      <div className="text-left text-[#666666] text-[13px] md:text-sm pt-3 mt-3 border-t border-ash">
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <div className="text-left text-gray-700 text-sm pt-1">
+        <div className="flex items-center gap-3">
+          <svg className="w-5 h-5 flex-shrink-0 text-dark" fill="currentColor" viewBox="0 0 20 20">
             <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
             <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
           </svg>
-          <span><span className="font-bold">Lieferzeit:</span> {lieferzeit} oder im Markt abholen</span>
+          {/* Backend-Text enthält den Zusatz meist schon – nur anhängen, wenn er fehlt */}
+          <span><span className="font-bold">Lieferzeit:</span> {lieferzeit}{/oder im Markt abholen/i.test(lieferzeit) ? '' : ' oder im Markt abholen'}</span>
         </div>
       </div>
       )}

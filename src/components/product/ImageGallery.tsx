@@ -8,9 +8,14 @@ import type { StoreApiProduct } from '@/lib/woocommerce';
 interface ImageGalleryProps {
   product: StoreApiProduct;
   rabattProzent?: number;  // Klebe-Vinyl Sparpaket: höherer Wert aus Backend und Berechnung
+  // 'neu' = Bodenseiten-Design 2026 (Pfeile immer sichtbar, 4 Thumbnails, rote Markierung).
+  // 'standard' = bisheriges Aussehen, z. B. für das Zubehör-Layout.
+  variante?: 'standard' | 'neu';
 }
 
-export default function ImageGallery({ product, rabattProzent }: ImageGalleryProps) {
+export default function ImageGallery({ product, rabattProzent, variante = 'standard' }: ImageGalleryProps) {
+  const isNeu = variante === 'neu';
+  const thumbnailCount = isNeu ? 4 : 3;
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const images = product.images || [];
 
@@ -135,7 +140,7 @@ export default function ImageGallery({ product, rabattProzent }: ImageGalleryPro
           <>
             <button
               onClick={goToPrevious}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 w-10 h-10 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              className={`absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-opacity ${isNeu ? '' : 'opacity-0 group-hover:opacity-100'}`}
               aria-label="Vorheriges Bild"
             >
               <ChevronLeft className="w-6 h-6" />
@@ -143,7 +148,7 @@ export default function ImageGallery({ product, rabattProzent }: ImageGalleryPro
 
             <button
               onClick={goToNext}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 w-10 h-10 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              className={`absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-900 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-opacity ${isNeu ? '' : 'opacity-0 group-hover:opacity-100'}`}
               aria-label="Nächstes Bild"
             >
               <ChevronRight className="w-6 h-6" />
@@ -154,14 +159,14 @@ export default function ImageGallery({ product, rabattProzent }: ImageGalleryPro
 
       {/* Thumbnails */}
       {images.length > 1 && (
-        <div className="grid grid-cols-3 gap-3">
-          {images.slice(0, 3).map((image, index) => (
+        <div className={`grid ${isNeu ? 'grid-cols-4' : 'grid-cols-3'} gap-3`}>
+          {images.slice(0, thumbnailCount).map((image, index) => (
             <button
               key={image.id || index}
               onClick={() => selectImage(index)}
               className={`relative aspect-[4/3] rounded-lg overflow-hidden border-2 transition-all ${
                 currentImageIndex === index
-                  ? 'border-dark ring-2 ring-dark ring-offset-2'
+                  ? isNeu ? 'border-brand' : 'border-dark ring-2 ring-dark ring-offset-2'
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
