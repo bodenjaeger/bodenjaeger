@@ -10,6 +10,8 @@ interface PromoImageProps {
   priority?: boolean;
   /** Animierte Grafiken am Optimierer vorbei ausliefern — er würde nur das erste Bild behalten. */
   unoptimized?: boolean;
+  /** Klassen fürs Bild, Standard `object-cover`. */
+  imageClassName?: string;
   /** Wird angezeigt, solange die Grafik fehlt (404) oder lädt. */
   fallback: React.ReactNode;
 }
@@ -20,7 +22,7 @@ interface PromoImageProps {
  * bleibt stehen. Sobald die Datei da ist, deckt das Bild ihn ab, ohne
  * Code-Änderung.
  */
-export default function PromoImage({ src, alt, sizes, priority, unoptimized, fallback }: PromoImageProps) {
+export default function PromoImage({ src, alt, sizes, priority, unoptimized, imageClassName = 'object-cover', fallback }: PromoImageProps) {
   const [failed, setFailed] = useState(false);
 
   return (
@@ -34,7 +36,7 @@ export default function PromoImage({ src, alt, sizes, priority, unoptimized, fal
           sizes={sizes}
           priority={priority}
           unoptimized={unoptimized}
-          className="object-cover"
+          className={imageClassName}
           onError={() => setFailed(true)}
         />
       )}
