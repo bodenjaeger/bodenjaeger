@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { PROMO_DISCOUNT_LABEL, PROMO_PATH, PROMO_RED } from '@/lib/black-weeks';
 
 export interface BlackWeeksBannerProps {
-  /** Enddatum, z. B. „30.11.“ — `null`, wenn `PROMO_END` fehlt (nur in der Vorschau möglich). */
+  /** Enddatum, z. B. „05.12.“ — `null` nur bei ungültigem `PROMO_END` (nur in der Vorschau möglich). */
   endLabel: string | null;
 }
 

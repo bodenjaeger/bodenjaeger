@@ -35,6 +35,12 @@ export const PROMO_CATEGORY_SLUG = process.env.NEXT_PUBLIC_PROMO_CATEGORY_SLUG |
 /** Start: 01.11.2026, 00:00 Uhr Europe/Berlin (Winterzeit, +01:00). */
 export const PROMO_START = '2026-11-01T00:00:00+01:00';
 
+/**
+ * Ende: 05.12.2026, 23:59:59 Uhr Europe/Berlin (so auch in den Grafiken).
+ * `PROMO_END` überschreibt den Wert, z. B. für eine Verlängerung ohne Deploy.
+ */
+const PROMO_END_DEFAULT = '2026-12-05';
+
 /** Aktionskachel zusätzlich alle n Produkte (nach der ersten an Platz 3). */
 export const PROMO_TILE_EVERY = 12;
 
@@ -116,13 +122,12 @@ function berlinOffset(date: string): string {
 }
 
 /**
- * Ende aus `PROMO_END`. Ein reines Datum (`2026-11-30`) gilt bis 23:59:59
- * Europe/Berlin dieses Tages; ein voller ISO-Zeitpunkt wird direkt übernommen.
- * Fehlt oder ungültig → `null`.
+ * Ende aus `PROMO_END`, sonst `PROMO_END_DEFAULT`. Ein reines Datum
+ * (`2026-11-30`) gilt bis 23:59:59 Europe/Berlin dieses Tages; ein voller
+ * ISO-Zeitpunkt wird direkt übernommen. Ungültig → `null`.
  */
 export function getPromoEnd(): Date | null {
-  const raw = process.env.PROMO_END?.trim();
-  if (!raw) return null;
+  const raw = process.env.PROMO_END?.trim() || PROMO_END_DEFAULT;
 
   const end = /^\d{4}-\d{2}-\d{2}$/.test(raw)
     ? new Date(`${raw}T23:59:59.999${berlinOffset(raw)}`)
@@ -131,7 +136,7 @@ export function getPromoEnd(): Date | null {
   return Number.isNaN(end.getTime()) ? null : end;
 }
 
-/** Enddatum für die Bannerleiste, z. B. „30.11.“ — `null`, wenn nicht gesetzt. */
+/** Enddatum für die Bannerleiste, z. B. „05.12.“ — `null`, wenn `PROMO_END` ungültig ist. */
 export function formatPromoEnd(): string | null {
   const end = getPromoEnd();
   if (!end) return null;
@@ -149,8 +154,9 @@ export function formatPromoEnd(): string | null {
  * Läuft die Aktion? Steuert Bannerleiste, Aktionskachel und die
  * Erreichbarkeit der Aktionsseite.
  *
- * Ohne gültiges `PROMO_END` bleibt die Aktion aus (außer in der Vorschau):
- * Eine Aktion ohne Ende darf nicht versehentlich unbefristet live gehen.
+ * Ist `PROMO_END` gesetzt, aber ungültig, bleibt die Aktion aus (außer in
+ * der Vorschau): Eine Aktion ohne Ende darf nicht versehentlich unbefristet
+ * live gehen. Fehlt `PROMO_END`, gilt `PROMO_END_DEFAULT`.
  */
 export function isPromoActive(now: Date = new Date()): boolean {
   if (isPromoPreview()) return true;
@@ -160,7 +166,7 @@ export function isPromoActive(now: Date = new Date()): boolean {
 
   const end = getPromoEnd();
   if (!end) {
-    console.warn('[black-weeks] PROMO_END fehlt oder ist ungültig — Aktion bleibt aus.');
+    console.warn('[black-weeks] PROMO_END ist ungültig — Aktion bleibt aus.');
     return false;
   }
   return now.getTime() <= end.getTime();
