@@ -110,6 +110,15 @@ const STAGE_PHOTO_ASPECT_MOBILE = 'aspect-[948/724]'; // Split-Foto in voller H�
    + Subline + vier Bullets + Button ≈ 242px); der Rest bleibt als Freiraum, in
    dem die Dot-Navigation sitzt. */
 const STAGE_TEXT_HEIGHT_MOBILE = 'h-[250px]';
+/* Nur wenn ALLE Slides Full-Bleed sind (Black Weeks): Bühne unter 1200px auf
+   die sichtbare Bildschirmhöhe minus Header kappen. Sonst ragt das Hochformat
+   samt eingebranntem Button unter den Bildschirmrand — der Header ist mobil
+   ≈ 192px hoch (Aktionsleiste 36 + USP 40 + Logozeile 56 + Suche 60), dazu
+   20px Slider-Abstand. Das Motiv wird per `contain` eingepasst und bleibt
+   vollständig; frei werdende Seitenränder füllt `bgColor`. Untergrenze 320px
+   für Querformat-Handys. Mit Split-Slides nicht anwenden: deren Foto würde
+   neben dem festen Textbereich zu sehr schrumpfen. */
+const STAGE_MAX_H_FULLBLEED_MOBILE = 'max-h-[max(320px,calc(100svh_-_212px))]';
 
 const baseSlides: SlideData[] = [
   {
@@ -225,6 +234,7 @@ interface HeroSliderProps {
 export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
   const slides = showPromo ? [PROMO_SLIDE, PRIMECORE_PROMO_SLIDE] : baseSlides;
   const slideCount = slides.length;
+  const allFullBleed = slides.every((s) => s.fullBleed);
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -332,7 +342,7 @@ export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
             Breite sonst sehr hoch würde. Greift die Kappung, schrumpft das Foto
             (der Textbereich ist `flex-shrink-0`) — bei allen Slides gleich, die
             Höhen bleiben also identisch. */}
-        <div className="relative max-h-[85vh] min-[1200px]:max-h-none">
+        <div className={`relative ${allFullBleed ? STAGE_MAX_H_FULLBLEED_MOBILE : 'max-h-[85vh]'} min-[1200px]:max-h-none`}>
           {/* Höhen-Spacer, rein geometrisch: nehmen keinen Platz neben den
               Slides ein, weil die absolut darüber liegen. */}
           <div aria-hidden className={`${STAGE_PHOTO_ASPECT_MOBILE} min-[1200px]:hidden`} />
