@@ -60,10 +60,10 @@ export const PROMO_MAX_DISCOUNT = 50;
 export const PROMO_DISCOUNT_LABEL = `${PROMO_MAX_DISCOUNT} %`;
 
 /**
- * Animierte WebP-Grafiken. Fehlt eine Datei, zeigt die Seite einen
- * Platzhalter (siehe `PromoImage` / `PromoHero`).
- * Hero Desktop 1600×773 (ab 768 px Breite), Hero Mobil 800×1143,
- * Kachel 600×857 (Hochformat in Kachelgröße).
+ * Animierte WebP-Grafiken. Fehlt die Kachel-Datei, zeigt die Kachel einen
+ * Platzhalter (siehe `PromoImage`).
+ * Hero = Startseiten-Slide (HeroSlider): Desktop 1600×773 (ab 1200 px Breite),
+ * Mobil 800×1143. Kachel 600×857 (Hochformat in Kachelgröße).
  */
 export const PROMO_IMAGES = {
   heroDesktop: '/promo/black-weeks-hero-desktop.webp',

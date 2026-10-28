@@ -130,18 +130,6 @@ const baseSlides: SlideData[] = [
     buttonHref: '/category/primecore',
     buttonVariant: 'light',
   },
-  {
-    id: 3,
-    bgColor: '#00518a',
-    image: '/images/sliderbilder/coreTec.webp',
-    imageAlt: 'CoreTec',
-    objectPosition: 'right 10%',
-    heading: 'COREtec',
-    text: 'Die Markenwelt der Luxusböden mit lebenslanger Garantie.',
-    buttonLabel: 'Mehr erfahren',
-    buttonHref: '/category/coretec',
-    buttonVariant: 'dark',
-  },
 ];
 
 /* Ersetzt den ins PNG eingebrannten Button durch einen echten.
@@ -212,13 +200,30 @@ const PROMO_SLIDE: SlideData = {
   buttonHref: PROMO_PATH,
 };
 
+/* primeCORE im Black-Weeks-Motiv — ersetzt während der Aktion den normalen
+   primeCORE-Slide. Aktionszeitraum und Black-Weeks-Preis sind ins Bild
+   eingebrannt, deshalb nur bei laufender Aktion. Querformat 2740×1323 trifft
+   die Desktop-Bühne; `bgColor` ist das Grün der Bilder. */
+const PRIMECORE_PROMO_SLIDE: SlideData = {
+  id: 2,
+  bgColor: '#51706a',
+  image: '/images/sliderbilder/BW26_Slider_primeCORE_desktop.jpg',
+  mobileImage: '/images/sliderbilder/BW26_Slider_primeCORE_mobil.jpg',
+  mobileAspectRatio: '1200 / 1714',
+  imageAlt:
+    'primeCORE – der extrem starke Vinylboden: 0,7 mm Nutzschicht, 8 mm stark, Korkdämmung integriert, lebenslange Garantie. Black-Weeks-Preis 44,99 €/m² statt UVP 79,95 €/m², 01.11. bis 05.12.2026.',
+  fullBleed: true,
+  buttonLabel: 'primeCORE jetzt sichern',
+  buttonHref: '/category/primecore',
+};
+
 interface HeroSliderProps {
   /** Black Weeks aktiv? Wird auf dem Server per `isPromoActive()` ermittelt. */
   showPromo?: boolean;
 }
 
 export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
-  const slides = showPromo ? [PROMO_SLIDE, ...baseSlides] : baseSlides;
+  const slides = showPromo ? [PROMO_SLIDE, PRIMECORE_PROMO_SLIDE] : baseSlides;
   const slideCount = slides.length;
 
   const [currentSlide, setCurrentSlide] = useState(0);
