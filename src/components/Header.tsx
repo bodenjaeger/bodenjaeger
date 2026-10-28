@@ -185,7 +185,7 @@ export default function Header({
         </div>
 
         {/* Zeile 3 — Navigation (nur Desktop) */}
-        <HeaderNav />
+        <HeaderNav promoActive={Boolean(promoBanner)} />
 
         {/* Zeile 3 — Suchzeile Mobile, dauerhaft sichtbar außer bei offenem Menü */}
         <div className={`px-4 pb-3 lg:hidden ${isMenuOpen ? 'hidden' : ''}`}>
@@ -193,7 +193,7 @@ export default function Header({
         </div>
       </div>
 
-      <ShopMobileMenu isOpen={isMenuOpen} onClose={closeMenu} />
+      <ShopMobileMenu isOpen={isMenuOpen} onClose={closeMenu} promoActive={Boolean(promoBanner)} />
 
       <CartDrawer isOpen={isCartDrawerOpen} onClose={closeCartDrawer} />
     </header>

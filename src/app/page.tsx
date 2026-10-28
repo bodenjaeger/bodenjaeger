@@ -30,13 +30,17 @@ const GoogleReviewsSlider = dynamic(() => import("@/components/sections/home/Goo
 });
 
 export default async function Home() {
+  // Während der Black Weeks entfällt „Böden im Sale“ — die Angebote laufen
+  // über Slider, Leiste und Aktionsseite.
+  const promoActive = isPromoActive();
+
   // Fetch products from WooCommerce (using old API for now, then adapt)
   let saleProducts: StoreApiProduct[] = [];
   let bestsellerProducts: StoreApiProduct[] = [];
 
   try {
     // Fetch sale products from "Sale" category
-    const rawSaleProducts = await wooCommerceClient.getProducts({
+    const rawSaleProducts = promoActive ? [] : await wooCommerceClient.getProducts({
       per_page: 12,
       category: 'sale',
       orderby: 'popularity',
@@ -93,7 +97,7 @@ export default async function Home() {
       <h1 className="sr-only">Bodenbeläge online kaufen: Vinyl, Laminat &amp; Parkett</h1>
 
       {/* Hero Slider */}
-      <HeroSlider showPromo={isPromoActive()} />
+      <HeroSlider showPromo={promoActive} />
 
       {/* Vorteile Slider - Position 2 */}
       <VorteileSlider />
@@ -102,7 +106,7 @@ export default async function Home() {
       <BodenkategorienSection />
 
       {/* Sale Product Slider */}
-      <SaleProductSlider products={saleProducts} />
+      {!promoActive && <SaleProductSlider products={saleProducts} />}
 
       {/* Bestseller Product Slider */}
       <BestsellerSlider products={bestsellerProducts} />

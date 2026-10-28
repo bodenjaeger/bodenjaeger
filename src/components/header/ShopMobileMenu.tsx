@@ -3,11 +3,13 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { ChevronRight, MapPin } from 'lucide-react'
-import { FACHMARKT_LINK, MUSTER_LINK, SHOP_NAV } from '@/content/shopNav'
+import { FACHMARKT_LINK, MUSTER_LINK, SHOP_NAV, getNavHref } from '@/content/shopNav'
 
 interface ShopMobileMenuProps {
   isOpen: boolean
   onClose: () => void
+  /** Black Weeks aktiv? „Angebote“ führt dann auf die Aktionsseite. */
+  promoActive?: boolean
 }
 
 /**
@@ -32,7 +34,7 @@ interface ShopMobileMenuProps {
  * das erlaubt die Slide-Animation und nimmt die Inhalte gleichzeitig aus
  * Tab-Reihenfolge und Screenreader-Baum.
  */
-export default function ShopMobileMenu({ isOpen, onClose }: ShopMobileMenuProps) {
+export default function ShopMobileMenu({ isOpen, onClose, promoActive = false }: ShopMobileMenuProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   // Aufgeklappte Unterliste beim Schließen zurücksetzen.
@@ -94,7 +96,7 @@ export default function ShopMobileMenu({ isOpen, onClose }: ShopMobileMenuProps)
                       <ul id={`mobile-sub-${item.id}`} hidden={!isExpanded} className="bg-hdr-panel">
                         <li>
                           <Link
-                            href={item.href}
+                            href={getNavHref(item, promoActive)}
                             onClick={onClose}
                             className="flex min-h-11 items-center px-4 text-sm text-white/90"
                           >
@@ -125,7 +127,7 @@ export default function ShopMobileMenu({ isOpen, onClose }: ShopMobileMenuProps)
                     </>
                   ) : (
                     <Link
-                      href={item.href}
+                      href={getNavHref(item, promoActive)}
                       onClick={onClose}
                       className="flex min-h-14 items-center justify-between px-4 text-[15px] text-white"
                     >

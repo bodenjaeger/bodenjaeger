@@ -9,6 +9,8 @@
  * und Dämmung liegen als eigene Gruppe im Zubehör-Dropdown.
  */
 
+import { PROMO_PATH } from '@/lib/black-weeks'
+
 export type NavIcon = 'package' | 'truck' | 'calendar' | 'gift'
 
 export interface UspItem {
@@ -119,6 +121,15 @@ export const SHOP_NAV: NavItem[] = [
     href: '/sale',
   },
 ]
+
+/**
+ * Linkziel eines Hauptpunkts. Während der Black Weeks führt „Angebote“ auf
+ * die Aktionsseite statt auf /sale; ob die Aktion läuft, entscheidet der
+ * Server (`isPromoActive()` in layout.tsx → Header).
+ */
+export function getNavHref(item: NavItem, promoActive: boolean): string {
+  return promoActive && item.id === 'angebote' ? PROMO_PATH : item.href
+}
 
 /** Fetter weißer Textlink in Nav-Zeile und Mobile-Menü (vorher rot). */
 export const MUSTER_LINK = {
