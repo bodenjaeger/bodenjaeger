@@ -29,9 +29,6 @@ import { PRODUCTS_PER_PAGE } from '@/lib/category-listing';
 /** URL der Aktionsseite. Bei Änderung auch den Ordner unter `src/app/aktion/` umbenennen. */
 export const PROMO_PATH = '/aktion/black-weeks';
 
-/** Anker der Aktionsbedingungen auf der Aktionsseite (Ziel des Sternchens). */
-export const PROMO_CONDITIONS_HREF = `${PROMO_PATH}#bedingungen`;
-
 /** WooCommerce-Kategorie mit den Aktionsböden (im Backend gepflegt). */
 export const PROMO_CATEGORY_SLUG = process.env.NEXT_PUBLIC_PROMO_CATEGORY_SLUG || 'black-weeks';
 

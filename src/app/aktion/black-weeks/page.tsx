@@ -80,15 +80,13 @@ export default async function BlackWeeksPage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <JsonLd data={breadcrumb} />
 
-      {/* Schwarzes Band im Stil der Aktionsgrafiken. Nur der Kopf der Seite —
-          die Produktkarten sind für hellen Grund gestaltet und bleiben darauf. */}
-      <section className="bg-black text-white">
-        <div className="content-container pb-10 pt-8">
+      <section>
+        <div className="content-container pt-8">
           {/* Breadcrumb — „Aktion“ ohne Link, es gibt keine Übersichtsseite */}
-          <nav aria-label="Brotkrumen" className="mb-6 text-sm text-gray-400">
+          <nav aria-label="Brotkrumen" className="mb-6 text-sm text-gray-500">
             <ol className="flex flex-wrap items-center gap-2">
               <li>
                 <Link href="/" className="hover:underline">Startseite</Link>
@@ -96,13 +94,13 @@ export default async function BlackWeeksPage() {
               <li aria-hidden="true">›</li>
               <li>Aktion</li>
               <li aria-hidden="true">›</li>
-              <li aria-current="page" className="font-medium text-white">Black Weeks</li>
+              <li aria-current="page" className="font-medium text-gray-900">Black Weeks</li>
             </ol>
           </nav>
 
           {/* Titelbild aus der Kategorie (animiertes GIF) — als <img>, damit
               der Next-Optimierer die Animation nicht anfasst. Fehlt es, steht
-              direkt die Überschrift da. */}
+              direkt die Produktliste da. */}
           {titleImage && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -111,16 +109,15 @@ export default async function BlackWeeksPage() {
               width={1500}
               height={500}
               fetchPriority="high"
-              className="mb-8 h-auto w-full"
+              className="h-auto w-full"
             />
           )}
 
-          <div className="max-w-3xl">
-            <h1 className="mb-4 text-2xl font-bold md:text-3xl">
-              Bis zu {PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl &amp; Parkett – Jetzt zugreifen und sparen!
-            </h1>
-            <p className="text-base leading-relaxed text-gray-200 md:text-lg">[EINLEITUNGSTEXT]</p>
-          </div>
+          {/* Sichtbar trägt das Titelbild die Aussage; die H1 bleibt für
+              Suchmaschinen und Screenreader. */}
+          <h1 className="sr-only">
+            Bis zu {PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl &amp; Parkett – Jetzt zugreifen und sparen!
+          </h1>
         </div>
       </section>
 
@@ -152,12 +149,6 @@ export default async function BlackWeeksPage() {
             </Link>
           </div>
         )}
-
-        {/* Aktionsbedingungen — Ziel des Sternchens in Leiste und Kachel */}
-        <section id="bedingungen" className="mt-16 scroll-mt-48 border-t border-gray-200 pt-6 text-xs leading-relaxed text-gray-600">
-          <h2 className="mb-2 text-sm font-bold text-gray-900">*Aktionsbedingungen</h2>
-          <p>[AKTIONSBEDINGUNGEN]</p>
-        </section>
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import PromoImage from './PromoImage';
 import {
-  PROMO_CONDITIONS_HREF,
   PROMO_DISCOUNT_LABEL,
   PROMO_IMAGES,
   PROMO_PATH,
@@ -13,8 +12,7 @@ import {
  * Aktionskachel im Produktgrid — Rahmen, Rundung und Hover wie
  * `UnifiedProductCard`, Höhe über das Grid (Zeilenhöhe der Nachbarkarten).
  *
- * Wie bei der Bannerleiste: ganze Kachel über einen gestreckten Link
- * klickbar, das Sternchen ist ein eigener Link auf die Bedingungen.
+ * Die ganze Kachel ist über einen gestreckten Link klickbar.
  */
 export default function PromoTile() {
   return (
@@ -33,7 +31,7 @@ export default function PromoTile() {
             style={{ backgroundColor: PROMO_RED }}
           >
             <span className="text-sm font-bold uppercase tracking-widest">Black Weeks</span>
-            <span className="text-5xl font-bold leading-none">Bis zu {PROMO_DISCOUNT_LABEL}*</span>
+            <span className="text-5xl font-bold leading-none">Bis zu {PROMO_DISCOUNT_LABEL}</span>
             <span className="text-lg font-bold">Laminat · Vinyl · Parkett</span>
             <span className="mt-2 rounded bg-white px-4 py-2 font-bold" style={{ color: PROMO_RED }}>
               Mehr erfahren →
@@ -43,14 +41,6 @@ export default function PromoTile() {
       />
 
       <Link href={PROMO_PATH} aria-label={PROMO_TILE_ALT} className="absolute inset-0" />
-
-      <Link
-        href={PROMO_CONDITIONS_HREF}
-        className="absolute bottom-2 left-3 z-[1] text-xs text-white hover:underline"
-        style={{ textShadow: '0 1px 2px rgb(0 0 0 / 0.4)' }}
-      >
-        *Es gelten Bedingungen
-      </Link>
     </article>
   );
 }
