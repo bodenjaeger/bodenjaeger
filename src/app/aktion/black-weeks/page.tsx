@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { connection } from 'next/server';
 import BlackWeeksListing from '@/components/black-weeks/BlackWeeksListing';
-import PromoHero from '@/components/black-weeks/PromoHero';
 import { JsonLd } from '@/components/JsonLd';
 import { wooCommerceClient, type StoreApiProduct } from '@/lib/woocommerce';
 import { buildBreadcrumbSchema } from '@/lib/schema';
@@ -60,7 +59,12 @@ export default async function BlackWeeksPage() {
   await connection();
   if (!isPromoActive()) redirect('/');
 
-  const { products, total, error } = await loadPromoProducts();
+  // Titelbild pflegt der Kunde selbst als Bild der Aktionskategorie in WooCommerce
+  const [{ products, total, error }, category] = await Promise.all([
+    loadPromoProducts(),
+    wooCommerceClient.getCategoryBySlug(PROMO_CATEGORY_SLUG).catch(() => null),
+  ]);
+  const titleImage = category?.image?.src ? category.image : null;
 
   // Mehr Produkte in der Kategorie, als in einem Request geladen werden
   const tooMany = total > products.length;
@@ -79,7 +83,7 @@ export default async function BlackWeeksPage() {
     <div className="min-h-screen bg-gray-50">
       <JsonLd data={breadcrumb} />
 
-      {/* Schwarzes Band wie der Grafik-Hintergrund. Nur der Kopf der Seite —
+      {/* Schwarzes Band im Stil der Aktionsgrafiken. Nur der Kopf der Seite —
           die Produktkarten sind für hellen Grund gestaltet und bleiben darauf. */}
       <section className="bg-black text-white">
         <div className="content-container pb-10 pt-8">
@@ -96,12 +100,20 @@ export default async function BlackWeeksPage() {
             </ol>
           </nav>
 
-          <div className="mb-8">
-            <PromoHero
-              alt={`Black Weeks bei Bodenjäger: bis zu ${PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl und Parkett – zu den Angeboten`}
-              href="#angebote"
+          {/* Titelbild aus der Kategorie (animiertes GIF) — als <img>, damit
+              der Next-Optimierer die Animation nicht anfasst. Fehlt es, steht
+              direkt die Überschrift da. */}
+          {titleImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={titleImage.src}
+              alt={titleImage.alt || `Black Weeks bei Bodenjäger: bis zu ${PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl und Parkett`}
+              width={1500}
+              height={500}
+              fetchPriority="high"
+              className="mb-8 h-auto w-full"
             />
-          </div>
+          )}
 
           <div className="max-w-3xl">
             <h1 className="mb-4 text-2xl font-bold md:text-3xl">

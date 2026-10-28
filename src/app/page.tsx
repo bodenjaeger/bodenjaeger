@@ -4,6 +4,7 @@ import { wooCommerceClient, type StoreApiProduct } from "@/lib/woocommerce";
 import HeroSlider from "@/components/startseite/HeroSlider";
 import VorteileSlider from "@/components/sections/home/VorteileSlider";
 import { buildMetadata } from "@/lib/seo";
+import { isPromoActive } from "@/lib/black-weeks";
 
 export const metadata: Metadata = buildMetadata({
   path: '/',
@@ -92,7 +93,7 @@ export default async function Home() {
       <h1 className="sr-only">Bodenbeläge online kaufen: Vinyl, Laminat &amp; Parkett</h1>
 
       {/* Hero Slider */}
-      <HeroSlider />
+      <HeroSlider showPromo={isPromoActive()} />
 
       {/* Vorteile Slider - Position 2 */}
       <VorteileSlider />

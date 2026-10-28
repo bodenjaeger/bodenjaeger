@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { AKTION_BANNER } from '@/content/aktion-banner';
+import { PROMO_DISCOUNT_LABEL, PROMO_IMAGES, PROMO_PATH } from '@/lib/black-weeks';
 
 interface SlideData {
   id: number;
@@ -27,6 +28,12 @@ interface SlideData {
   fullBleed?: boolean;
   // Eigenes Hochformat-Bild unterhalb von 1200px (nur bei `fullBleed`).
   mobileImage?: string;
+  // Seitenverhältnis des Hochformats als CSS-`aspect-ratio` (nur bei
+  // `fullBleed`). Ohne Angabe gilt das des Aktionsbanners.
+  mobileAspectRatio?: string;
+  // Animierte Grafik: am Next-Optimierer vorbei ausliefern, sonst wäre nur
+  // das erste Bild zu sehen bzw. die Datei würde unnötig durchgereicht.
+  animated?: boolean;
   // Nur bei `fullBleed`: Lage des eingebrannten Buttons im Bild. Ist sie
   // gesetzt, wird der gemalte Button mit `bgColor` übermalt und an seiner
   // Stelle ein echter HTML-Button gerendert — in derselben Größe wie auf den
@@ -104,7 +111,7 @@ const STAGE_PHOTO_ASPECT_MOBILE = 'aspect-[948/724]'; // Split-Foto in voller H�
    dem die Dot-Navigation sitzt. */
 const STAGE_TEXT_HEIGHT_MOBILE = 'h-[250px]';
 
-const slides: SlideData[] = [
+const baseSlides: SlideData[] = [
   {
     id: 1,
     bgColor: '#4c4c4c',
@@ -188,7 +195,32 @@ function PaintedButtonOverlay({
   );
 }
 
-export default function HeroSlider() {
+/* Black-Weeks-Slide an Platz 1, solange die Aktion läuft. Die animierten
+   Grafiken bringen Rabatt und Button eingebrannt mit, der ganze Slide führt
+   zur Aktionsseite. Querformat 1600×773 trifft die Desktop-Bühne (8547×4134)
+   bis auf Bruchteile eines Pixels; der Rest verschwindet im Schwarz. */
+const PROMO_SLIDE: SlideData = {
+  id: 0,
+  bgColor: '#000000',
+  image: PROMO_IMAGES.heroDesktop,
+  mobileImage: PROMO_IMAGES.heroMobile,
+  mobileAspectRatio: '800 / 1143',
+  imageAlt: `Black Weeks bei Bodenjäger: bis zu ${PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl und Parkett`,
+  fullBleed: true,
+  animated: true,
+  buttonLabel: 'Zu den Black-Weeks-Angeboten',
+  buttonHref: PROMO_PATH,
+};
+
+interface HeroSliderProps {
+  /** Black Weeks aktiv? Wird auf dem Server per `isPromoActive()` ermittelt. */
+  showPromo?: boolean;
+}
+
+export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
+  const slides = showPromo ? [PROMO_SLIDE, ...baseSlides] : baseSlides;
+  const slideCount = slides.length;
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -201,16 +233,16 @@ export default function HeroSlider() {
   const goToNextSlide = useCallback(() => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
+    setCurrentSlide((prev) => (prev + 1) % slideCount);
     setTimeout(() => setIsTransitioning(false), 500);
-  }, [isTransitioning]);
+  }, [isTransitioning, slideCount]);
 
   const goToPrevSlide = useCallback(() => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    setCurrentSlide((prev) => (prev - 1 + slideCount) % slideCount);
     setTimeout(() => setIsTransitioning(false), 500);
-  }, [isTransitioning]);
+  }, [isTransitioning, slideCount]);
 
   // Auto-play functionality
   useEffect(() => {
@@ -334,6 +366,7 @@ export default function HeroSlider() {
                       sizes="(min-width: 1400px) 1400px, 100vw"
                       priority={index === 0}
                       loading={index === 0 ? 'eager' : 'lazy'}
+                      unoptimized={slide.animated}
                     />
                     {/* Hier gelten die Prozentwerte direkt auf dem Link: ab
                         1200px hat die Bühne exakt das Seitenverhältnis des
@@ -373,8 +406,8 @@ export default function HeroSlider() {
                     <div
                       className="relative"
                       style={{
-                        aspectRatio: AKTION_BANNER.mobileAspectRatio,
-                        width: `min(100%, calc(100cqh * ${AKTION_BANNER.mobileAspectRatio}))`,
+                        aspectRatio: slide.mobileAspectRatio ?? AKTION_BANNER.mobileAspectRatio,
+                        width: `min(100%, calc(100cqh * ${slide.mobileAspectRatio ?? AKTION_BANNER.mobileAspectRatio}))`,
                       }}
                     >
                       <Image
@@ -385,6 +418,7 @@ export default function HeroSlider() {
                         sizes="100vw"
                         priority={index === 0}
                         loading={index === 0 ? 'eager' : 'lazy'}
+                        unoptimized={slide.animated}
                       />
                       {slide.paintedButtonMobile && (
                         <PaintedButtonOverlay
