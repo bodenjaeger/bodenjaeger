@@ -52,13 +52,29 @@ export const PROMO_TILE_POSITION = 3;
  */
 export const PROMO_MAX_PRODUCTS = 100;
 
+/**
+ * Höchster Rabatt in Prozent — „Bis zu … %“ in Leiste, Kachel, Aktionsseite
+ * und Metadaten. Muss zu den Grafiken passen: Die Zahl steht dort im Bild
+ * und ändert sich nicht mit diesem Wert.
+ */
+export const PROMO_MAX_DISCOUNT = 50;
+
+/** „bis zu 50 %“ — mit geschütztem Leerzeichen vor dem Prozentzeichen. */
+export const PROMO_DISCOUNT_LABEL = `${PROMO_MAX_DISCOUNT} %`;
+
+/**
+ * Animierte WebP-Grafiken. Fehlt eine Datei, zeigt die Seite einen
+ * Platzhalter (siehe `PromoImage` / `PromoHero`).
+ * Hero Desktop 1600×773 (ab 768 px Breite), Hero Mobil 800×1143,
+ * Kachel 600×857 (Hochformat in Kachelgröße).
+ */
 export const PROMO_IMAGES = {
-  /** Wird von uns geliefert; bis dahin zeigt die Seite einen Platzhalter. */
-  hero: '/promo/black-weeks-hero.webp',
+  heroDesktop: '/promo/black-weeks-hero-desktop.webp',
+  heroMobile: '/promo/black-weeks-hero-mobile.webp',
   tile: '/promo/black-weeks-tile.webp',
 } as const;
 
-export const PROMO_TILE_ALT = 'Black Weeks: bis zu 59 % auf Laminat, Vinyl und Parkett';
+export const PROMO_TILE_ALT = `Black Weeks: bis zu ${PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl und Parkett`;
 
 /**
  * Aktionsrot für Leiste und Kachel. Bewusst nicht das Markenrot #ed1b24:

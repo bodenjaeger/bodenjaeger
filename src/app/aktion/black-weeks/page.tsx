@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { connection } from 'next/server';
 import BlackWeeksListing from '@/components/black-weeks/BlackWeeksListing';
-import PromoImage from '@/components/black-weeks/PromoImage';
+import PromoHero from '@/components/black-weeks/PromoHero';
 import { JsonLd } from '@/components/JsonLd';
 import { wooCommerceClient, type StoreApiProduct } from '@/lib/woocommerce';
 import { buildBreadcrumbSchema } from '@/lib/schema';
@@ -11,7 +11,7 @@ import { buildMetadata } from '@/lib/seo';
 import { SITE_URL } from '@/lib/site';
 import {
   PROMO_CATEGORY_SLUG,
-  PROMO_IMAGES,
+  PROMO_DISCOUNT_LABEL,
   PROMO_MAX_PRODUCTS,
   PROMO_PATH,
   isPromoActive,
@@ -29,9 +29,9 @@ import {
 
 export async function generateMetadata(): Promise<Metadata> {
   return buildMetadata({
-    title: 'Black Weeks: Bis zu 59 % auf Laminat, Vinyl & Parkett | Bodenjäger',
+    title: `Black Weeks: Bis zu ${PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl & Parkett | Bodenjäger`,
     description:
-      'Black Weeks bei Bodenjäger: Bis zu 59 % Rabatt auf ausgewählte Laminat-, Vinyl- und Parkettböden. Nur für kurze Zeit – jetzt zugreifen und sparen.',
+      `Black Weeks bei Bodenjäger: Bis zu ${PROMO_DISCOUNT_LABEL} Rabatt auf ausgewählte Laminat-, Vinyl- und Parkettböden. Nur für kurze Zeit – jetzt zugreifen und sparen.`,
     path: PROMO_PATH,
   });
 }
@@ -78,42 +78,41 @@ export default async function BlackWeeksPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <JsonLd data={breadcrumb} />
-      <div className="content-container py-8">
-        {/* Breadcrumb — „Aktion“ ohne Link, es gibt keine Übersichtsseite */}
-        <nav aria-label="Brotkrumen" className="mb-6 text-sm text-gray-600">
-          <ol className="flex flex-wrap items-center gap-2">
-            <li>
-              <Link href="/" className="hover:underline">Startseite</Link>
-            </li>
-            <li aria-hidden="true">›</li>
-            <li>Aktion</li>
-            <li aria-hidden="true">›</li>
-            <li aria-current="page" className="font-medium text-gray-900">Black Weeks</li>
-          </ol>
-        </nav>
 
-        {/* Hero — Grafik folgt unter public/promo/black-weeks-hero.webp */}
-        <div className="relative mb-8 aspect-[16/9] overflow-hidden rounded-md bg-gray-200 md:aspect-[3/1]">
-          <PromoImage
-            src={PROMO_IMAGES.hero}
-            alt="Black Weeks bei Bodenjäger: bis zu 59 % auf Laminat, Vinyl und Parkett"
-            sizes="(min-width: 1400px) 1400px, 100vw"
-            priority
-            fallback={
-              <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center text-lg font-medium text-gray-500">
-                Aktionsgrafik folgt
-              </div>
-            }
-          />
+      {/* Schwarzes Band wie der Grafik-Hintergrund. Nur der Kopf der Seite —
+          die Produktkarten sind für hellen Grund gestaltet und bleiben darauf. */}
+      <section className="bg-black text-white">
+        <div className="content-container pb-10 pt-8">
+          {/* Breadcrumb — „Aktion“ ohne Link, es gibt keine Übersichtsseite */}
+          <nav aria-label="Brotkrumen" className="mb-6 text-sm text-gray-400">
+            <ol className="flex flex-wrap items-center gap-2">
+              <li>
+                <Link href="/" className="hover:underline">Startseite</Link>
+              </li>
+              <li aria-hidden="true">›</li>
+              <li>Aktion</li>
+              <li aria-hidden="true">›</li>
+              <li aria-current="page" className="font-medium text-white">Black Weeks</li>
+            </ol>
+          </nav>
+
+          <div className="mb-8">
+            <PromoHero
+              alt={`Black Weeks bei Bodenjäger: bis zu ${PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl und Parkett – zu den Angeboten`}
+              href="#angebote"
+            />
+          </div>
+
+          <div className="max-w-3xl">
+            <h1 className="mb-4 text-2xl font-bold md:text-3xl">
+              Bis zu {PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl &amp; Parkett – Jetzt zugreifen und sparen!
+            </h1>
+            <p className="text-base leading-relaxed text-gray-200 md:text-lg">[EINLEITUNGSTEXT]</p>
+          </div>
         </div>
+      </section>
 
-        <div className="mb-10 max-w-3xl">
-          <h1 className="mb-4 text-2xl font-bold text-gray-900 md:text-3xl">
-            Bis zu 59 % auf Laminat, Vinyl &amp; Parkett – Jetzt zugreifen und sparen!
-          </h1>
-          <p className="text-base leading-relaxed text-gray-900 md:text-lg">[EINLEITUNGSTEXT]</p>
-        </div>
-
+      <div id="angebote" className="content-container scroll-mt-48 py-10">
         {tooMany && isPromoPreview() && (
           <div className="mb-6 rounded border-2 border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
             <strong>Nur in der Vorschau sichtbar:</strong> Die Kategorie hat {total} Produkte, die Seite

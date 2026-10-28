@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PROMO_CONDITIONS_HREF, PROMO_PATH, PROMO_RED } from '@/lib/black-weeks';
+import { PROMO_CONDITIONS_HREF, PROMO_DISCOUNT_LABEL, PROMO_PATH, PROMO_RED } from '@/lib/black-weeks';
 
 export interface BlackWeeksBannerProps {
   /** Enddatum, z. B. „30.11.“ — `null`, wenn `PROMO_END` fehlt (nur in der Vorschau möglich). */
@@ -27,9 +27,9 @@ export default function BlackWeeksBanner({ endLabel }: BlackWeeksBannerProps) {
         className="min-w-0 truncate whitespace-nowrap after:absolute after:inset-0 hover:underline focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-4px] focus-visible:after:outline-white"
       >
         {/* Mobil: kurz und einzeilig */}
-        <span className="md:hidden">Black Weeks: bis zu 59 %</span>
+        <span className="md:hidden">Black Weeks: bis zu {PROMO_DISCOUNT_LABEL}</span>
         <span className="hidden md:inline">
-          Black Weeks: Bis zu 59 % auf Laminat, Vinyl &amp; Parkett – nur bis {endLabel ?? '[ENDDATUM]'}
+          Black Weeks: Bis zu {PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl &amp; Parkett – nur bis {endLabel ?? '[ENDDATUM]'}
         </span>
       </Link>
       <Link
