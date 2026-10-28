@@ -208,7 +208,10 @@ export function getPromoBodenart(product: Pick<StoreApiProduct, 'categories'>): 
 /**
  * Rabatt in Prozent für die Sortierung „Höchster Rabatt“ — dieselbe Quelle
  * wie das Prozent-Badge der Produktkarte (Set-Ersparnis, sonst Sale-Rabatt).
+ * Wie das Badge nur bei `on_sale`: Ohne aktiven Angebotspreis ist die
+ * gespeicherte Set-Ersparnis ein veralteter Schnappschuss.
  */
 export function getPromoDiscount(product: StoreApiProduct): number {
+  if (!product.on_sale) return 0;
   return product.setangebot_ersparnis_prozent || product.discount_percent || 0;
 }
