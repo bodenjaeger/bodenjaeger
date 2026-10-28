@@ -110,15 +110,6 @@ const STAGE_PHOTO_ASPECT_MOBILE = 'aspect-[948/724]'; // Split-Foto in voller H�
    + Subline + vier Bullets + Button ≈ 242px); der Rest bleibt als Freiraum, in
    dem die Dot-Navigation sitzt. */
 const STAGE_TEXT_HEIGHT_MOBILE = 'h-[250px]';
-/* Nur wenn ALLE Slides Full-Bleed sind (Black Weeks): Bühne unter 1200px auf
-   die sichtbare Bildschirmhöhe minus Header kappen. Sonst ragt das Hochformat
-   samt eingebranntem Button unter den Bildschirmrand — der Header ist mobil
-   ≈ 192px hoch (Aktionsleiste 36 + USP 40 + Logozeile 56 + Suche 60), dazu
-   20px Slider-Abstand. Das Motiv wird per `contain` eingepasst und bleibt
-   vollständig; frei werdende Seitenränder füllt `bgColor`. Untergrenze 320px
-   für Querformat-Handys. Mit Split-Slides nicht anwenden: deren Foto würde
-   neben dem festen Textbereich zu sehr schrumpfen. */
-const STAGE_MAX_H_FULLBLEED_MOBILE = 'max-h-[max(320px,calc(100svh_-_212px))]';
 
 const baseSlides: SlideData[] = [
   {
@@ -234,7 +225,11 @@ interface HeroSliderProps {
 export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
   const slides = showPromo ? [PROMO_SLIDE, PRIMECORE_PROMO_SLIDE] : baseSlides;
   const slideCount = slides.length;
-  const allFullBleed = slides.every((s) => s.fullBleed);
+  // Sind alle Slides Full-Bleed, gibt das Hochformat des ersten die mobile
+  // Bühnenform vor (die Black-Weeks-Grafiken haben alle ≈ 0,7).
+  const mobileFullBleedAspect = slides.every((s) => s.fullBleed)
+    ? slides[0].mobileAspectRatio ?? AKTION_BANNER.mobileAspectRatio
+    : null;
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -338,15 +333,24 @@ export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
             Textbereich. Ein einzelnes `aspect-ratio` könnte das nicht leisten —
             der Foto-Anteil skaliert mit der Breite, der Text-Anteil nicht.
 
-            `max-h-[85vh]` kappt nur den Tablet-Bereich, wo das Foto bei großer
-            Breite sonst sehr hoch würde. Greift die Kappung, schrumpft das Foto
-            (der Textbereich ist `flex-shrink-0`) — bei allen Slides gleich, die
-            Höhen bleiben also identisch. */}
-        <div className={`relative ${allFullBleed ? STAGE_MAX_H_FULLBLEED_MOBILE : 'max-h-[85vh]'} min-[1200px]:max-h-none`}>
+            Bewusst ohne Höhenkappung: Fotos und Grafiken erscheinen auf allen
+            Breiten in Originalgröße, auf dem Tablet wird der Slider dafür
+            entsprechend hoch. */}
+        <div className="relative">
           {/* Höhen-Spacer, rein geometrisch: nehmen keinen Platz neben den
-              Slides ein, weil die absolut darüber liegen. */}
-          <div aria-hidden className={`${STAGE_PHOTO_ASPECT_MOBILE} min-[1200px]:hidden`} />
-          <div aria-hidden className={`${STAGE_TEXT_HEIGHT_MOBILE} min-[1200px]:hidden`} />
+              Slides ein, weil die absolut darüber liegen.
+              Nur Full-Bleed-Slides (Black Weeks): Bühne mobil im
+              Seitenverhältnis der Hochformat-Grafiken, volle Breite und ohne
+              Höhenkappung — die Grafik erscheint in Originalgröße, der Slider
+              darf dafür über den ersten Bildschirm hinausgehen. */}
+          {mobileFullBleedAspect ? (
+            <div aria-hidden className="min-[1200px]:hidden" style={{ aspectRatio: mobileFullBleedAspect }} />
+          ) : (
+            <>
+              <div aria-hidden className={`${STAGE_PHOTO_ASPECT_MOBILE} min-[1200px]:hidden`} />
+              <div aria-hidden className={`${STAGE_TEXT_HEIGHT_MOBILE} min-[1200px]:hidden`} />
+            </>
+          )}
           <div aria-hidden className={`hidden min-[1200px]:block ${STAGE_ASPECT_DESKTOP}`} />
 
           {slides.map((slide, index) => {
@@ -400,9 +404,8 @@ export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
                   {/* Full-Bleed Mobile/Tablet: Hochformat-Bild in der Bühne,
                       deren Höhe sich nach dem Split-Foto plus Textbereich
                       richtet. `object-contain` passt das Motiv darin ein —
-                      die Ränder, die dabei oben und unten (bzw. seitlich, wenn
-                      die 85vh-Kappung greift) frei bleiben, verschwinden in
-                      der gleichen Rotfläche. */}
+                      die Ränder, die dabei frei bleiben, verschwinden in
+                      `bgColor`. */}
                   <a
                     href={slide.buttonHref}
                     aria-label={slide.buttonLabel}
@@ -526,10 +529,7 @@ export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
                   ab: randlos gefüllt UND vollständig sichtbar, ohne Beschnitt.
                   Weil darunter ein fester Textbereich steht, ist die Fotohöhe
                   bei allen Split-Slides identisch, unabhängig von der
-                  Textmenge.
-                  `min-h-0` lässt das Foto schrumpfen, falls die 85vh-Kappung
-                  der Bühne greift (Tablet) — dann trifft es alle Slides
-                  gleichermaßen, und `objectPosition` bestimmt den Ausschnitt. */}
+                  Textmenge. */}
               <div className="min-[1200px]:hidden flex h-full flex-col">
                 <div className={`relative w-full min-h-0 ${STAGE_PHOTO_ASPECT_MOBILE}`}>
                   <Image
