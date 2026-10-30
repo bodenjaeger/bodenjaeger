@@ -29,7 +29,7 @@ export type CouponErrorCode =
   | 'CONFIG_ERROR'
   | 'RATE_LIMIT'
   | 'EMAIL_REQUIRED'
-  | 'ORDER_REQUIRED'
+  | 'FLOOR_REQUIRED'
   | 'NOT_ELIGIBLE'
   | 'GIFT_MISSING'
   | 'UNKNOWN';
@@ -150,23 +150,22 @@ async function validateMuster50(
 ): Promise<ValidateCouponResult> {
   const giftId = MUSTER50.giftProductId;
 
-  // Nur zusammen mit einer Bestellung — Muster und das Set selbst zählen nicht.
-  const hasOrder = cartItems.some(
-    (item) => !item.isSample && item.productId !== giftId && item.quantity > 0
+  // Nur beim Kauf eines Bodens — Muster zählen nicht (eigene Kategorie).
+  const hasFloor = cartItems.some(
+    (item) =>
+      !item.isSample &&
+      item.quantity > 0 &&
+      item.categoryIds.some((c) => MUSTER50.floorCategoryIds.includes(c))
   );
-  if (!hasOrder) {
-    return fail(
-      'ORDER_REQUIRED',
-      'Dieser Code gilt nur zusammen mit einer Bestellung, nicht für das Verlegeset allein.'
-    );
+  if (!hasFloor) {
+    return fail('FLOOR_REQUIRED', MUSTER50.messages.floorRequired);
   }
 
+  // Ohne E-Mail lehnt der Checkout nicht ab, sondern merkt den Code vor
+  // und prüft ihn, sobald die E-Mail eingegeben ist.
   const email = (options.email || '').trim().toLowerCase();
   if (!EMAIL_PATTERN.test(email)) {
-    return fail(
-      'EMAIL_REQUIRED',
-      'Bitte gib zuerst die E-Mail-Adresse ein, mit der du die Musterbox bestellt hast.'
-    );
+    return fail('EMAIL_REQUIRED', MUSTER50.messages.emailPending);
   }
 
   // Einmal pro Kunde. WC prüft beim Anlegen der Order nochmals autoritativ
@@ -175,7 +174,7 @@ async function validateMuster50(
   if (limitPerUser > 0) {
     const used = (wcCoupon.used_by || []).filter((u) => String(u).trim().toLowerCase() === email).length;
     if (used >= limitPerUser) {
-      return fail('USAGE_LIMIT_REACHED', 'Du hast diesen Code bereits eingelöst.');
+      return fail('USAGE_LIMIT_REACHED', MUSTER50.messages.alreadyUsed);
     }
   }
 
@@ -197,7 +196,7 @@ async function validateMuster50(
     return fail('UNKNOWN', 'Dieser Gutschein kann gerade nicht angewendet werden.');
   }
   if (!eligible) {
-    return fail('NOT_ELIGIBLE', MUSTER50.notEligibleMessage);
+    return fail('NOT_ELIGIBLE', MUSTER50.messages.notEligible);
   }
   if (!gift) {
     return fail('UNKNOWN', 'Dieser Gutschein kann gerade nicht angewendet werden.');

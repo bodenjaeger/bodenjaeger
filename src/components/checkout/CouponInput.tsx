@@ -6,6 +6,8 @@
  * UI-States:
  *   default → Input + „Anwenden"-Button (immer sichtbar, kein Klapp-Pattern)
  *   applied → Status-Zeile „Code X angewendet (−€)" + „Entfernen"-Link
+ *   pending → Status-Zeile „Code X vorgemerkt" + „Entfernen"-Link (MUSTER50
+ *             ohne E-Mail; der Checkout prüft, sobald die E-Mail eingegeben ist)
  *   error   → rote Fehlermeldung unter dem Input; Code bleibt im Feld
  *
  * Replace-Logik bleibt erhalten: wird im selben Slot ein neuer Code applied
@@ -23,9 +25,13 @@ interface CouponInputProps {
   /** Rechnungs-E-Mail aus dem Checkout (MUSTER50 prüft damit die Musterbestellung). */
   email?: string;
   appliedCoupon: AppliedCoupon | null;
+  /** Vorgemerkter Code, der noch auf die E-Mail wartet. */
+  pendingCode?: string | null;
   onApply: (coupon: AppliedCoupon) => void;
   onRemove: () => void;
   onReplace: (oldCode: string, newCoupon: AppliedCoupon) => void;
+  onPending?: (code: string) => void;
+  onRemovePending?: () => void;
 }
 
 const CODE_MAX_LENGTH = 50;
@@ -44,9 +50,12 @@ export default function CouponInput({
   cartItems,
   email,
   appliedCoupon,
+  pendingCode = null,
   onApply,
   onRemove,
   onReplace,
+  onPending,
+  onRemovePending,
 }: CouponInputProps) {
   const [code, setCode] = useState('');
   const [validating, setValidating] = useState(false);
@@ -76,6 +85,11 @@ export default function CouponInput({
         } else {
           onApply(result.coupon);
         }
+        setCode('');
+        setError(null);
+      } else if (result.errorCode === 'EMAIL_REQUIRED' && onPending) {
+        // Code braucht die E-Mail (MUSTER50) — vormerken statt ablehnen.
+        onPending(cleanCode);
         setCode('');
         setError(null);
       } else {
@@ -108,6 +122,25 @@ export default function CouponInput({
         <button
           type="button"
           onClick={onRemove}
+          className="text-mid hover:text-brand hover:underline whitespace-nowrap"
+        >
+          Entfernen
+        </button>
+      </div>
+    );
+  }
+
+  // Pending: Code wartet auf die E-Mail-Eingabe.
+  if (pendingCode) {
+    return (
+      <div className="flex items-center justify-between gap-3 mb-6 text-sm">
+        <span className="text-mid">
+          Code <strong className="text-dark">{pendingCode}</strong> vorgemerkt – wir prüfen
+          ihn, sobald du deine E-Mail-Adresse eingibst.
+        </span>
+        <button
+          type="button"
+          onClick={onRemovePending}
           className="text-mid hover:text-brand hover:underline whitespace-nowrap"
         >
           Entfernen

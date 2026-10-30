@@ -108,14 +108,17 @@ export default function CheckoutPage() {
   // Marketing-Material und das ist akzeptabel.
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
   const [couponNotice, setCouponNotice] = useState<{
-    type: 'replaced' | 'removed';
+    type: 'replaced' | 'removed' | 'added';
     message: string;
   } | null>(null);
+  // Vorgemerkter Code (MUSTER50 ohne E-Mail) — wird geprüft, sobald die
+  // E-Mail eingegeben ist.
+  const [pendingCouponCode, setPendingCouponCode] = useState<string | null>(null);
 
-  // Auto-Dismiss der 'replaced'-Notice nach 5s. 'removed'-Notice bleibt
-  // permanent (B4=b) und muss aktiv vom User geschlossen werden.
+  // Auto-Dismiss der 'replaced'- und 'added'-Notice nach 5s. 'removed'-Notice
+  // bleibt permanent (B4=b) und muss aktiv vom User geschlossen werden.
   useEffect(() => {
-    if (couponNotice?.type !== 'replaced') return;
+    if (couponNotice?.type !== 'replaced' && couponNotice?.type !== 'added') return;
     const timer = setTimeout(() => setCouponNotice(null), 5000);
     return () => clearTimeout(timer);
   }, [couponNotice]);
@@ -134,13 +137,10 @@ export default function CheckoutPage() {
     return () => removeCouponGifts();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // E-Mail entprellt für die Coupon-Re-Validation (MUSTER50 prüft die
-  // Musterbestellung über die Rechnungs-E-Mail) — sonst ein Request pro Tastendruck.
+  // E-Mail für die Coupon-Prüfung (MUSTER50 prüft die Musterbestellung über die
+  // Rechnungs-E-Mail). Wird beim Verlassen des E-Mail-Felds übernommen, nicht
+  // pro Tastendruck.
   const [couponEmail, setCouponEmail] = useState('');
-  useEffect(() => {
-    const timer = setTimeout(() => setCouponEmail(formData.email.trim()), 800);
-    return () => clearTimeout(timer);
-  }, [formData.email]);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -170,8 +170,9 @@ export default function CheckoutPage() {
   }, [formData.paymentMethod]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Coupon-Re-Validation bei kritischen Änderungen (Entscheidung B3=c).
-  // Trigger: cartItems.length, totalPrice, shippingMethod und die (entprellte)
-  // E-Mail. Adress-Eingaben lösen KEINE Re-Validation aus.
+  // Trigger: cartItems.length, totalPrice, shippingMethod und die E-Mail
+  // (beim Verlassen des Felds). Adress-Eingaben lösen KEINE Re-Validation aus.
+  // Fehlt die E-Mail (MUSTER50), wird der Code wieder vorgemerkt statt entfernt.
   // Bei valid:false wird der Coupon entfernt und eine Notice gesetzt (B4=b,
   // permanent bis User schließt — Anzeige in Phase D).
   useEffect(() => {
@@ -191,7 +192,10 @@ export default function CheckoutPage() {
         });
         if (cancelled) return;
         const result: ValidateCouponResult = await response.json();
-        if (!result.valid) {
+        if (!result.valid && result.errorCode === 'EMAIL_REQUIRED') {
+          setAppliedCoupon(null);
+          setPendingCouponCode(appliedCoupon.code);
+        } else if (!result.valid) {
           setAppliedCoupon(null);
           setCouponNotice({
             type: 'removed',
@@ -274,6 +278,8 @@ export default function CheckoutPage() {
           // Wenn Adressen gleich: sameAsBilling bleibt true
           sameAsBilling: addressesMatch,
         }));
+        // Vorausgefüllte E-Mail zählt wie eine Eingabe (kein Blur-Event).
+        setCouponEmail((prev) => prev || (c.email || billing.email || '').trim());
       })
       .catch(() => {});
   }, [isLoggedIn]);
@@ -285,7 +291,11 @@ export default function CheckoutPage() {
   const addGiftForCoupon = async (coupon: AppliedCoupon) => {
     const giftId = coupon.giftProductId;
     if (!giftId) return;
-    if (cartItems.some((item) => item.id === giftId)) return;
+    const giftAdded = { type: 'added' as const, message: 'Profi-Verlegeset gratis hinzugefügt.' };
+    if (cartItems.some((item) => item.id === giftId)) {
+      setCouponNotice(giftAdded);
+      return;
+    }
 
     try {
       const response = await fetch('/api/products/by-ids', {
@@ -296,6 +306,7 @@ export default function CheckoutPage() {
       const products: StoreApiProduct[] = response.ok ? await response.json() : [];
       if (products[0]) {
         addCouponGift(products[0], coupon.code);
+        setCouponNotice(giftAdded);
         return;
       }
     } catch (err) {
@@ -312,6 +323,7 @@ export default function CheckoutPage() {
   // Coupon-Handler — werden von CouponInput (via OrderSummary) aufgerufen.
   const handleApplyCoupon = (coupon: AppliedCoupon) => {
     setAppliedCoupon(coupon);
+    setPendingCouponCode(null);
     setCouponNotice(null);
     void addGiftForCoupon(coupon);
   };
@@ -321,8 +333,59 @@ export default function CheckoutPage() {
     setCouponNotice(null);
   };
 
+  const handlePendingCoupon = (code: string) => {
+    setAppliedCoupon(null);
+    setPendingCouponCode(code);
+    setCouponNotice(null);
+  };
+
+  const handleRemovePendingCoupon = () => {
+    setPendingCouponCode(null);
+    setCouponNotice(null);
+  };
+
+  // Vorgemerkten Code prüfen, sobald eine E-Mail vorliegt (beim Verlassen des
+  // Felds bzw. nach dem Vorausfüllen aus dem Kundenkonto).
+  useEffect(() => {
+    if (!pendingCouponCode || !couponEmail.includes('@')) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch('/api/checkout/validate-coupon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: pendingCouponCode,
+            cartItems: toValidationItems(cartItems),
+            email: couponEmail,
+          }),
+        });
+        if (cancelled) return;
+        const result: ValidateCouponResult = await response.json();
+        if (result.valid) {
+          handleApplyCoupon(result.coupon);
+        } else if (result.errorCode !== 'EMAIL_REQUIRED') {
+          // E-Mail noch unvollständig → vorgemerkt lassen; sonst Grund anzeigen.
+          setPendingCouponCode(null);
+          setCouponNotice({ type: 'removed', message: result.message });
+        }
+      } catch (err) {
+        if (cancelled) return;
+        // Netzfehler: vorgemerkt lassen, nächster Blur prüft erneut.
+        console.error('[checkout] Pending coupon validation failed:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingCouponCode, couponEmail]);
+
   const handleReplaceCoupon = (oldCode: string, newCoupon: AppliedCoupon) => {
     setAppliedCoupon(newCoupon);
+    setPendingCouponCode(null);
     setCouponNotice({
       type: 'replaced',
       message: `Code „${oldCode}" durch „${newCoupon.code}" ersetzt.`,
@@ -369,6 +432,15 @@ export default function CheckoutPage() {
 
       if (!formData.acceptTerms) {
         setError('Bitte akzeptieren Sie die AGB und Datenschutzerklärung');
+        setLoading(false);
+        return;
+      }
+
+      // Vorgemerkter Code (MUSTER50) wird gerade noch geprüft — sonst ginge
+      // die Bestellung ohne das Gratis-Set raus.
+      if (pendingCouponCode) {
+        setCouponEmail(formData.email.trim());
+        setError(`Ihr Code ${pendingCouponCode} wird noch geprüft. Bitte einen Moment warten und erneut absenden.`);
         setLoading(false);
         return;
       }
@@ -599,6 +671,7 @@ export default function CheckoutPage() {
                     required
                     value={formData.email}
                     onChange={handleInputChange}
+                    onBlur={() => setCouponEmail(formData.email.trim())}
                     className="w-full px-4 py-3 border border-ash rounded-lg focus:outline-none focus:border-brand"
                   />
                   <input
@@ -1086,10 +1159,13 @@ export default function CheckoutPage() {
                 shippingMethod={shippingMethod}
                 billingEmail={formData.email.trim()}
                 appliedCoupon={appliedCoupon}
+                pendingCouponCode={pendingCouponCode}
                 couponNotice={couponNotice}
                 onApplyCoupon={handleApplyCoupon}
                 onRemoveCoupon={handleRemoveCoupon}
                 onReplaceCoupon={handleReplaceCoupon}
+                onPendingCoupon={handlePendingCoupon}
+                onRemovePendingCoupon={handleRemovePendingCoupon}
                 onDismissNotice={handleDismissNotice}
               />
             </div>

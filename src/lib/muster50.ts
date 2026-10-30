@@ -7,7 +7,7 @@
  *    Rechnungs-E-Mail, höchstens `MUSTER50.validDays` Tage seit Status „Abgeschlossen“.
  *    Der Flyer verspricht 14 Tage ab Erhalt — die Technik rechnet großzügiger,
  *    damit sie nie strenger ist als der Flyer.
- *  - Nur zusammen mit einer Bestellung, nicht für das Set allein.
+ *  - Nur beim Kauf eines Bodens (Vinyl, Laminat, Parkett).
  *  - Einmal pro Kunde (WC `usage_limit_per_user` = 1).
  *
  * WooCommerce-Gutschein (im Backend anzulegen): Code MUSTER50, Prozent-Rabatt
@@ -22,7 +22,17 @@ export const MUSTER50 = {
   /** Profi Verlegeset (SKU 100198000). */
   giftProductId: 1689,
   validDays: 20,
-  notEligibleMessage: 'Code nur für Musterbox-Besteller innerhalb von 14 Tagen gültig.',
+  /**
+   * WC-Kategorien, die als „Boden“ zählen: Vinylboden (16, Unterkategorien
+   * Klebe-/Luxus-/Rigid-Vinyl tragen sie immer mit), Laminat (25), Parkett (29).
+   */
+  floorCategoryIds: [16, 25, 29] as readonly number[],
+  messages: {
+    emailPending: 'Code MUSTER50 vorgemerkt – wir prüfen ihn, sobald du deine E-Mail-Adresse eingibst.',
+    floorRequired: 'MUSTER50 gilt beim Kauf eines Bodens.',
+    notEligible: 'MUSTER50 gilt nur für Kunden, die eine Musterbox bestellt haben – innerhalb von 14 Tagen.',
+    alreadyUsed: 'Du hast MUSTER50 bereits eingelöst.',
+  },
 } as const;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
