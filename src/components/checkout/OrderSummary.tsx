@@ -11,6 +11,8 @@ import CouponInput from '@/components/checkout/CouponInput';
 
 interface OrderSummaryProps {
   shippingMethod?: 'delivery' | 'pickup';
+  /** Rechnungs-E-Mail, wird an die Gutschein-Prüfung durchgereicht. */
+  billingEmail?: string;
   appliedCoupon?: AppliedCoupon | null;
   couponNotice?: { type: 'replaced' | 'removed'; message: string } | null;
   onApplyCoupon?: (coupon: AppliedCoupon) => void;
@@ -21,6 +23,7 @@ interface OrderSummaryProps {
 
 export default function OrderSummary({
   shippingMethod = 'delivery',
+  billingEmail,
   appliedCoupon = null,
   couponNotice = null,
   onApplyCoupon,
@@ -176,6 +179,7 @@ export default function OrderSummary({
       {onApplyCoupon && onRemoveCoupon && onReplaceCoupon && (
         <CouponInput
           cartItems={validationItems}
+          email={billingEmail}
           appliedCoupon={appliedCoupon}
           onApply={onApplyCoupon}
           onRemove={onRemoveCoupon}

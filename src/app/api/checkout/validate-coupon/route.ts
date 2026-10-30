@@ -37,6 +37,8 @@ const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 interface RequestBody {
   code: string;
   cartItems: CartItemForValidation[];
+  /** Rechnungs-E-Mail (optional; Pflicht nur für MUSTER50). */
+  email?: string;
 }
 
 function isCartItem(x: unknown): x is CartItemForValidation {
@@ -62,7 +64,12 @@ function parseBody(body: unknown): RequestBody | null {
   if (typeof o.code !== 'string') return null;
   if (!Array.isArray(o.cartItems)) return null;
   if (!o.cartItems.every(isCartItem)) return null;
-  return { code: o.code, cartItems: o.cartItems as CartItemForValidation[] };
+  if (o.email !== undefined && typeof o.email !== 'string') return null;
+  return {
+    code: o.code,
+    cartItems: o.cartItems as CartItemForValidation[],
+    email: o.email as string | undefined,
+  };
 }
 
 // ============================================================================
@@ -105,6 +112,8 @@ export async function POST(request: NextRequest) {
   }
 
   // 3. Validate Coupon
-  const result = await validateAndCalculateCoupon(parsed.code, parsed.cartItems);
+  const result = await validateAndCalculateCoupon(parsed.code, parsed.cartItems, {
+    email: parsed.email,
+  });
   return NextResponse.json(result, { status: 200 });
 }

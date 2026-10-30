@@ -15,6 +15,7 @@ import type { PaymentType, PurchaseTrackingPayload } from '@/lib/analytics/types
 import { useAttribution } from '@/hooks/useAttribution';
 import type { AppliedCoupon } from '@/types/checkout';
 import type { ValidateCouponResult } from '@/lib/coupon';
+import type { StoreApiProduct } from '@/lib/woocommerce';
 import OrderSummary from '@/components/checkout/OrderSummary';
 import ExpressCheckout from '@/components/checkout/ExpressCheckout';
 import { PAYPAL_EXPRESS_ENABLED } from '@/lib/paypal-express-flag';
@@ -52,7 +53,14 @@ interface FormData {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems, totalPrice, customerNote, deliveryNote } = useCart();
+  const {
+    cartItems,
+    totalPrice,
+    customerNote,
+    deliveryNote,
+    addCouponGift,
+    removeCouponGifts,
+  } = useCart();
 
   /**
    * Vorschau-/Testmodus (NEXT_PUBLIC_AKTION_FORCE=1, nur auf Preview-
@@ -112,6 +120,28 @@ export default function CheckoutPage() {
     return () => clearTimeout(timer);
   }, [couponNotice]);
 
+  // Gratis-Produkte (MUSTER50) gehören nur zum aktiven Gutschein: Wird der
+  // Code entfernt, ersetzt oder ungültig — oder liegt nach einem Reload noch
+  // ein Set ohne Code im Warenkorb —, fliegt es wieder raus. Beim Verlassen
+  // des Checkouts ebenso, weil der Code nur in-memory gehalten wird.
+  useEffect(() => {
+    if (cartItems.some((item) => item.couponGift && item.couponGift !== appliedCoupon?.code)) {
+      removeCouponGifts(appliedCoupon?.code);
+    }
+  }, [appliedCoupon, cartItems]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    return () => removeCouponGifts();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // E-Mail entprellt für die Coupon-Re-Validation (MUSTER50 prüft die
+  // Musterbestellung über die Rechnungs-E-Mail) — sonst ein Request pro Tastendruck.
+  const [couponEmail, setCouponEmail] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setCouponEmail(formData.email.trim()), 800);
+    return () => clearTimeout(timer);
+  }, [formData.email]);
+
   // Redirect if cart is empty
   useEffect(() => {
     if (cartItems.length === 0) {
@@ -140,8 +170,8 @@ export default function CheckoutPage() {
   }, [formData.paymentMethod]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Coupon-Re-Validation bei kritischen Änderungen (Entscheidung B3=c).
-  // Trigger: cartItems.length, totalPrice, shippingMethod. Adress-Eingaben
-  // lösen KEINE Re-Validation aus.
+  // Trigger: cartItems.length, totalPrice, shippingMethod und die (entprellte)
+  // E-Mail. Adress-Eingaben lösen KEINE Re-Validation aus.
   // Bei valid:false wird der Coupon entfernt und eine Notice gesetzt (B4=b,
   // permanent bis User schließt — Anzeige in Phase D).
   useEffect(() => {
@@ -156,6 +186,7 @@ export default function CheckoutPage() {
           body: JSON.stringify({
             code: appliedCoupon.code,
             cartItems: toValidationItems(cartItems),
+            email: couponEmail,
           }),
         });
         if (cancelled) return;
@@ -185,12 +216,12 @@ export default function CheckoutPage() {
     return () => {
       cancelled = true;
     };
-    // Re-Validation NUR bei diesen drei Triggern (laut Spec). `appliedCoupon` und
+    // Re-Validation NUR bei diesen Triggern (laut Spec). `appliedCoupon` und
     // `cartItems` werden im Effect gelesen, sind aber bewusst nicht in den Deps:
     // - `appliedCoupon`: ein Apply triggert die Validation eigenständig (Phase B)
     // - `cartItems`: stabile Referenz pro Render würde sonst dauerhafte Re-Runs auslösen
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartItems.length, totalPrice, shippingMethod]);
+  }, [cartItems.length, totalPrice, shippingMethod, couponEmail]);
 
   // Auto-fill from customer account
   useEffect(() => {
@@ -247,10 +278,42 @@ export default function CheckoutPage() {
       .catch(() => {});
   }, [isLoggedIn]);
 
+  // Gratis-Produkt des Gutscheins (MUSTER50: Verlegeset) in den Warenkorb legen.
+  // Liegt es schon drin, wird diese Position rabattiert. Lässt es sich nicht
+  // laden, wird der Code wieder entfernt — sonst stimmt der angezeigte Rabatt
+  // nicht mit der WC-Order überein (WC rabattiert nur das Set).
+  const addGiftForCoupon = async (coupon: AppliedCoupon) => {
+    const giftId = coupon.giftProductId;
+    if (!giftId) return;
+    if (cartItems.some((item) => item.id === giftId)) return;
+
+    try {
+      const response = await fetch('/api/products/by-ids', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [giftId] }),
+      });
+      const products: StoreApiProduct[] = response.ok ? await response.json() : [];
+      if (products[0]) {
+        addCouponGift(products[0], coupon.code);
+        return;
+      }
+    } catch (err) {
+      console.error('[checkout] Coupon gift could not be loaded:', err);
+    }
+
+    setAppliedCoupon(null);
+    setCouponNotice({
+      type: 'removed',
+      message: `Code „${coupon.code}" wurde entfernt: Das Gratis-Produkt konnte nicht geladen werden.`,
+    });
+  };
+
   // Coupon-Handler — werden von CouponInput (via OrderSummary) aufgerufen.
   const handleApplyCoupon = (coupon: AppliedCoupon) => {
     setAppliedCoupon(coupon);
     setCouponNotice(null);
+    void addGiftForCoupon(coupon);
   };
 
   const handleRemoveCoupon = () => {
@@ -264,6 +327,7 @@ export default function CheckoutPage() {
       type: 'replaced',
       message: `Code „${oldCode}" durch „${newCoupon.code}" ersetzt.`,
     });
+    void addGiftForCoupon(newCoupon);
   };
 
   const handleDismissNotice = () => setCouponNotice(null);
@@ -520,8 +584,9 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Notschalter: ohne NEXT_PUBLIC_PAYPAL_EXPRESS_ENABLED=true kein Express. */}
-              {PAYPAL_EXPRESS_ENABLED && !isVorschauModus && <ExpressCheckout />}
+              {/* Notschalter: ohne NEXT_PUBLIC_PAYPAL_EXPRESS_ENABLED=true kein Express.
+                  Express kennt keine Gutscheine — mit Gratis-Set (MUSTER50) würde das Set voll berechnet. */}
+              {PAYPAL_EXPRESS_ENABLED && !isVorschauModus && !appliedCoupon?.giftProductId && <ExpressCheckout />}
 
               {/* Kontakt */}
               <div className="mb-8">
@@ -1019,6 +1084,7 @@ export default function CheckoutPage() {
             <div className="w-full lg:w-2/5 order-1 lg:order-2">
               <OrderSummary
                 shippingMethod={shippingMethod}
+                billingEmail={formData.email.trim()}
                 appliedCoupon={appliedCoupon}
                 couponNotice={couponNotice}
                 onApplyCoupon={handleApplyCoupon}

@@ -421,3 +421,53 @@ export async function getCouponByCode(code: string): Promise<WCCoupon | null> {
     throw error;
   }
 }
+
+/** Ausschnitt einer WC-Order, soweit für die MUSTER50-Prüfung nötig. */
+export interface WCCompletedOrder {
+  id: number;
+  billing: { email: string };
+  date_completed_gmt: string | null;                         // GMT ohne Z-Suffix
+  line_items: Array<{
+    product_id: number;
+    meta_data: Array<{ key: string; value: unknown }>;
+  }>;
+}
+
+/**
+ * Lädt abgeschlossene Bestellungen zu einer E-Mail-Adresse (neueste zuerst).
+ *
+ * `search` ist eine Volltextsuche (trifft auch Teilstrings und Namen) — der
+ * exakte E-Mail-Vergleich muss beim Aufrufer passieren.
+ */
+export async function getCompletedOrdersByEmail(email: string): Promise<WCCompletedOrder[]> {
+  const params = new URLSearchParams({
+    search: email,
+    status: 'completed',
+    per_page: '50',
+    orderby: 'date',
+    order: 'desc',
+  });
+  const url = `${WC_BASE_URL}/wp-json/wc/v3/orders?${params.toString()}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getWCAuthHeaders(),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('WooCommerce API Error:', errorData);
+      throw new Error(
+        `Failed to fetch orders: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const orders = await response.json();
+    return Array.isArray(orders) ? (orders as WCCompletedOrder[]) : [];
+  } catch (error) {
+    console.error('Failed to get completed orders by email:', error);
+    throw error;
+  }
+}

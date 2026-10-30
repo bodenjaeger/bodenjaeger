@@ -10,7 +10,9 @@
  * die finale Verrechnung übernimmt WC selbst über `coupon_lines`.
  */
 
+import { MUSTER50, hasRecentSampleOrder } from '@/lib/muster50';
 import { SAMPLE_CATEGORY_ID } from '@/lib/sampleUtils';
+import { wooCommerceClient } from '@/lib/woocommerce';
 import { getCouponByCode, type WCCoupon } from '@/lib/woocommerce-checkout';
 
 // ============================================================================
@@ -26,6 +28,10 @@ export type CouponErrorCode =
   | 'EXCLUDED_PRODUCTS_ONLY'
   | 'CONFIG_ERROR'
   | 'RATE_LIMIT'
+  | 'EMAIL_REQUIRED'
+  | 'ORDER_REQUIRED'
+  | 'NOT_ELIGIBLE'
+  | 'GIFT_MISSING'
   | 'UNKNOWN';
 
 export interface CartItemForValidation {
@@ -43,6 +49,15 @@ export interface AppliedCoupon {
   discountType: 'percent' | 'fixed_cart' | 'fixed_product';
   discountAmount: number;
   freeShipping: boolean;
+  /** Produkt, das der Gutschein gratis in den Warenkorb legt (MUSTER50). */
+  giftProductId?: number;
+}
+
+export interface ValidateCouponOptions {
+  /** Rechnungs-E-Mail aus dem Checkout (Pflicht für MUSTER50). */
+  email?: string;
+  /** Beim Order-Submit: Gratis-Produkt muss bereits im Warenkorb liegen. */
+  requireGiftInCart?: boolean;
 }
 
 export type ValidateCouponResult =
@@ -121,6 +136,89 @@ function getExpiryDate(coupon: WCCoupon): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Sonderregeln für MUSTER50 (siehe `muster50.ts`). Läuft nach den generischen
+ * Checks 1–5; ersetzt die Rabattberechnung (6–9), weil das Verlegeset beim
+ * ersten Anwenden noch nicht im Warenkorb liegt.
+ */
+async function validateMuster50(
+  wcCoupon: WCCoupon,
+  cartItems: CartItemForValidation[],
+  options: ValidateCouponOptions
+): Promise<ValidateCouponResult> {
+  const giftId = MUSTER50.giftProductId;
+
+  // Nur zusammen mit einer Bestellung — Muster und das Set selbst zählen nicht.
+  const hasOrder = cartItems.some(
+    (item) => !item.isSample && item.productId !== giftId && item.quantity > 0
+  );
+  if (!hasOrder) {
+    return fail(
+      'ORDER_REQUIRED',
+      'Dieser Code gilt nur zusammen mit einer Bestellung, nicht für das Verlegeset allein.'
+    );
+  }
+
+  const email = (options.email || '').trim().toLowerCase();
+  if (!EMAIL_PATTERN.test(email)) {
+    return fail(
+      'EMAIL_REQUIRED',
+      'Bitte gib zuerst die E-Mail-Adresse ein, mit der du die Musterbox bestellt hast.'
+    );
+  }
+
+  // Einmal pro Kunde. WC prüft beim Anlegen der Order nochmals autoritativ
+  // (`usage_limit_per_user`), meldet das aber nur auf Englisch.
+  const limitPerUser = wcCoupon.usage_limit_per_user ?? 0;
+  if (limitPerUser > 0) {
+    const used = (wcCoupon.used_by || []).filter((u) => String(u).trim().toLowerCase() === email).length;
+    if (used >= limitPerUser) {
+      return fail('USAGE_LIMIT_REACHED', 'Du hast diesen Code bereits eingelöst.');
+    }
+  }
+
+  if (options.requireGiftInCart && !cartItems.some((item) => item.productId === giftId)) {
+    return fail(
+      'GIFT_MISSING',
+      'Das Verlegeset fehlt im Warenkorb. Bitte den Code erneut eingeben.'
+    );
+  }
+
+  let eligible: boolean;
+  let gift;
+  try {
+    [eligible, gift] = await Promise.all([
+      hasRecentSampleOrder(email),
+      wooCommerceClient.getProductsByIds([giftId]).then((map) => map.get(giftId)),
+    ]);
+  } catch {
+    return fail('UNKNOWN', 'Dieser Gutschein kann gerade nicht angewendet werden.');
+  }
+  if (!eligible) {
+    return fail('NOT_ELIGIBLE', MUSTER50.notEligibleMessage);
+  }
+  if (!gift) {
+    return fail('UNKNOWN', 'Dieser Gutschein kann gerade nicht angewendet werden.');
+  }
+
+  // Rabatt = ein Set zum Shop-Preis (Server-Preis, nicht der vom Client).
+  // Entspricht dem WC-Gutschein: 100 % auf das Set, höchstens 1 Artikel.
+  const discountAmount = round2(gift.price * (gift.paketinhalt || 1));
+
+  return {
+    valid: true,
+    coupon: {
+      code: wcCoupon.code.toUpperCase(),
+      discountType: wcCoupon.discount_type,
+      discountAmount,
+      freeShipping: wcCoupon.free_shipping,
+      giftProductId: giftId,
+    },
+  };
+}
+
 // ============================================================================
 // Main Entry
 // ============================================================================
@@ -135,10 +233,13 @@ function getExpiryDate(coupon: WCCoupon): Date | null {
  *   6. Rabattfähige Items leer → EXCLUDED_PRODUCTS_ONLY
  *   7. `discountableSubtotal` < `minimum_amount` → MIN_AMOUNT_NOT_REACHED
  *   8. `discountableSubtotal` > `maximum_amount` → MAX_AMOUNT_EXCEEDED
+ *
+ * MUSTER50 läuft ab Schritt 6 über `validateMuster50`.
  */
 export async function validateAndCalculateCoupon(
   code: string,
-  cartItems: CartItemForValidation[]
+  cartItems: CartItemForValidation[],
+  options: ValidateCouponOptions = {}
 ): Promise<ValidateCouponResult> {
   // 1. Sanitize
   const cleanCode = sanitizeCouponCode(code);
@@ -181,6 +282,10 @@ export async function validateAndCalculateCoupon(
         `Open the coupon in WooCommerce admin → "Nutzungseinschränkung" → "Ausgeschlossene Kategorien" → add "Muster".`
     );
     return fail('CONFIG_ERROR', 'Dieser Gutschein ist aktuell nicht verfügbar.');
+  }
+
+  if (cleanCode === MUSTER50.code) {
+    return validateMuster50(wcCoupon, cartItems, options);
   }
 
   // 6. Discountable items

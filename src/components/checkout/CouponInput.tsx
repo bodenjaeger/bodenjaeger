@@ -20,6 +20,8 @@ import type { AppliedCoupon, CartItemForValidation, ValidateCouponResult } from 
 
 interface CouponInputProps {
   cartItems: CartItemForValidation[];
+  /** Rechnungs-E-Mail aus dem Checkout (MUSTER50 prüft damit die Musterbestellung). */
+  email?: string;
   appliedCoupon: AppliedCoupon | null;
   onApply: (coupon: AppliedCoupon) => void;
   onRemove: () => void;
@@ -40,6 +42,7 @@ function sanitizeInput(raw: string): string {
 
 export default function CouponInput({
   cartItems,
+  email,
   appliedCoupon,
   onApply,
   onRemove,
@@ -63,7 +66,7 @@ export default function CouponInput({
       const response = await fetch('/api/checkout/validate-coupon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: cleanCode, cartItems }),
+        body: JSON.stringify({ code: cleanCode, cartItems, email }),
       });
       const result: ValidateCouponResult = await response.json();
 

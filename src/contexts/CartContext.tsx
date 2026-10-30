@@ -23,6 +23,8 @@ export interface CartItem {
   // Sample (Muster) specific
   isSample?: boolean;            // Flag to identify sample products
   samplePrice?: number;          // Legacy, always 0 — Muster sind kostenlos, Fracht läuft über shippingConfig
+  // Gratis-Produkt eines Gutscheins (z.B. Verlegeset bei MUSTER50) — Wert = Gutschein-Code
+  couponGift?: string;
 }
 
 // Set bundle interface for adding to cart
@@ -68,6 +70,8 @@ export interface CartContextType {
   totalPrice: number;
   addToCart: (product: StoreApiProduct, quantity?: number) => void;
   addSampleToCart: (product: StoreApiProduct) => AddSampleResult;
+  addCouponGift: (product: StoreApiProduct, couponCode: string) => void;
+  removeCouponGifts: (keepCode?: string) => void;
   addSetToCart: (setBundle: SetBundle) => void;
   removeFromCart: (productId: number) => void;
   removeSet: (setId: string) => void;
@@ -387,6 +391,24 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     return { status: 'added' };
   };
 
+  // Gratis-Produkt eines Gutscheins als eigene Position (Menge 1). Der Preis
+  // bleibt stehen, der Gutschein zieht ihn im Checkout wieder ab.
+  const addCouponGift = (product: StoreApiProduct, couponCode: string) => {
+    setCartItems(prevItems => {
+      if (prevItems.some(item => item.id === product.id)) return prevItems;
+      return [...prevItems, { id: product.id, product, quantity: 1, couponGift: couponCode }];
+    });
+  };
+
+  // Entfernt Gratis-Produkte, die nicht zum Code `keepCode` gehören
+  // (ohne Argument: alle).
+  const removeCouponGifts = (keepCode?: string) => {
+    setCartItems(prevItems => {
+      const kept = prevItems.filter(item => !item.couponGift || item.couponGift === keepCode);
+      return kept.length === prevItems.length ? prevItems : kept;
+    });
+  };
+
   // Cart Drawer functions
   const openCartDrawer = () => setIsCartDrawerOpen(true);
   const closeCartDrawer = () => setIsCartDrawerOpen(false);
@@ -398,6 +420,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     totalPrice,
     addToCart,
     addSampleToCart,
+    addCouponGift,
+    removeCouponGifts,
     addSetToCart,
     removeFromCart,
     removeSet,
