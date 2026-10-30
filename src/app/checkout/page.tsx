@@ -440,7 +440,7 @@ export default function CheckoutPage() {
       // die Bestellung ohne das Gratis-Set raus.
       if (pendingCouponCode) {
         setCouponEmail(formData.email.trim());
-        setError(`Ihr Code ${pendingCouponCode} wird noch geprüft. Bitte einen Moment warten und erneut absenden.`);
+        setError(`Dein Code ${pendingCouponCode} wird noch geprüft. Bitte kurz warten und erneut absenden.`);
         setLoading(false);
         return;
       }
