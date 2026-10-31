@@ -201,7 +201,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const couponResult = await validateAndCalculateCoupon(couponCode, cartItemsForValidation);
+      const couponResult = await validateAndCalculateCoupon(couponCode, cartItemsForValidation, {
+        email: billing?.email,
+        requireGiftInCart: true,
+      });
       if (!couponResult.valid) {
         return NextResponse.json(
           {

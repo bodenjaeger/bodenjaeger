@@ -11,21 +11,30 @@ import CouponInput from '@/components/checkout/CouponInput';
 
 interface OrderSummaryProps {
   shippingMethod?: 'delivery' | 'pickup';
+  /** Rechnungs-E-Mail, wird an die Gutschein-Prüfung durchgereicht. */
+  billingEmail?: string;
   appliedCoupon?: AppliedCoupon | null;
-  couponNotice?: { type: 'replaced' | 'removed'; message: string } | null;
+  pendingCouponCode?: string | null;
+  couponNotice?: { type: 'replaced' | 'removed' | 'added'; message: string } | null;
   onApplyCoupon?: (coupon: AppliedCoupon) => void;
   onRemoveCoupon?: () => void;
   onReplaceCoupon?: (oldCode: string, newCoupon: AppliedCoupon) => void;
+  onPendingCoupon?: (code: string) => void;
+  onRemovePendingCoupon?: () => void;
   onDismissNotice?: () => void;
 }
 
 export default function OrderSummary({
   shippingMethod = 'delivery',
+  billingEmail,
   appliedCoupon = null,
+  pendingCouponCode = null,
   couponNotice = null,
   onApplyCoupon,
   onRemoveCoupon,
   onReplaceCoupon,
+  onPendingCoupon,
+  onRemovePendingCoupon,
   onDismissNotice,
 }: OrderSummaryProps) {
   const { cartItems, totalPrice, itemCount } = useCart();
@@ -68,8 +77,9 @@ export default function OrderSummary({
 
   return (
     <div className="sticky top-6">
-      {/* Notice (Coupon ersetzt / automatisch entfernt). Permanent für 'removed'
-          (B4=b), Auto-Dismiss nach 5s für 'replaced' (im Parent gesteuert). */}
+      {/* Notice (Coupon ersetzt / automatisch entfernt / Gratis-Produkt hinzugefügt).
+          Permanent für 'removed' (B4=b), Auto-Dismiss nach 5s für 'replaced'
+          und 'added' (im Parent gesteuert). */}
       {couponNotice && (
         <div
           className={`mb-4 p-3 rounded-lg border flex items-start gap-2 ${
@@ -176,10 +186,14 @@ export default function OrderSummary({
       {onApplyCoupon && onRemoveCoupon && onReplaceCoupon && (
         <CouponInput
           cartItems={validationItems}
+          email={billingEmail}
           appliedCoupon={appliedCoupon}
+          pendingCode={pendingCouponCode}
           onApply={onApplyCoupon}
           onRemove={onRemoveCoupon}
           onReplace={onReplaceCoupon}
+          onPending={onPendingCoupon}
+          onRemovePending={onRemovePendingCoupon}
         />
       )}
 
