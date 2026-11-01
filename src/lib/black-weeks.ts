@@ -224,6 +224,11 @@ export function getPromoBodenart(product: Pick<StoreApiProduct, 'categories'>): 
   return null;
 }
 
+/** Gehört das Produkt zur Aktionskategorie? Steuert das Label auf der Produktkarte. */
+export function isPromoProduct(product: Pick<StoreApiProduct, 'categories'>): boolean {
+  return product.categories?.some((c) => c.slug.toLowerCase() === PROMO_CATEGORY_SLUG) ?? false;
+}
+
 /**
  * Rabatt in Prozent für die Sortierung „Höchster Rabatt“ — dieselbe Quelle
  * wie das Prozent-Badge der Produktkarte (Set-Ersparnis, sonst Sale-Rabatt).

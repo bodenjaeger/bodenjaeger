@@ -4,6 +4,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CookieConsentProvider } from "@/contexts/CookieConsentContext";
+import { PromoProvider } from "@/contexts/PromoContext";
 import HeaderWrapper from "@/components/HeaderWrapper";
 import Footer from "@/components/Footer";
 import FloatingContactButton from "@/components/FloatingContactButton";
@@ -106,7 +107,7 @@ export default function RootLayout({
                     über den Nav-Punkt „Angebote" (/sale). */}
                 <HeaderWrapper promoBanner={promoBanner} />
                 <FloatingContactButton />
-                {children}
+                <PromoProvider active={Boolean(promoBanner)}>{children}</PromoProvider>
                 <Footer />
               </WishlistProvider>
             </CartProvider>
