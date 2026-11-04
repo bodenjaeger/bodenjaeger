@@ -120,7 +120,7 @@ export const BENEFITS = [
 ]
 
 export const WEG = [
-  { titel: 'Stelle anklicken', text: 'E-Mail bestätigen und bewerben. Ein Anschreiben brauchst du nicht.' },
+  { titel: 'Stelle anklicken', text: 'E-Mail bestätigen und bewerben. Ein Anschreiben ist keine Pflicht.' },
   { titel: 'Wir melden uns', text: 'Du bekommst eine persönliche Antwort.' },
   { titel: 'Wir lernen uns kennen', text: 'Im Fachmarkt in Hückelhoven, mit dem Team vor Ort.' },
 ]

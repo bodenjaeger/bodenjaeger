@@ -44,10 +44,6 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
       <section className="pt-4 lg:pt-6">
         <div className="content-container">
           <div className="overflow-hidden rounded-[28px] bg-dark px-5 pb-28 pt-8 text-white lg:px-14 lg:pb-36 lg:pt-14">
-          <p className="mb-6 flex items-center gap-2.5 text-sm font-bold">
-            <span className="h-2.5 w-2.5 rounded-full bg-white" />
-            Karriere bei Bodenjäger · Hückelhoven
-          </p>
           <div className="grid grid-cols-[minmax(0,1fr)] items-end gap-8 lg:grid-cols-[6fr_5fr] lg:gap-14">
             <div>
               <h1
@@ -91,9 +87,6 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
                   </div>
                 ))}
               </div>
-              <p className="mt-4 text-[13px] text-ash lg:text-right lg:text-sm">
-                Dominik, Sascha, Daniel, Hans-Dieter, Julian und Stephan freuen sich auf dich.
-              </p>
             </div>
           </div>
           </div>
