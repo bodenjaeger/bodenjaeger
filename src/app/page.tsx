@@ -3,11 +3,14 @@ import dynamic from 'next/dynamic';
 import { wooCommerceClient, type StoreApiProduct } from "@/lib/woocommerce";
 import HeroSlider from "@/components/startseite/HeroSlider";
 import VorteileSlider from "@/components/sections/home/VorteileSlider";
+import { buildMetadata } from "@/lib/seo";
+import { isPromoActive } from "@/lib/black-weeks";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
+  path: '/',
   title: 'Vinyl, Laminat & Parkett online kaufen | Bodenjäger',
   description: 'Rigid-Vinyl, Klebe-Vinyl, Laminat und Parkett von COREtec, primeCORE & Co. – mit Set-Angeboten, Fachmarkt in Hückelhoven und persönlicher Beratung.',
-};
+});
 
 // Dynamic imports for below-the-fold components to reduce initial bundle size
 const BodenkategorienSection = dynamic(() => import("@/components/sections/home/BodenkategorienSection"), {
@@ -27,13 +30,17 @@ const GoogleReviewsSlider = dynamic(() => import("@/components/sections/home/Goo
 });
 
 export default async function Home() {
+  // Während der Black Weeks entfällt „Böden im Sale“ — die Angebote laufen
+  // über Slider, Leiste und Aktionsseite.
+  const promoActive = isPromoActive();
+
   // Fetch products from WooCommerce (using old API for now, then adapt)
   let saleProducts: StoreApiProduct[] = [];
   let bestsellerProducts: StoreApiProduct[] = [];
 
   try {
     // Fetch sale products from "Sale" category
-    const rawSaleProducts = await wooCommerceClient.getProducts({
+    const rawSaleProducts = promoActive ? [] : await wooCommerceClient.getProducts({
       per_page: 12,
       category: 'sale',
       orderby: 'popularity',
@@ -90,7 +97,7 @@ export default async function Home() {
       <h1 className="sr-only">Bodenbeläge online kaufen: Vinyl, Laminat &amp; Parkett</h1>
 
       {/* Hero Slider */}
-      <HeroSlider />
+      <HeroSlider showPromo={promoActive} />
 
       {/* Vorteile Slider - Position 2 */}
       <VorteileSlider />
@@ -99,7 +106,7 @@ export default async function Home() {
       <BodenkategorienSection />
 
       {/* Sale Product Slider */}
-      <SaleProductSlider products={saleProducts} />
+      {!promoActive && <SaleProductSlider products={saleProducts} />}
 
       {/* Bestseller Product Slider */}
       <BestsellerSlider products={bestsellerProducts} />

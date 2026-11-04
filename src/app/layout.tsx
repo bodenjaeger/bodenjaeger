@@ -4,6 +4,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CookieConsentProvider } from "@/contexts/CookieConsentContext";
+import { PromoProvider } from "@/contexts/PromoContext";
 import HeaderWrapper from "@/components/HeaderWrapper";
 import Footer from "@/components/Footer";
 import FloatingContactButton from "@/components/FloatingContactButton";
@@ -18,6 +19,9 @@ import Roomvo from "@/components/Roomvo";
 import { JsonLd } from "@/components/JsonLd";
 import { buildOrganizationSchema, buildWebSiteSchema } from "@/lib/schema";
 import { SITE_URL } from "@/lib/site";
+import { CONSENT_HEAD_SCRIPT } from "@/lib/analytics/track";
+import { DEFAULT_OG_IMAGE, SITE_NAME } from "@/lib/seo";
+import { formatPromoEnd, isPromoActive } from "@/lib/black-weeks";
 import "./globals.css";
 
 const poppinsRegular = localFont({
@@ -41,6 +45,18 @@ export const metadata: Metadata = {
   keywords: "Bodenbelag, Vinyl, Laminat, Parkett, COREtec, primeCORE, Rigid-Vinyl, Klebe-Vinyl",
   authors: [{ name: "Bodenjäger" }],
   viewport: "width=device-width, initial-scale=1, maximum-scale=5",
+  // Standardwerte für Seiten ohne eigene Angaben; Seiten mit buildMetadata
+  // (src/lib/seo.ts) setzen Titel, Beschreibung, URL und Bild selbst.
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "de_DE",
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [DEFAULT_OG_IMAGE.url],
+  },
 };
 
 export default function RootLayout({
@@ -48,17 +64,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Black-Weeks-Leiste serverseitig entscheiden (src/lib/black-weeks.ts),
+  // damit sie im HTML steht und nicht nachträglich einspringt.
+  const promoBanner = isPromoActive() ? { endLabel: formatPromoEnd() } : null;
+
   return (
     <html lang="de">
       <head>
-        {/* Consent Mode v2 default — MUSS vor gtm.js laufen.
+        {/* Consent Mode v2 default + gespeicherte Entscheidung — MUSS vor gtm.js laufen.
             Synchroner inline-Script im <head> wird beim HTML-Parse
             ausgeführt, also lange vor jedem next/script (afterInteractive). */}
         <script
           id="gtm-consent-default"
-          dangerouslySetInnerHTML={{
-            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{'ad_storage':'denied','ad_user_data':'denied','ad_personalization':'denied','analytics_storage':'denied','functionality_storage':'denied','personalization_storage':'denied','security_storage':'granted','wait_for_update':500});`,
-          }}
+          dangerouslySetInnerHTML={{ __html: CONSENT_HEAD_SCRIPT }}
         />
 
         {/* Preconnect to WooCommerce backend for faster API calls */}
@@ -89,9 +107,9 @@ export default function RootLayout({
                 <CookieConsent />
                 {/* Gelbes SummerSALE-Banner entfernt — die Aktion läuft jetzt
                     über den Nav-Punkt „Angebote" (/sale). */}
-                <HeaderWrapper />
+                <HeaderWrapper promoBanner={promoBanner} />
                 <FloatingContactButton />
-                {children}
+                <PromoProvider active={Boolean(promoBanner)}>{children}</PromoProvider>
                 <Footer />
               </WishlistProvider>
             </CartProvider>

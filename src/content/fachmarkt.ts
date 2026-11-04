@@ -14,6 +14,10 @@ import type { FilialBanner } from '@/types/fachmarkt'
 // dort zentral, damit Startseiten-Slider und Angebote-Banner beim nächsten
 // Motivwechsel nicht auseinanderlaufen.
 import { AKTION_BANNER } from '@/content/aktion-banner'
+import { PROMO_IMAGES, PROMO_PATH } from '@/lib/black-weeks'
+
+/** Laufzeitende der Black-Weeks-Slides, wie in den Grafiken angegeben. */
+const BLACK_WEEKS_ENDE = '2026-12-05T23:59:59+01:00'
 // Cta-Typ ist jetzt zentral in src/types/cta.ts (geteilt mit der Service-Seite).
 // Re-Export für Abwärtskompatibilität bestehender Importe aus diesem Modul.
 import type { Cta, CtaVariant } from '@/types/cta'
@@ -130,6 +134,60 @@ export const BESUCHS_ABLAUF = {
 // ── Sektion 6: Filialangebote (CMS/Mock) ────────────────────────────────────────
 // Phase 1: Mock-Daten mit identischem Typ. Phase 2: WordPress-CPT `filial_banner`.
 export const FILIAL_BANNER_MOCK: FilialBanner[] = [
+  // Black Weeks 01.11.–05.12.2026: Reihenfolge und Verlinkung laut Kundenübersicht.
+  // Nur Slide 1 ist verlinkt. Nach `gueltigBis` blendet activeBanners() sie aus.
+  {
+    id: 4,
+    titel: 'Black Weeks',
+    bild: PROMO_IMAGES.heroMobile,
+    bildAlt: 'Black Weeks: Dein Traumboden, unser Black-Weeks-Preis. Bis zu 50 % sparen auf Vinyl, Laminat und Parkett.',
+    hochformat: true,
+    ctaLabel: 'Jetzt Angebote entdecken',
+    ctaUrl: PROMO_PATH,
+    aktiv: true,
+    reihenfolge: 1,
+    gueltigBis: BLACK_WEEKS_ENDE,
+  },
+  {
+    id: 5,
+    titel: 'Teppichboden',
+    bild: '/images/fachmarkt-hueckelhoven/aktionen/bw26-2-teppichboden.webp',
+    bildAlt: 'Black Weeks, nur im Fachmarkt: alle vorrätigen Teppichböden zusätzlich 20 % auf alle ausgezeichneten Preise.',
+    hochformat: true,
+    aktiv: true,
+    reihenfolge: 2,
+    gueltigBis: BLACK_WEEKS_ENDE,
+  },
+  {
+    id: 6,
+    titel: 'CV-Böden',
+    bild: '/images/fachmarkt-hueckelhoven/aktionen/bw26-3-cv-boeden.webp',
+    bildAlt: 'Black Weeks, nur im Fachmarkt: CV-Böden bis zu 50 %. Große Auswahl in 300 und 400 cm Breite, direkt zum Mitnehmen.',
+    hochformat: true,
+    aktiv: true,
+    reihenfolge: 3,
+    gueltigBis: BLACK_WEEKS_ENDE,
+  },
+  {
+    id: 7,
+    titel: 'Reste',
+    bild: '/images/fachmarkt-hueckelhoven/aktionen/bw26-4-reste.webp',
+    bildAlt: 'Black Weeks, nur im Fachmarkt: alle Reste zusätzlich 50 %. Teppichboden, CV, Laminat und Vinyl, solange der Vorrat reicht.',
+    hochformat: true,
+    aktiv: true,
+    reihenfolge: 4,
+    gueltigBis: BLACK_WEEKS_ENDE,
+  },
+  {
+    id: 8,
+    titel: 'Verlegeservice',
+    bild: '/images/fachmarkt-hueckelhoven/aktionen/bw26-5-verlegeservice.webp',
+    bildAlt: 'Boden aussuchen, wir verlegen: persönliche Beratung im Fachmarkt, Aufmaß bei dir vor Ort und Black-Weeks-Preise bis zu 50 %.',
+    hochformat: true,
+    aktiv: true,
+    reihenfolge: 5,
+    gueltigBis: BLACK_WEEKS_ENDE,
+  },
   {
     id: 3,
     titel: 'Jedes 7. Paket gratis',
@@ -153,7 +211,8 @@ export const FILIAL_BANNER_MOCK: FilialBanner[] = [
     hintergrund: '#ed1b24',
     ctaLabel: AKTION_BANNER.linkLabel,
     ctaUrl: AKTION_BANNER.href,
-    aktiv: true,
+    // Aktion am 21.10.2026 beendet. Daten bleiben erhalten.
+    aktiv: false,
     reihenfolge: 1,
     gueltigBis: null,
   },

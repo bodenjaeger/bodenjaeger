@@ -2,7 +2,9 @@ import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { wooCommerceClient, type StoreApiProduct } from "@/lib/woocommerce";
 import ProductPageContent from "@/components/product/ProductPageContent";
 import { JsonLd } from "@/components/JsonLd";
-import { buildProductSchema, buildBreadcrumbSchema, stripHtml } from "@/lib/schema";
+import { buildProductSchema, buildBreadcrumbSchema } from "@/lib/schema";
+import { buildProductMetaDescription } from "@/lib/product-description";
+import { buildMetadata } from "@/lib/seo";
 import { SITE_URL, productUrl, categoryUrl } from "@/lib/site";
 import { KLEBEVINYL_SPARPAKET, SPARPAKET_PRODUKT_IDS } from "@/content/klebevinyl-sparpaket";
 
@@ -140,24 +142,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
     console.log('  - setangebot_ersparnis_euro:', product.setangebot_ersparnis_euro);
     console.log('  - setangebot_ersparnis_prozent:', product.setangebot_ersparnis_prozent);
 
-    // Load WooCommerce description (contains Eigenschaften table) via REST API
-    try {
-      const wcUrl = process.env.NEXT_PUBLIC_WORDPRESS_URL;
-      const ck = process.env.WC_CONSUMER_KEY;
-      const cs = process.env.WC_CONSUMER_SECRET;
-      const wcRes = await fetch(
-        `${wcUrl}/wp-json/wc/v3/products/${product.id}?consumer_key=${ck}&consumer_secret=${cs}`,
-        { next: { revalidate: 300 } }
-      );
-      if (wcRes.ok) {
-        const wcProduct = await wcRes.json();
-        if (wcProduct.description) {
-          product.description = wcProduct.description;
-        }
-      }
-    } catch (e) {
+    // Load WooCommerce description (contains Eigenschaften table) via REST API.
+    // Läuft parallel zu den Zusatzprodukten unten (vorher seriell davor).
+    const detailsPromise = wooCommerceClient.getProductDetails(product.id).catch((e) => {
       console.error('Error loading WC description:', e);
-    }
+      return null;
+    });
 
     // ✅ USE ROOT-LEVEL FIELDS - Parse all product IDs we need to load
     const daemmungId = product.daemmung_id;
@@ -254,6 +244,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
         // Continue without additional products rather than failing completely
       }
     }
+
+    const details = await detailsPromise;
+    if (details?.description) {
+      product.description = details.description;
+    }
   } catch (error) {
     console.error('Error fetching product:', error);
     notFound();
@@ -283,17 +278,19 @@ export default async function ProductPage({ params }: ProductPageProps) {
   );
 }
 
-// Generate static params for most popular products (optional)
+// Alle indexierbaren Produkte beim Build vorrendern, damit nach einem Deploy
+// keine Produktseite kalt (3–15 s) gerendert werden muss. Muster-Produkte
+// (noindex, nicht verlinkt) werden weiter bei Bedarf gerendert.
+// Backend-Last beim Build: max. 4 parallele Requests (limitDuringBuild in woocommerce.ts).
 export async function generateStaticParams() {
   try {
-    const products = await wooCommerceClient.getProducts({
-      per_page: 10, // Top 10 most popular products
-      orderby: 'popularity'
-    });
+    const products = await wooCommerceClient.getAllProducts();
 
-    return products.map((product) => ({
-      slug: product.slug,
-    }));
+    return products
+      .filter((product) => product.slug && !product.slug.startsWith('muster-'))
+      .map((product) => ({
+        slug: product.slug,
+      }));
   } catch (error) {
     console.error('Error generating static params:', error);
     return [];
@@ -312,27 +309,18 @@ export async function generateMetadata({ params }: ProductPageProps) {
       };
     }
 
-    const description = stripHtml(
-      product.short_description || product.description?.substring(0, 160) || ''
-    ) || `${product.name} bei Bodenjäger kaufen`;
-    const canonicalUrl = productUrl(product.slug);
+    // Pro Produkt eindeutig (vorher: Kurzbeschreibung, bei ganzen Serien identisch)
+    const details = await wooCommerceClient.getProductDetails(product.id).catch(() => null);
+    const description = buildProductMetaDescription(product, details?.seoDescription);
 
-    return {
+    return buildMetadata({
       title: `${product.name} | Bodenjäger`,
       description,
-      alternates: {
-        canonical: canonicalUrl,
-      },
+      path: `/products/${product.slug}`,
+      image: product.images?.[0]?.src,
       // Muster-Produkte sind nicht verlinkt und nicht in der Sitemap
       ...(product.slug.startsWith('muster-') && { robots: { index: false, follow: true } }),
-      openGraph: {
-        title: product.name,
-        description,
-        images: product.images?.[0]?.src ? [product.images[0].src] : [],
-        type: 'website',
-        url: canonicalUrl,
-      },
-    };
+    });
   } catch {
     return {
       title: 'Bodenjäger - Hochwertige Bodenbeläge'

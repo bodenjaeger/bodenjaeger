@@ -1,7 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { consent as consentApi, type ConsentDecisionAction } from '@/lib/analytics/track';
+import {
+  consent as consentApi,
+  CONSENT_STORAGE_KEY,
+  CONSENT_VERSION,
+  type ConsentDecisionAction,
+} from '@/lib/analytics/track';
 
 export interface CookieCategories {
   necessary: true;
@@ -27,9 +32,6 @@ export interface CookieConsentContextType {
   closeBanner: () => void;
   isAllowed: (category: keyof CookieCategories) => boolean;
 }
-
-const CONSENT_STORAGE_KEY = 'bodenjaeger-cookie-consent';
-const CONSENT_VERSION = 1;
 
 const CookieConsentContext = createContext<CookieConsentContextType | undefined>(undefined);
 
@@ -84,6 +86,13 @@ export const CookieConsentProvider: React.FC<CookieConsentProviderProps> = ({ ch
     } catch {
       // ignore quota errors
     }
+    // Reihenfolge: erst Consent Mode Update, dann das Event — so werten Tags,
+    // die auf `cookie_consent` feuern, schon den neuen Consent-Status aus.
+    // Widerruf (Banner erneut öffnen) läuft ebenfalls hier durch und setzt
+    // abgewählte Kategorien wieder auf denied.
+    // Folgeseiten: Das Update aus dem gespeicherten Eintrag setzt das
+    // Head-Script (CONSENT_HEAD_SCRIPT in app/layout.tsx).
+    consentApi.update(categories);
     // Consent-Entscheidung als GA4-Event — bewusst nur hier (echte Nutzeraktion
     // über den Banner), nicht beim Re-Signaling des Consent Mode auf Folge-Seiten.
     consentApi.decision(action, categories);

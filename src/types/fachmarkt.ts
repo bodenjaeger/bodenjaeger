@@ -28,6 +28,12 @@ export interface FilialBanner {
    * Motiv an den Rändern abschneiden würde.
    */
   hintergrund?: string
+  /**
+   * Hochformat-Motiv (800 × 1143 px) mit eingebrannter Schrift. Wird nicht in
+   * die 7:3-Box gesetzt, sondern als Karte in Originalverhältnis, von der auf
+   * Desktop mehrere nebeneinander sichtbar sind.
+   */
+  hochformat?: boolean
   ctaLabel?: string
   ctaUrl?: string
   /** Nur aktive Banner werden gerendert */

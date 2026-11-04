@@ -2,11 +2,13 @@ import type { Metadata } from 'next';
 import { wordPressClient } from '@/lib/wordpress';
 import WordPressPage from '@/components/WordPressPage';
 import { notFound } from 'next/navigation';
+import { buildMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
+  path: '/agb',
   title: 'AGB – Allgemeine Geschäftsbedingungen | Bodenjäger',
   description: 'Allgemeine Geschäftsbedingungen von Bodenjäger für Bestellungen im Onlineshop und im Fachmarkt Hückelhoven.',
-};
+});
 
 export const revalidate = 300;
 

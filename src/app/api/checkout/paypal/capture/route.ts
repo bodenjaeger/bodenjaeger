@@ -12,13 +12,40 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { capturePayPalOrder } from '@/lib/paypal';
-import { updateOrderStatus, addOrderNote } from '@/lib/woocommerce-checkout';
+import { updateOrderStatus, addOrderNote, getOrderStatus } from '@/lib/woocommerce-checkout';
+
+// Capture über den Proxy + Status-Prüfung + ggf. Status-Update.
+export const maxDuration = 60;
+
+/**
+ * Ist die Order bereits bezahlt? Fängt den doppelten Aufruf der Rückkehr-URL
+ * ab (Reload, Zurück-Button, doppelter Redirect): Der zweite Capture schlägt
+ * bei PayPal fehl, weil schon erfasst — die Order darf dann NICHT auf
+ * „failed“ gesetzt werden. Bei Fehlern beim Abruf `false` (altes Verhalten).
+ */
+async function isAlreadyPaid(orderId: number): Promise<boolean> {
+  try {
+    const order = await getOrderStatus(orderId);
+    return order.status === 'processing' || order.status === 'completed';
+  } catch (err) {
+    console.error(`[paypal/capture] Status-Abruf für Order ${orderId} fehlgeschlagen:`, err);
+    return false;
+  }
+}
+
+function successRedirect(orderId: number) {
+  return NextResponse.redirect(
+    `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success?order=${orderId}&paypal=success`,
+    { status: 302 }
+  );
+}
 
 // ============================================================================
 // GET Handler
 // ============================================================================
 
 export async function GET(request: NextRequest) {
+  let orderId: number | null = null;
   try {
     // 1. Query-Parameter auslesen
     const searchParams = request.nextUrl.searchParams;
@@ -34,7 +61,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const orderId = parseInt(wcOrderId);
+    orderId = parseInt(wcOrderId);
     if (isNaN(orderId)) {
       console.error('❌ PayPal capture: Invalid order ID');
       return NextResponse.redirect(
@@ -55,13 +82,16 @@ export async function GET(request: NextRequest) {
       console.log(`✅ Order ${orderId} captured via proxy (Transaction: ${result.transactionId})`);
 
       // Redirect zur Success-Page
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success?order=${orderId}&paypal=success`,
-        { status: 302 }
-      );
+      return successRedirect(orderId);
     }
 
-    // 5. Fehler: Zahlung fehlgeschlagen
+    // 5. Fehler — aber vorher prüfen, ob die Order schon bezahlt ist
+    if (await isAlreadyPaid(orderId)) {
+      console.log(`ℹ️ Order ${orderId} ist bereits bezahlt — kein Statuswechsel, weiter zur Success-Page`);
+      return successRedirect(orderId);
+    }
+
+    // Zahlung fehlgeschlagen
     await updateOrderStatus(orderId, 'failed');
     await addOrderNote(
       orderId,
@@ -78,6 +108,12 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     console.error('❌ PayPal capture error:', error);
+
+    // Wirft der Proxy, weil die Zahlung schon erfasst ist (zweiter Aufruf),
+    // soll der Kunde trotzdem seine Bestätigung sehen.
+    if (orderId !== null && !isNaN(orderId) && (await isAlreadyPaid(orderId))) {
+      return successRedirect(orderId);
+    }
 
     // Bei Fehler: Redirect zurück zum Checkout
     return NextResponse.redirect(

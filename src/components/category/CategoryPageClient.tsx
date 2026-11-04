@@ -1,12 +1,20 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { Fragment, useState, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { type StoreApiProduct } from '@/lib/woocommerce';
 import Image from 'next/image';
 import UnifiedProductCard from '@/components/UnifiedProductCard';
 import { SORT_OPTIONS, listingHref } from '@/lib/category-listing';
+import PromoTile from '@/components/black-weeks/PromoTile';
+import { PROMO_TILE_EVERY, PROMO_TILE_POSITION } from '@/lib/black-weeks';
+
+/** Kommt vor dem Produkt an Index `i` eine Aktionskachel? (Platz 3, dann alle 12 Produkte) */
+function promoTileBefore(i: number): boolean {
+  const first = PROMO_TILE_POSITION - 1;
+  return i >= first && (i - first) % PROMO_TILE_EVERY === 0;
+}
 
 interface CategoryImage {
   id: number;
@@ -31,6 +39,11 @@ interface CategoryPageClientProps {
   currentPage: number;
   sortBy: string;
   error: string | null;
+  /**
+   * Black-Weeks-Aktionskachel einblenden — vom Server entschieden
+   * (`isPromoActive()`), damit Kachel und Seitengröße (11 statt 12) zusammenpassen.
+   */
+  showPromoTile?: boolean;
 }
 
 export default function CategoryPageClient({
@@ -43,6 +56,7 @@ export default function CategoryPageClient({
   currentPage,
   sortBy,
   error,
+  showPromoTile = false,
 }: CategoryPageClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -205,14 +219,18 @@ export default function CategoryPageClient({
         {/* Products Grid */}
         {products.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
-            {products.map((product) => (
-              <UnifiedProductCard
-                key={product.id}
-                product={product}
-                daemmungProduct={product.daemmung_id ? (addonProductsMap.get(product.daemmung_id) ?? null) : null}
-                sockelleisteProduct={product.sockelleisten_id ? (addonProductsMap.get(product.sockelleisten_id) ?? null) : null}
-              />
+            {products.map((product, index) => (
+              <Fragment key={product.id}>
+                {showPromoTile && promoTileBefore(index) && <PromoTile />}
+                <UnifiedProductCard
+                  product={product}
+                  daemmungProduct={product.daemmung_id ? (addonProductsMap.get(product.daemmung_id) ?? null) : null}
+                  sockelleisteProduct={product.sockelleisten_id ? (addonProductsMap.get(product.sockelleisten_id) ?? null) : null}
+                />
+              </Fragment>
             ))}
+            {/* Weniger Produkte als Platz 3 → Kachel ans Ende */}
+            {showPromoTile && products.length < PROMO_TILE_POSITION && <PromoTile />}
           </div>
         ) : (
           <div className="text-center py-12">

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { AKTION_BANNER } from '@/content/aktion-banner';
+import { PROMO_DISCOUNT_LABEL, PROMO_IMAGES, PROMO_PATH } from '@/lib/black-weeks';
 
 interface SlideData {
   id: number;
@@ -27,6 +28,12 @@ interface SlideData {
   fullBleed?: boolean;
   // Eigenes Hochformat-Bild unterhalb von 1200px (nur bei `fullBleed`).
   mobileImage?: string;
+  // Seitenverhältnis des Hochformats als CSS-`aspect-ratio` (nur bei
+  // `fullBleed`). Ohne Angabe gilt das des Aktionsbanners.
+  mobileAspectRatio?: string;
+  // Animierte Grafik: am Next-Optimierer vorbei ausliefern, sonst wäre nur
+  // das erste Bild zu sehen bzw. die Datei würde unnötig durchgereicht.
+  animated?: boolean;
   // Nur bei `fullBleed`: Lage des eingebrannten Buttons im Bild. Ist sie
   // gesetzt, wird der gemalte Button mit `bgColor` übermalt und an seiner
   // Stelle ein echter HTML-Button gerendert — in derselben Größe wie auf den
@@ -104,21 +111,7 @@ const STAGE_PHOTO_ASPECT_MOBILE = 'aspect-[948/724]'; // Split-Foto in voller H�
    dem die Dot-Navigation sitzt. */
 const STAGE_TEXT_HEIGHT_MOBILE = 'h-[250px]';
 
-const slides: SlideData[] = [
-  {
-    id: 4,
-    // Motiv, Rotton und Linkziel aus der gemeinsamen Quelle — die
-    // Fachmarktseite zeigt denselben Banner in ihrem Hero.
-    bgColor: AKTION_BANNER.bgColor,
-    fullBleed: true,
-    image: AKTION_BANNER.imageDesktop,
-    mobileImage: AKTION_BANNER.imageMobile,
-    imageAlt: AKTION_BANNER.alt,
-    buttonLabel: AKTION_BANNER.linkLabel,
-    buttonHref: AKTION_BANNER.href,
-    paintedButtonDesktop: AKTION_BANNER.buttonDesktop,
-    paintedButtonMobile: AKTION_BANNER.buttonMobile,
-  },
+const baseSlides: SlideData[] = [
   {
     id: 1,
     bgColor: '#4c4c4c',
@@ -136,18 +129,6 @@ const slides: SlideData[] = [
     buttonLabel: 'Mehr erfahren',
     buttonHref: '/category/primecore',
     buttonVariant: 'light',
-  },
-  {
-    id: 3,
-    bgColor: '#00518a',
-    image: '/images/sliderbilder/coreTec.webp',
-    imageAlt: 'CoreTec',
-    objectPosition: 'right 10%',
-    heading: 'COREtec',
-    text: 'Die Markenwelt der Luxusböden mit lebenslanger Garantie.',
-    buttonLabel: 'Mehr erfahren',
-    buttonHref: '/category/coretec',
-    buttonVariant: 'dark',
   },
 ];
 
@@ -202,7 +183,54 @@ function PaintedButtonOverlay({
   );
 }
 
-export default function HeroSlider() {
+/* Black-Weeks-Slide an Platz 1, solange die Aktion läuft. Die animierten
+   Grafiken bringen Rabatt und Button eingebrannt mit, der ganze Slide führt
+   zur Aktionsseite. Querformat 1600×773 trifft die Desktop-Bühne (8547×4134)
+   bis auf Bruchteile eines Pixels; der Rest verschwindet im Schwarz. */
+const PROMO_SLIDE: SlideData = {
+  id: 0,
+  bgColor: '#000000',
+  image: PROMO_IMAGES.heroDesktop,
+  mobileImage: PROMO_IMAGES.heroMobile,
+  mobileAspectRatio: '800 / 1143',
+  imageAlt: `Black Weeks bei Bodenjäger: bis zu ${PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl und Parkett`,
+  fullBleed: true,
+  animated: true,
+  buttonLabel: 'Zu den Black-Weeks-Angeboten',
+  buttonHref: PROMO_PATH,
+};
+
+/* primeCORE im Black-Weeks-Motiv — ersetzt während der Aktion den normalen
+   primeCORE-Slide. Aktionszeitraum und Black-Weeks-Preis sind ins Bild
+   eingebrannt, deshalb nur bei laufender Aktion. Querformat 2740×1323 trifft
+   die Desktop-Bühne; `bgColor` ist das Grün der Bilder. */
+const PRIMECORE_PROMO_SLIDE: SlideData = {
+  id: 2,
+  bgColor: '#51706a',
+  image: '/images/sliderbilder/BW26_Slider_primeCORE_desktop.jpg',
+  mobileImage: '/images/sliderbilder/BW26_Slider_primeCORE_mobil.jpg',
+  mobileAspectRatio: '1200 / 1714',
+  imageAlt:
+    'primeCORE – der extrem starke Vinylboden: 0,7 mm Nutzschicht, 8 mm stark, Korkdämmung integriert, lebenslange Garantie. Black-Weeks-Preis 44,99 €/m² statt UVP 79,95 €/m², 01.11. bis 05.12.2026.',
+  fullBleed: true,
+  buttonLabel: 'primeCORE jetzt sichern',
+  buttonHref: '/category/primecore',
+};
+
+interface HeroSliderProps {
+  /** Black Weeks aktiv? Wird auf dem Server per `isPromoActive()` ermittelt. */
+  showPromo?: boolean;
+}
+
+export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
+  const slides = showPromo ? [PROMO_SLIDE, PRIMECORE_PROMO_SLIDE] : baseSlides;
+  const slideCount = slides.length;
+  // Sind alle Slides Full-Bleed, gibt das Hochformat des ersten die mobile
+  // Bühnenform vor (die Black-Weeks-Grafiken haben alle ≈ 0,7).
+  const mobileFullBleedAspect = slides.every((s) => s.fullBleed)
+    ? slides[0].mobileAspectRatio ?? AKTION_BANNER.mobileAspectRatio
+    : null;
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -215,16 +243,16 @@ export default function HeroSlider() {
   const goToNextSlide = useCallback(() => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
+    setCurrentSlide((prev) => (prev + 1) % slideCount);
     setTimeout(() => setIsTransitioning(false), 500);
-  }, [isTransitioning]);
+  }, [isTransitioning, slideCount]);
 
   const goToPrevSlide = useCallback(() => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    setCurrentSlide((prev) => (prev - 1 + slideCount) % slideCount);
     setTimeout(() => setIsTransitioning(false), 500);
-  }, [isTransitioning]);
+  }, [isTransitioning, slideCount]);
 
   // Auto-play functionality
   useEffect(() => {
@@ -305,15 +333,24 @@ export default function HeroSlider() {
             Textbereich. Ein einzelnes `aspect-ratio` könnte das nicht leisten —
             der Foto-Anteil skaliert mit der Breite, der Text-Anteil nicht.
 
-            `max-h-[85vh]` kappt nur den Tablet-Bereich, wo das Foto bei großer
-            Breite sonst sehr hoch würde. Greift die Kappung, schrumpft das Foto
-            (der Textbereich ist `flex-shrink-0`) — bei allen Slides gleich, die
-            Höhen bleiben also identisch. */}
-        <div className="relative max-h-[85vh] min-[1200px]:max-h-none">
+            Bewusst ohne Höhenkappung: Fotos und Grafiken erscheinen auf allen
+            Breiten in Originalgröße, auf dem Tablet wird der Slider dafür
+            entsprechend hoch. */}
+        <div className="relative">
           {/* Höhen-Spacer, rein geometrisch: nehmen keinen Platz neben den
-              Slides ein, weil die absolut darüber liegen. */}
-          <div aria-hidden className={`${STAGE_PHOTO_ASPECT_MOBILE} min-[1200px]:hidden`} />
-          <div aria-hidden className={`${STAGE_TEXT_HEIGHT_MOBILE} min-[1200px]:hidden`} />
+              Slides ein, weil die absolut darüber liegen.
+              Nur Full-Bleed-Slides (Black Weeks): Bühne mobil im
+              Seitenverhältnis der Hochformat-Grafiken, volle Breite und ohne
+              Höhenkappung — die Grafik erscheint in Originalgröße, der Slider
+              darf dafür über den ersten Bildschirm hinausgehen. */}
+          {mobileFullBleedAspect ? (
+            <div aria-hidden className="min-[1200px]:hidden" style={{ aspectRatio: mobileFullBleedAspect }} />
+          ) : (
+            <>
+              <div aria-hidden className={`${STAGE_PHOTO_ASPECT_MOBILE} min-[1200px]:hidden`} />
+              <div aria-hidden className={`${STAGE_TEXT_HEIGHT_MOBILE} min-[1200px]:hidden`} />
+            </>
+          )}
           <div aria-hidden className={`hidden min-[1200px]:block ${STAGE_ASPECT_DESKTOP}`} />
 
           {slides.map((slide, index) => {
@@ -348,6 +385,7 @@ export default function HeroSlider() {
                       sizes="(min-width: 1400px) 1400px, 100vw"
                       priority={index === 0}
                       loading={index === 0 ? 'eager' : 'lazy'}
+                      unoptimized={slide.animated}
                     />
                     {/* Hier gelten die Prozentwerte direkt auf dem Link: ab
                         1200px hat die Bühne exakt das Seitenverhältnis des
@@ -366,9 +404,8 @@ export default function HeroSlider() {
                   {/* Full-Bleed Mobile/Tablet: Hochformat-Bild in der Bühne,
                       deren Höhe sich nach dem Split-Foto plus Textbereich
                       richtet. `object-contain` passt das Motiv darin ein —
-                      die Ränder, die dabei oben und unten (bzw. seitlich, wenn
-                      die 85vh-Kappung greift) frei bleiben, verschwinden in
-                      der gleichen Rotfläche. */}
+                      die Ränder, die dabei frei bleiben, verschwinden in
+                      `bgColor`. */}
                   <a
                     href={slide.buttonHref}
                     aria-label={slide.buttonLabel}
@@ -387,8 +424,8 @@ export default function HeroSlider() {
                     <div
                       className="relative"
                       style={{
-                        aspectRatio: AKTION_BANNER.mobileAspectRatio,
-                        width: `min(100%, calc(100cqh * ${AKTION_BANNER.mobileAspectRatio}))`,
+                        aspectRatio: slide.mobileAspectRatio ?? AKTION_BANNER.mobileAspectRatio,
+                        width: `min(100%, calc(100cqh * ${slide.mobileAspectRatio ?? AKTION_BANNER.mobileAspectRatio}))`,
                       }}
                     >
                       <Image
@@ -399,6 +436,7 @@ export default function HeroSlider() {
                         sizes="100vw"
                         priority={index === 0}
                         loading={index === 0 ? 'eager' : 'lazy'}
+                        unoptimized={slide.animated}
                       />
                       {slide.paintedButtonMobile && (
                         <PaintedButtonOverlay
@@ -491,10 +529,7 @@ export default function HeroSlider() {
                   ab: randlos gefüllt UND vollständig sichtbar, ohne Beschnitt.
                   Weil darunter ein fester Textbereich steht, ist die Fotohöhe
                   bei allen Split-Slides identisch, unabhängig von der
-                  Textmenge.
-                  `min-h-0` lässt das Foto schrumpfen, falls die 85vh-Kappung
-                  der Bühne greift (Tablet) — dann trifft es alle Slides
-                  gleichermaßen, und `objectPosition` bestimmt den Ausschnitt. */}
+                  Textmenge. */}
               <div className="min-[1200px]:hidden flex h-full flex-col">
                 <div className={`relative w-full min-h-0 ${STAGE_PHOTO_ASPECT_MOBILE}`}>
                   <Image

@@ -1,4 +1,5 @@
 import NewsletterSignup from '@/components/NewsletterSignup';
+import { buildMetadata } from '@/lib/seo';
 
 export default function NewsletterPage() {
   return (
@@ -208,7 +209,8 @@ export default function NewsletterPage() {
   );
 }
 
-export const metadata = {
+export const metadata = buildMetadata({
+  path: '/newsletter',
   title: 'Newsletter | Bodenjäger',
   description: 'Melden Sie sich für unseren Newsletter an und erhalten Sie exklusive Angebote, Neuheiten und Tipps rund um Bodenbeläge.',
-};
+});

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { loadScript } from '@paypal/paypal-js';
 import { useCart } from '@/contexts/CartContext';
-import { cartItemsToOrderItems } from '@/lib/cart-utils';
+import { buildOrderLineItems, sumLineItemTotals, type OrderLineItem } from '@/lib/order-line-items';
 import { calculateShippingCost } from '@/lib/shippingConfig';
 import { calculatePaketAktion } from '@/lib/promo';
 
@@ -12,11 +12,14 @@ import { calculatePaketAktion } from '@/lib/promo';
  *
  * Flow:
  * 1. Browser zeigt Button (nach SDK-Load)
- * 2. Klick → createOrder-Callback → POST /api/checkout/paypal/express-create
- *    (mit Cart-Items, FREE-Items gefiltert)
+ * 2. Klick → createOrder-Callback → Positionen einmal bauen
+ *    (`buildOrderLineItems`, dieselbe Funktion wie im normalen Checkout) →
+ *    POST /api/checkout/paypal/express-create
  * 3. PayPal-Popup öffnet sich, Kunde bestätigt Adresse + Zahlung
- * 4. onApprove-Callback → POST /api/checkout/paypal/express-capture
- *    (mit allen Items inkl. Free, für vollständige WC-Order)
+ * 4. onApprove-Callback → POST /api/checkout/paypal/express-capture mit
+ *    GENAU den Positionen aus Schritt 2 — so bildet die WC-Order den
+ *    eingezogenen Betrag ab, auch wenn sich zwischendurch etwas ändert
+ *    (z.B. eine Aktion um Mitternacht endet).
  * 5. Bei Erfolg: window.location.href = /checkout/success?order=...&paypal=success
  *    (Success-Page räumt den Cart auf)
  *
@@ -39,6 +42,9 @@ export default function ExpressCheckout() {
   const totalPriceRef = useRef(totalPrice);
   const customerNoteRef = useRef(customerNote);
   const deliveryNoteRef = useRef(deliveryNote);
+
+  // Positionen + Versand, mit denen die PayPal-Order erstellt wurde.
+  const pendingOrderRef = useRef<{ lineItems: OrderLineItem[]; shippingCost: number } | null>(null);
 
   useEffect(() => {
     cartItemsRef.current = cartItems;
@@ -90,10 +96,9 @@ export default function ExpressCheckout() {
           createOrder: async () => {
             setErrorMsg(null);
 
-            const allItems = cartItemsToOrderItems(cartItemsRef.current);
-            const billableItems = allItems.filter((item) => item.price > 0);
+            const lineItems = buildOrderLineItems(cartItemsRef.current);
 
-            if (billableItems.length === 0) {
+            if (sumLineItemTotals(lineItems) <= 0) {
               const msg = 'Keine bezahlbaren Artikel im Warenkorb.';
               setErrorMsg(msg);
               throw new Error(msg);
@@ -111,10 +116,8 @@ export default function ExpressCheckout() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                items: billableItems,
-                subtotal: totalPriceRef.current,
+                line_items: lineItems,
                 shipping_cost: shippingCost,
-                ...(aktionDiscount > 0 ? { aktion_discount: aktionDiscount } : {}),
               }),
             });
 
@@ -124,18 +127,20 @@ export default function ExpressCheckout() {
               setErrorMsg(msg);
               throw new Error(msg);
             }
+            pendingOrderRef.current = { lineItems, shippingCost };
             return data.paypalOrderId as string;
           },
 
           onApprove: async (data) => {
-            try {
-              // Für WC: ALLE Items (auch Free) — WC braucht die volle Set-Darstellung
-              const allItems = cartItemsToOrderItems(cartItemsRef.current);
-              const aktionDiscount = calculatePaketAktion(cartItemsRef.current).discount;
-              const shippingCost = calculateShippingCost(
-                Math.max(0, totalPriceRef.current - aktionDiscount),
-                cartItemsRef.current
+            const pending = pendingOrderRef.current;
+            if (!pending) {
+              setErrorMsg(
+                'Die Zahlung konnte nicht zugeordnet werden. Bitte nicht erneut bezahlen, sondern uns kontaktieren.'
               );
+              return;
+            }
+
+            try {
 
               const note = [
                 deliveryNoteRef.current.trim() && `Lieferwunsch: ${deliveryNoteRef.current.trim()}`,
@@ -149,16 +154,17 @@ export default function ExpressCheckout() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   paypalOrderId: data.orderID,
-                  items: allItems,
-                  subtotal: totalPriceRef.current,
-                  shipping_cost: shippingCost,
-                  ...(aktionDiscount > 0 ? { aktion_discount: aktionDiscount } : {}),
+                  line_items: pending.lineItems,
+                  shipping_cost: pending.shippingCost,
                   customer_note: note,
                 }),
               });
 
               const result = await res.json();
 
+              // Auch wenn die Bestellung nach dem Capture nicht angelegt werden
+              // konnte, kommt `success` + redirectUrl (?paypal=pending) — die
+              // Bestätigungsseite leert den Warenkorb.
               if (result.success && result.redirectUrl) {
                 window.location.href = result.redirectUrl;
                 return;
@@ -169,8 +175,12 @@ export default function ExpressCheckout() {
                   'Zahlung erfolgt, Bestellung konnte aber nicht angelegt werden. Bitte kontaktieren Sie uns.'
               );
             } catch (err) {
-              const msg = err instanceof Error ? err.message : 'Express-Capture fehlgeschlagen.';
-              setErrorMsg(msg);
+              // Keine Antwort vom Server: Ob PayPal schon eingezogen hat, ist
+              // hier unbekannt — Kunde soll nicht ein zweites Mal bezahlen.
+              console.error('[ExpressCheckout] express-capture request failed:', err);
+              setErrorMsg(
+                'Die Verbindung wurde unterbrochen. Ihre Zahlung wird möglicherweise bereits verarbeitet – bitte nicht erneut bezahlen, sondern prüfen Sie Ihr PayPal-Konto oder kontaktieren Sie uns.'
+              );
             }
           },
 

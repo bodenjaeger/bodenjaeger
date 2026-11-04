@@ -40,6 +40,16 @@ export function parseListingParams(searchParams: SearchParamsRecord): { page: nu
   return { page, sort };
 }
 
+/** „ – Seite N“ ab Seite 2 (für eindeutige Titles/Descriptions), sonst leer. */
+export function pageSuffix(page: number): string {
+  return page > 1 ? ` – Seite ${page}` : '';
+}
+
+/** Steht `?page=1` ausdrücklich in der URL? (→ Weiterleitung auf die URL ohne Parameter) */
+export function hasExplicitFirstPage(searchParams: SearchParamsRecord): boolean {
+  return first(searchParams.page) === '1';
+}
+
 /** URL einer Listenseite. Seite 1 und Standard-Sortierung werden weggelassen. */
 export function listingHref(basePath: string, page: number, sort: string = DEFAULT_SORT): string {
   const params = new URLSearchParams();

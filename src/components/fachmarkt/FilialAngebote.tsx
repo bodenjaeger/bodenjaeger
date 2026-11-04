@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -30,16 +30,22 @@ interface FilialAngeboteProps {
  */
 function Banner({ banner }: { banner: FilialBanner }) {
   const clickable = Boolean(banner.ctaUrl)
-  const contain = Boolean(banner.hintergrund)
+  const hochformat = Boolean(banner.hochformat)
+  const contain = Boolean(banner.hintergrund) || hochformat
+  const slideCls = hochformat
+    ? 'block w-[82%] flex-shrink-0 snap-start md:w-[42%] lg:w-[30%]'
+    : 'block w-full flex-shrink-0 snap-center'
   const inner = (
     <div
-      className="group relative aspect-[7/3] w-full overflow-hidden rounded-3xl"
+      className={`group relative w-full overflow-hidden rounded-3xl ${hochformat ? 'aspect-[800/1143]' : 'aspect-[7/3]'}`}
       style={banner.hintergrund ? { backgroundColor: banner.hintergrund } : undefined}
     >
       <Image
         src={banner.bild}
         alt={banner.bildAlt || banner.titel}
         fill
+        // Hochformat-Motive sind animierte WebP: ohne Bildoptimierung ausliefern.
+        unoptimized={hochformat}
         sizes="(max-width: 1024px) 100vw, 1200px"
         className={
           contain
@@ -51,13 +57,27 @@ function Banner({ banner }: { banner: FilialBanner }) {
   )
 
   return clickable ? (
-    <Link href={banner.ctaUrl!} className="block w-full flex-shrink-0 snap-center">
+    <Link href={banner.ctaUrl!} className={slideCls}>
       {inner}
     </Link>
   ) : (
     // Ohne Link: kein <a>-Wrapper, kein Pointer, kein Hover.
-    <div className="w-full flex-shrink-0 snap-center">{inner}</div>
+    <div className={slideCls}>{inner}</div>
   )
+}
+
+/**
+ * Misst den Track: `step` = Abstand zweier Slides, `max` = größter Scrollwert,
+ * `stops` = Anzahl erreichbarer Positionen. Bei Hochformat-Karten sind mehrere
+ * gleichzeitig sichtbar, es gibt also weniger Positionen als Banner.
+ */
+function measureTrack(el: HTMLDivElement) {
+  const first = el.children[0] as HTMLElement | undefined
+  const second = el.children[1] as HTMLElement | undefined
+  const step = first && second ? second.offsetLeft - first.offsetLeft : el.clientWidth
+  const max = el.scrollWidth - el.clientWidth
+  const stops = step > 0 ? Math.ceil((max - 1) / step) + 1 : 1
+  return { step, max, stops: Math.max(stops, 1) }
 }
 
 /**
@@ -69,26 +89,41 @@ export default function FilialAngebote({ banners }: FilialAngeboteProps) {
   const reduced = usePrefersReducedMotion()
   const trackRef = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
+  const [stops, setStops] = useState(banners?.length ?? 0)
+
+  const syncPosition = useCallback(() => {
+    const el = trackRef.current
+    if (!el) return
+    const { step, max, stops: count } = measureTrack(el)
+    setStops(count)
+    // Am Ende zählt die letzte Position, auch wenn der Rest kürzer als ein Slide ist.
+    setActive(el.scrollLeft >= max - 2 ? count - 1 : Math.round(el.scrollLeft / step))
+  }, [])
+
+  // Die Zahl der Positionen hängt von der Breite ab (Karten pro Ansicht).
+  useEffect(() => {
+    const el = trackRef.current
+    if (!el) return
+    syncPosition()
+    const observer = new ResizeObserver(syncPosition)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [syncPosition])
 
   const scrollToIndex = useCallback(
     (i: number) => {
       const el = trackRef.current
       if (!el) return
-      const clamped = Math.max(0, Math.min(i, banners.length - 1))
-      el.scrollTo({ left: clamped * el.clientWidth, behavior: reduced ? 'auto' : 'smooth' })
+      const { step, max, stops: count } = measureTrack(el)
+      const clamped = Math.max(0, Math.min(i, count - 1))
+      el.scrollTo({ left: Math.min(clamped * step, max), behavior: reduced ? 'auto' : 'smooth' })
       setActive(clamped)
     },
-    [banners.length, reduced],
+    [reduced],
   )
 
-  const onScroll = useCallback(() => {
-    const el = trackRef.current
-    if (!el) return
-    setActive(Math.round(el.scrollLeft / el.clientWidth))
-  }, [])
-
   if (!banners || banners.length === 0) return null
-  const multiple = banners.length > 1
+  const multiple = stops > 1
 
   return (
     <section id="angebote" className="scroll-mt-24 bg-dark py-28 text-white md:py-40">
@@ -106,7 +141,7 @@ export default function FilialAngebote({ banners }: FilialAngeboteProps) {
           {/* Slider-Track */}
           <div
             ref={trackRef}
-            onScroll={onScroll}
+            onScroll={syncPosition}
             className="flex snap-x snap-mandatory gap-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             style={{ msOverflowStyle: 'none' }}
           >
@@ -137,9 +172,9 @@ export default function FilialAngebote({ banners }: FilialAngeboteProps) {
 
               {/* Dots */}
               <div className="mt-6 flex justify-center gap-2">
-                {banners.map((b, i) => (
+                {Array.from({ length: stops }, (_, i) => (
                   <button
-                    key={b.id}
+                    key={i}
                     type="button"
                     aria-label={`Zu Angebot ${i + 1}`}
                     aria-current={i === active}

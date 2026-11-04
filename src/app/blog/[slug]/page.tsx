@@ -2,6 +2,9 @@ import { wordPressClient } from '@/lib/wordpress';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+import { buildMetadata } from '@/lib/seo';
+import { stripHtml } from '@/lib/schema';
 
 export const revalidate = 300; // 5 minutes
 
@@ -9,6 +12,24 @@ interface BlogPostPageProps {
   params: Promise<{
     slug: string;
   }>;
+}
+
+export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await wordPressClient.getPostBySlug(slug);
+  if (!post) {
+    return { title: 'Beitrag nicht gefunden | Bodenjäger' };
+  }
+
+  const title = stripHtml(post.title.rendered);
+  const excerpt = stripHtml(post.excerpt?.rendered || '').replace(/\s+/g, ' ').trim();
+  const description = excerpt.length > 155 ? `${excerpt.slice(0, 154).trimEnd()}…` : excerpt;
+
+  return buildMetadata({
+    path: `/blog/${post.slug}`,
+    title: `${title} | Bodenjäger`,
+    description: description || `${title} – Ratgeber von Bodenjäger`,
+  });
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {

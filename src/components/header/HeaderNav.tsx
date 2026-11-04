@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, MapPin } from 'lucide-react'
-import { FACHMARKT_LINK, MUSTER_LINK, SHOP_NAV } from '@/content/shopNav'
+import { FACHMARKT_LINK, MUSTER_LINK, SHOP_NAV, getNavHref } from '@/content/shopNav'
 
 /**
  * Zeile 3 des Shop-Headers (nur ab lg): Kategorienavigation mit Dropdowns,
@@ -17,7 +17,7 @@ import { FACHMARKT_LINK, MUSTER_LINK, SHOP_NAV } from '@/content/shopNav'
  * Einen Chevron erhalten nur Punkte mit Unterpunkten. „Parkett" hat im Bestand
  * keine Unterkategorien und steht daher — anders als im Mockup — ohne Chevron.
  */
-export default function HeaderNav() {
+export default function HeaderNav({ promoActive = false }: { promoActive?: boolean }) {
   const [openId, setOpenId] = useState<string | null>(null)
   const navRef = useRef<HTMLDivElement>(null)
   const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({})
@@ -62,7 +62,7 @@ export default function HeaderNav() {
                   >
                     <span className="flex items-center">
                       <Link
-                        href={item.href}
+                        href={getNavHref(item, promoActive)}
                         className="flex h-11 items-center rounded-md px-2.5 text-[15px] text-white transition-colors hover:text-hdr-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                       >
                         {item.label}

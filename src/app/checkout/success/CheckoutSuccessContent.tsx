@@ -12,15 +12,31 @@ export default function CheckoutSuccessContent() {
   const orderId = searchParams.get('order');  // Changed from 'orderId' to 'order'
   const paypalSuccess = searchParams.get('paypal');
   const stripeSessionId = searchParams.get('session_id');
+  // PayPal Express: bezahlt, aber die Bestellung wird vom Team manuell
+  // angelegt (WooCommerce hat sie nach dem Capture abgelehnt). Keine
+  // Bestellnummer, stattdessen die PayPal-Transaktions-ID.
+  const paypalPending = paypalSuccess === 'pending';
+  const paypalTransactionId = searchParams.get('tx');
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (paypalPending) {
+      // Warenkorb in jedem Fall leeren — bezahlt ist bezahlt, sonst droht
+      // eine zweite Zahlung.
+      try {
+        localStorage.removeItem('woocommerce-cart');
+      } catch {
+        // ignore
+      }
+      return;
+    }
+
     // If no order ID is present, redirect to home
     if (!orderId) {
       router.push('/');
       return;
     }
-
-    if (typeof window === 'undefined') return;
 
     // GA4 purchase — Doppel-Event-Schutz via sessionStorage.
     const flagKey = `purchase_tracked_${orderId}`;
@@ -62,7 +78,7 @@ export default function CheckoutSuccessContent() {
     } catch {
       // ignore
     }
-  }, [orderId, router]);
+  }, [orderId, paypalPending, router]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -98,6 +114,24 @@ export default function CheckoutSuccessContent() {
           </div>
 
           {/* Success Message */}
+          {paypalPending ? (
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-dark mb-4">
+              Vielen Dank – Ihre Zahlung ist eingegangen!
+            </h1>
+            <p className="text-lg text-gray-700 mb-2">
+              Ihre Bestellung wird von unserem Team bearbeitet. Sie erhalten die
+              Bestellbestätigung in Kürze per E-Mail.
+            </p>
+            {paypalTransactionId && (
+              <p className="text-gray-600">
+                PayPal-Transaktions-ID:{' '}
+                <span className="font-semibold text-dark">{paypalTransactionId}</span>
+              </p>
+            )}
+            <p className="text-brand text-sm mt-2">✅ PayPal Zahlung erfolgreich</p>
+          </div>
+          ) : (
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-dark mb-4">
               Vielen Dank für Ihre Bestellung!
@@ -117,6 +151,7 @@ export default function CheckoutSuccessContent() {
               </p>
             )}
           </div>
+          )}
 
           {/* Order Confirmation Details */}
           <div className="bg-white rounded-lg shadow-md p-8 mb-8">

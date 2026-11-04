@@ -14,6 +14,8 @@ import {
   isMusterProduct,
 } from '@/lib/sampleUtils';
 import { useSparpaketStreichpreisProM2, sparpaketRabattProzent } from '@/hooks/useSparpaketStreichpreisProM2';
+import { usePromoActive } from '@/contexts/PromoContext';
+import { PROMO_RED, isPromoProduct } from '@/lib/black-weeks';
 
 interface UnifiedProductCardProps {
   product: StoreApiProduct;
@@ -71,6 +73,9 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
   const sparpaketStreichpreisProM2 = useSparpaketStreichpreisProM2(product, sockelleisteProduct);
 
   const wishlisted = isInWishlist(product.id);
+
+  // Black-Weeks-Label: nur während der Aktion und für Produkte der Aktionskategorie
+  const showPromoLabel = usePromoActive() && isPromoProduct(product);
 
   const handleToggleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -183,6 +188,24 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
                 </div>
               ) : null;
             })()}
+
+            {/* Black-Weeks-Label — schwarz mit rotem Leuchtrand (Kundenvorlage) */}
+            {showPromoLabel && (
+              <div
+                className="text-white rounded font-bold uppercase w-fit"
+                style={{
+                  fontSize: '12px',
+                  padding: '3% 10%',
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '0.06em',
+                  backgroundColor: '#140809',
+                  border: `1.5px solid ${PROMO_RED}`,
+                  boxShadow: `0 0 6px ${PROMO_RED}`,
+                }}
+              >
+                Black Weeks
+              </div>
+            )}
 
             {/* Aktion Badge — Stil aus Backend, Jäger-Farben */}
             {product.show_aktion && product.aktion && (

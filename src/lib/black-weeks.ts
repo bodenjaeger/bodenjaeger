@@ -1,0 +1,241 @@
+/**
+ * Black-Weeks-Aktion 2026 — EINZIGE Quelle für Laufzeit, Slugs und Regeln.
+ *
+ * Bannerleiste (Header), Aktionskachel (Listings) und die Aktionsseite
+ * `/aktion/black-weeks` lesen alle `isPromoActive()`. Unabhängig von der
+ * beendeten Paket-Aktion in `src/lib/promo.ts`; am Warenkorb ändert diese
+ * Aktion nichts — die Preise kommen wie immer aus WooCommerce.
+ *
+ * ── Nur auf dem Server auswerten ────────────────────────────────────────────
+ * `PROMO_END`, `PROMO_PREVIEW` und `PROMO_EXCLUSIVE` sind keine
+ * `NEXT_PUBLIC_`-Variablen und im Browser `undefined`. Die Seiten werten
+ * `isPromoActive()` serverseitig aus und reichen das Ergebnis als Prop weiter.
+ * Das verhindert außerdem, dass Server-HTML und Browser zur Startminute
+ * unterschiedlich rendern (Hydration-Fehler, Layout-Shift).
+ *
+ * ── Start um 00:00 ohne Deploy ──────────────────────────────────────────────
+ * Die Shopseiten liegen gerendert im Cache. Ein Vercel-Cron
+ * (`/api/cron/black-weeks`, siehe `vercel.json`) leert ihn kurz nach Start
+ * und Ende komplett; die Aktionsseite prüft die Zeit ohnehin bei jedem Aufruf.
+ */
+
+import type { StoreApiProduct } from '@/lib/woocommerce';
+import { PRODUCTS_PER_PAGE } from '@/lib/category-listing';
+
+// ============================================================================
+// Konfiguration
+// ============================================================================
+
+/** URL der Aktionsseite. Bei Änderung auch den Ordner unter `src/app/aktion/` umbenennen. */
+export const PROMO_PATH = '/aktion/black-weeks';
+
+/** WooCommerce-Kategorie mit den Aktionsböden (im Backend gepflegt). */
+export const PROMO_CATEGORY_SLUG = process.env.NEXT_PUBLIC_PROMO_CATEGORY_SLUG || 'black-weeks';
+
+/** Start: 01.11.2026, 00:00 Uhr Europe/Berlin (Winterzeit, +01:00). */
+export const PROMO_START = '2026-11-01T00:00:00+01:00';
+
+/**
+ * Ende: 05.12.2026, 23:59:59 Uhr Europe/Berlin (so auch in den Grafiken).
+ * `PROMO_END` überschreibt den Wert, z. B. für eine Verlängerung ohne Deploy.
+ */
+const PROMO_END_DEFAULT = '2026-12-05';
+
+/** Aktionskachel zusätzlich alle n Produkte (nach der ersten an Platz 3). */
+export const PROMO_TILE_EVERY = 12;
+
+/** Platz der ersten Aktionskachel im Grid (1-basiert). */
+export const PROMO_TILE_POSITION = 3;
+
+/**
+ * Höchstzahl an Produkten, die die Aktionsseite in einem Request lädt
+ * (Tabs, Sortierung und Blättern laufen danach im Browser). Hat die
+ * Kategorie mehr, fehlen die übrigen — die Seite warnt dann im Server-Log
+ * und in der Vorschau sichtbar.
+ */
+export const PROMO_MAX_PRODUCTS = 100;
+
+/**
+ * Höchster Rabatt in Prozent — „Bis zu … %“ in Leiste, Kachel, Aktionsseite
+ * und Metadaten. Muss zu den Grafiken passen: Die Zahl steht dort im Bild
+ * und ändert sich nicht mit diesem Wert.
+ */
+export const PROMO_MAX_DISCOUNT = 50;
+
+/** „bis zu 50 %“ — mit geschütztem Leerzeichen vor dem Prozentzeichen. */
+export const PROMO_DISCOUNT_LABEL = `${PROMO_MAX_DISCOUNT} %`;
+
+/**
+ * Animierte WebP-Grafiken. Fehlt die Kachel-Datei, zeigt die Kachel einen
+ * Platzhalter (siehe `PromoImage`).
+ * Hero = Startseiten-Slide (HeroSlider): Desktop 1600×773 (ab 1200 px Breite),
+ * Mobil 800×1143. Kachel 600×857 (Hochformat in Kachelgröße).
+ */
+export const PROMO_IMAGES = {
+  heroDesktop: '/promo/black-weeks-hero-desktop.webp',
+  heroMobile: '/promo/black-weeks-hero-mobile.webp',
+  tile: '/promo/black-weeks-tile.webp',
+} as const;
+
+export const PROMO_TILE_ALT = `Black Weeks: bis zu ${PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl und Parkett`;
+
+/**
+ * Aktionsrot für Leiste und Kachel. Bewusst nicht das Markenrot #ed1b24:
+ * Weiß darauf erreicht nur 4,4:1. #d11820 (Hover-Rot des Shops) schafft 5,4:1.
+ */
+export const PROMO_RED = '#d11820';
+
+// ============================================================================
+// Laufzeit
+// ============================================================================
+
+/** Branch, dessen Vercel-Previews die Aktion automatisch zeigen. */
+const PROMO_PREVIEW_BRANCH = 'feature/black-weeks-2026';
+
+/**
+ * Vorschau — Aktion unabhängig vom Datum aktiv:
+ *  1. `PROMO_PREVIEW=true` (manuell, z. B. lokal). In Production nie setzen.
+ *  2. Automatisch auf Vercel-Previews des Aktions-Branches. Vercel setzt
+ *     `VERCEL_ENV` und `VERCEL_GIT_COMMIT_REF` selbst; in Production ist
+ *     `VERCEL_ENV === 'production'`, dort greift das also nie — auch nicht
+ *     nach dem Merge nach `main`.
+ */
+export function isPromoPreview(): boolean {
+  if (process.env.PROMO_PREVIEW === 'true') return true;
+  return (
+    process.env.VERCEL_ENV === 'preview' &&
+    process.env.VERCEL_GIT_COMMIT_REF === PROMO_PREVIEW_BRANCH
+  );
+}
+
+/** UTC-Offset von Europe/Berlin an einem Kalendertag, z. B. `+01:00`. */
+function berlinOffset(date: string): string {
+  const noonUtc = new Date(`${date}T12:00:00Z`);
+  const name = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Berlin',
+    timeZoneName: 'longOffset',
+  })
+    .formatToParts(noonUtc)
+    .find((part) => part.type === 'timeZoneName')?.value;
+  const offset = name?.replace('GMT', '');
+  return offset && /^[+-]\d{2}:\d{2}$/.test(offset) ? offset : '+01:00';
+}
+
+/**
+ * Ende aus `PROMO_END`, sonst `PROMO_END_DEFAULT`. Ein reines Datum
+ * (`2026-11-30`) gilt bis 23:59:59 Europe/Berlin dieses Tages; ein voller
+ * ISO-Zeitpunkt wird direkt übernommen. Ungültig → `null`.
+ */
+export function getPromoEnd(): Date | null {
+  const raw = process.env.PROMO_END?.trim() || PROMO_END_DEFAULT;
+
+  const end = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? new Date(`${raw}T23:59:59.999${berlinOffset(raw)}`)
+    : new Date(raw);
+
+  return Number.isNaN(end.getTime()) ? null : end;
+}
+
+/** Enddatum für die Bannerleiste, z. B. „05.12.“ — `null`, wenn `PROMO_END` ungültig ist. */
+export function formatPromoEnd(): string | null {
+  const end = getPromoEnd();
+  if (!end) return null;
+  const parts = new Intl.DateTimeFormat('de-DE', {
+    timeZone: 'Europe/Berlin',
+    day: '2-digit',
+    month: '2-digit',
+  }).formatToParts(end);
+  const day = parts.find((p) => p.type === 'day')?.value;
+  const month = parts.find((p) => p.type === 'month')?.value;
+  return day && month ? `${day}.${month}.` : null;
+}
+
+/**
+ * Läuft die Aktion? Steuert Bannerleiste, Aktionskachel und die
+ * Erreichbarkeit der Aktionsseite.
+ *
+ * Ist `PROMO_END` gesetzt, aber ungültig, bleibt die Aktion aus (außer in
+ * der Vorschau): Eine Aktion ohne Ende darf nicht versehentlich unbefristet
+ * live gehen. Fehlt `PROMO_END`, gilt `PROMO_END_DEFAULT`.
+ */
+export function isPromoActive(now: Date = new Date()): boolean {
+  if (isPromoPreview()) return true;
+
+  const start = new Date(PROMO_START).getTime();
+  if (now.getTime() < start) return false;
+
+  const end = getPromoEnd();
+  if (!end) {
+    console.warn('[black-weeks] PROMO_END ist ungültig — Aktion bleibt aus.');
+    return false;
+  }
+  return now.getTime() <= end.getTime();
+}
+
+/**
+ * Aktionskachel für ein Listing (/category/[slug], /sale, /bestseller).
+ * Mit Kachel lädt die Seite ein Produkt weniger, damit das Raster voll bleibt
+ * (Kachel + 11 Produkte = 12 Plätze). Nicht in der Aktionskategorie selbst.
+ */
+export function getPromoTileListing(category: string): { showPromoTile: boolean; perPage: number } {
+  const showPromoTile = category !== PROMO_CATEGORY_SLUG && isPromoActive();
+  return { showPromoTile, perPage: showPromoTile ? PRODUCTS_PER_PAGE - 1 : PRODUCTS_PER_PAGE };
+}
+
+/**
+ * Exklusiv-Modus: Aktionsböden nur auf der Aktionsseite zeigen.
+ *
+ * ACHTUNG — derzeit ohne Wirkung. Ein sauberes Ausblenden braucht eine
+ * Erweiterung der Plugin-API `/jaeger/v1/products` um `exclude_category`.
+ * Im Frontend nachträglich herauszufiltern würde Produktanzahl und
+ * Seitenzahlen der Listings verfälschen. Nach der Plugin-Erweiterung den
+ * Parameter in `loadListing()` (category-listing-server.ts) und bei den
+ * Slider-Abfragen der Startseite übergeben, wenn dieser Schalter an ist.
+ */
+export function isPromoExclusive(): boolean {
+  return process.env.PROMO_EXCLUSIVE === 'true';
+}
+
+// ============================================================================
+// Aktionsseite: Bodenart und Rabatt
+// ============================================================================
+
+export type PromoBodenart = 'laminat' | 'vinyl' | 'parkett';
+
+export const PROMO_BODENART_TABS: ReadonlyArray<{ value: PromoBodenart | 'alle'; label: string }> = [
+  { value: 'alle', label: 'Alle' },
+  { value: 'laminat', label: 'Laminat' },
+  { value: 'vinyl', label: 'Vinyl' },
+  { value: 'parkett', label: 'Parkett' },
+];
+
+const BODENART_SLUGS: Record<PromoBodenart, readonly string[]> = {
+  laminat: ['laminat'],
+  vinyl: ['vinylboden', 'klebe-vinyl', 'rigid-vinyl'],
+  parkett: ['parkett'],
+};
+
+/** Bodenart eines Produkts anhand seiner WooCommerce-Kategorien. */
+export function getPromoBodenart(product: Pick<StoreApiProduct, 'categories'>): PromoBodenart | null {
+  const slugs = product.categories?.map((c) => c.slug.toLowerCase()) ?? [];
+  for (const art of Object.keys(BODENART_SLUGS) as PromoBodenart[]) {
+    if (BODENART_SLUGS[art].some((s) => slugs.includes(s))) return art;
+  }
+  return null;
+}
+
+/** Gehört das Produkt zur Aktionskategorie? Steuert das Label auf der Produktkarte. */
+export function isPromoProduct(product: Pick<StoreApiProduct, 'categories'>): boolean {
+  return product.categories?.some((c) => c.slug.toLowerCase() === PROMO_CATEGORY_SLUG) ?? false;
+}
+
+/**
+ * Rabatt in Prozent für die Sortierung „Höchster Rabatt“ — dieselbe Quelle
+ * wie das Prozent-Badge der Produktkarte (Set-Ersparnis, sonst Sale-Rabatt).
+ * Wie das Badge nur bei `on_sale`: Ohne aktiven Angebotspreis ist die
+ * gespeicherte Set-Ersparnis ein veralteter Schnappschuss.
+ */
+export function getPromoDiscount(product: StoreApiProduct): number {
+  if (!product.on_sale) return 0;
+  return product.setangebot_ersparnis_prozent || product.discount_percent || 0;
+}

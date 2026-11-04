@@ -11,6 +11,7 @@ import HeaderNav from './header/HeaderNav';
 import ShopMobileMenu from './header/ShopMobileMenu';
 import UspBar from './header/UspBar';
 import SaleBanner from './SaleBanner';
+import BlackWeeksBanner, { type BlackWeeksBannerProps } from './black-weeks/BlackWeeksBanner';
 
 /**
  * Shop-Header.
@@ -35,7 +36,12 @@ import SaleBanner from './SaleBanner';
  * Panel z-[2], Header-Zeilen z-[3]. Vollständige Staffelung ist in
  * globals.css dokumentiert.
  */
-export default function Header() {
+export default function Header({
+  promoBanner = null,
+}: {
+  /** Black-Weeks-Leiste — vom Server entschieden (layout.tsx), `null` = aus. */
+  promoBanner?: BlackWeeksBannerProps | null;
+}) {
   const { isCartDrawerOpen, closeCartDrawer } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -132,7 +138,7 @@ export default function Header() {
             USP-Zeile ab (z-[1], USP ist nicht positioniert). Funktioniert
             unabhängig von der Leistenhöhe. Bei offenem Mobile-Menü aus. */}
         <div className={`sticky top-0 z-[1] ${isMenuOpen ? 'hidden lg:block' : ''}`}>
-          <SaleBanner />
+          {promoBanner ? <BlackWeeksBanner {...promoBanner} /> : <SaleBanner />}
         </div>
 
         {/* Zeile 1 — USP-Leiste (Desktop statisch, mobil Ticker) */}
@@ -179,7 +185,7 @@ export default function Header() {
         </div>
 
         {/* Zeile 3 — Navigation (nur Desktop) */}
-        <HeaderNav />
+        <HeaderNav promoActive={Boolean(promoBanner)} />
 
         {/* Zeile 3 — Suchzeile Mobile, dauerhaft sichtbar außer bei offenem Menü */}
         <div className={`px-4 pb-3 lg:hidden ${isMenuOpen ? 'hidden' : ''}`}>
@@ -187,7 +193,7 @@ export default function Header() {
         </div>
       </div>
 
-      <ShopMobileMenu isOpen={isMenuOpen} onClose={closeMenu} />
+      <ShopMobileMenu isOpen={isMenuOpen} onClose={closeMenu} promoActive={Boolean(promoBanner)} />
 
       <CartDrawer isOpen={isCartDrawerOpen} onClose={closeCartDrawer} />
     </header>
