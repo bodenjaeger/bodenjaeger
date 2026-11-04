@@ -40,6 +40,7 @@ export const STELLEN: Stelle[] = [
       'Untergründe vorbereiten, spachteln und ausgleichen',
       'Treppen gestalten und renovieren',
       'Projekte überwiegend in Hückelhoven und Umgebung',
+      'Übertarifliche Bezahlung plus Leistungsprämien',
     ],
     anforderung:
       'Erfahrung im Verlegen, Führerschein Klasse B und einen sauberen Anspruch. Eine abgeschlossene Ausbildung ist von Vorteil, aber kein Muss.',
