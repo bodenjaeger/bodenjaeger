@@ -5,6 +5,7 @@ import {
   consent as consentApi,
   CONSENT_STORAGE_KEY,
   CONSENT_VERSION,
+  isSupportedConsentVersion,
   type ConsentDecisionAction,
 } from '@/lib/analytics/track';
 
@@ -57,7 +58,7 @@ export const CookieConsentProvider: React.FC<CookieConsentProviderProps> = ({ ch
       const raw = localStorage.getItem(CONSENT_STORAGE_KEY);
       if (raw) {
         const parsed: CookieConsent = JSON.parse(raw);
-        if (parsed.version === CONSENT_VERSION) {
+        if (isSupportedConsentVersion(parsed.version)) {
           setConsent(parsed);
         }
       }

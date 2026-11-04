@@ -100,8 +100,19 @@ describe('CONSENT_HEAD_SCRIPT', () => {
     expect(plain(dl[1])).toEqual(plain(clientDl[0]));
   });
 
-  it('ignoriert veraltete Version und kaputten Eintrag', () => {
+  it('wertet eine alte Einwilligung (Version 1) weiter aus', () => {
+    const categories = { necessary: true, functional: false, analytics: true, marketing: true };
+    const dl = runHeadScript({ categories, timestamp: 1, version: 1 });
+
+    expect(dl).toHaveLength(2);
+    expect(plain(dl[1])[1]).toBe('update');
+    expect(plain(dl[1])[2]).toMatchObject({ analytics_storage: 'granted', ad_storage: 'granted' });
+  });
+
+  it('ignoriert unbekannte Version und kaputten Eintrag', () => {
     expect(runHeadScript({ categories: { marketing: true }, version: CONSENT_VERSION + 1 })).toHaveLength(1);
+    expect(runHeadScript({ categories: { marketing: true }, version: 0 })).toHaveLength(1);
+    expect(runHeadScript({ categories: { marketing: true } })).toHaveLength(1);
     const ctx: Record<string, unknown> = { localStorage: { getItem: () => '{kaputt' } };
     ctx.window = ctx;
     runInNewContext(CONSENT_HEAD_SCRIPT, ctx);

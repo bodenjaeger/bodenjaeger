@@ -2,7 +2,11 @@
 
 import { useEffect, useRef } from 'react';
 import { useCookieConsent } from '@/contexts/CookieConsentContext';
-import { OPENAI_PIXEL_ID, openaiPixel } from '@/lib/analytics/openai-pixel';
+import {
+  OPENAI_PIXEL_ID,
+  OPENAI_PIXEL_MIN_CONSENT_VERSION,
+  openaiPixel,
+} from '@/lib/analytics/openai-pixel';
 
 /**
  * OpenAI Measurement Pixel (ChatGPT Ads) - DSGVO-konform
@@ -23,8 +27,9 @@ import { OPENAI_PIXEL_ID, openaiPixel } from '@/lib/analytics/openai-pixel';
  * - Das Script wird nur ein einziges Mal eingefuegt (idempotent ueber Ref).
  */
 export default function OpenAIPixel() {
-  const { isAllowed } = useCookieConsent();
-  const marketingAllowed = isAllowed('marketing');
+  const { consent, isAllowed } = useCookieConsent();
+  const marketingAllowed =
+    isAllowed('marketing') && (consent?.version ?? 0) >= OPENAI_PIXEL_MIN_CONSENT_VERSION;
   const isLoadedRef = useRef(false);
 
   useEffect(() => {

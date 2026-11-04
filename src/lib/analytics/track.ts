@@ -146,7 +146,20 @@ export const track = {
 
 /** localStorage-Eintrag des Cookie-Banners (CookieConsentContext). */
 export const CONSENT_STORAGE_KEY = 'bodenjaeger-cookie-consent';
+/** Version, mit der neue Entscheidungen gespeichert werden. */
 export const CONSENT_VERSION = 2;
+/**
+ * Älteste weiter gültige Version: Einwilligungen mit Version 1 bleiben für alle
+ * Kategorien gültig, der Banner erscheint dafür nicht erneut. Nur der
+ * OpenAI-Pixel verlangt mehr (OPENAI_PIXEL_MIN_CONSENT_VERSION).
+ */
+export const CONSENT_MIN_VERSION = 1;
+
+export function isSupportedConsentVersion(version: unknown): boolean {
+  return (
+    typeof version === 'number' && version >= CONSENT_MIN_VERSION && version <= CONSENT_VERSION
+  );
+}
 
 const DEFAULT_DENIED = {
   ad_storage: 'denied',
@@ -171,7 +184,7 @@ export const CONSENT_HEAD_SCRIPT =
   `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}` +
   `gtag('consent','default',${JSON.stringify(DEFAULT_DENIED)});` +
   `try{var c=JSON.parse(localStorage.getItem(${JSON.stringify(CONSENT_STORAGE_KEY)})||'null');` +
-  `if(c&&c.version===${CONSENT_VERSION}&&c.categories){var k=c.categories;` +
+  `if(c&&typeof c.version==='number'&&c.version>=${CONSENT_MIN_VERSION}&&c.version<=${CONSENT_VERSION}&&c.categories){var k=c.categories;` +
   `gtag('consent','update',{` +
   `'analytics_storage':k.analytics?'granted':'denied',` +
   `'ad_storage':k.marketing?'granted':'denied',` +

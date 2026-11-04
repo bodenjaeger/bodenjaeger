@@ -14,6 +14,13 @@ import type { GA4Item } from './types';
 
 export const OPENAI_PIXEL_ID = 'RKDXHXFm5KTf5q2hiQUhBL';
 
+/**
+ * Der Pixel lädt nur bei einer Marketing-Einwilligung ab dieser Version. Ältere
+ * Einwilligungen bleiben für alle anderen Dienste gültig, nannten OpenAI aber
+ * noch nicht.
+ */
+export const OPENAI_PIXEL_MIN_CONSENT_VERSION = 2;
+
 type OaiqFn = ((...args: unknown[]) => void) & { q?: unknown[] };
 
 declare global {
