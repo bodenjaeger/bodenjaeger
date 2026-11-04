@@ -101,7 +101,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
             {stellen.map((stelle) => (
               <a
                 key={stelle.id}
-                href={stelle.joinUrl}
+                href={stelle.joinUrl} target="_blank" rel="noopener noreferrer"
                 className="group grid grid-cols-[48px_minmax(0,1fr)_40px] items-center gap-3 border-t border-ash px-3 py-3.5 transition-colors hover:bg-pale lg:grid-cols-[64px_minmax(0,1fr)_48px] lg:gap-5 lg:px-5 lg:py-4"
               >
                 <span className="relative h-12 w-12 overflow-hidden rounded-full lg:h-16 lg:w-16">
@@ -125,7 +125,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
               </a>
             ))}
             <a
-              href={INITIATIV_URL}
+              href={INITIATIV_URL} target="_blank" rel="noopener noreferrer"
               className="group grid grid-cols-[48px_minmax(0,1fr)_40px] items-center gap-3 border-t border-ash px-3 py-3.5 transition-colors hover:bg-pale lg:grid-cols-[64px_minmax(0,1fr)_48px] lg:gap-5 lg:px-5 lg:py-4"
             >
               <span
@@ -203,7 +203,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
                     <p className="text-mid">
                       <strong className="text-dark">Das brauchst du:</strong> {stelle.anforderung}
                     </p>
-                    <a href={stelle.joinUrl} className={`${BTN_ROT} mt-6 w-full sm:w-auto`}>
+                    <a href={stelle.joinUrl} target="_blank" rel="noopener noreferrer" className={`${BTN_ROT} mt-6 w-full sm:w-auto`}>
                       {stelle.cta}
                     </a>
                   </div>
@@ -242,7 +242,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
         <div className="content-container grid grid-cols-[minmax(0,1fr)] items-center gap-6 lg:grid-cols-[7fr_5fr] lg:gap-16">
           <div className="relative aspect-[3/2] overflow-hidden rounded-3xl">
             <Image
-              src="/images/fachmarkt-hueckelhoven/hero-DSCF2859.jpg"
+              src="/images/jobs/fachmarkt-aussen.webp"
               alt="Der Bodenjäger-Fachmarkt in Hückelhoven"
               fill
               sizes="(max-width: 1024px) 100vw, 780px"
