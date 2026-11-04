@@ -9,6 +9,7 @@ import { calculateShippingCost } from '@/lib/shippingConfig';
 import { toValidationItems } from '@/lib/cart-utils';
 import { PAKET_AKTION, calculatePaketAktion, isAktionForced } from '@/lib/promo';
 import { buildOrderLineItems } from '@/lib/order-line-items';
+import { buildLineItemDisplays } from '@/lib/stripe-line-items';
 import { track } from '@/lib/analytics/track';
 import { cartItemsToGA4Items } from '@/lib/analytics/mapItem';
 import type { PaymentType, PurchaseTrackingPayload } from '@/lib/analytics/types';
@@ -542,6 +543,7 @@ export default function CheckoutPage() {
           billing,
           shipping,
           line_items,
+          line_item_displays: buildLineItemDisplays(cartItems),
           payment_method: formData.paymentMethod,
           shipping_method: shippingMethod,
           customer_note: [

@@ -27,6 +27,7 @@ import {
 } from '@/lib/coupon';
 import { PAKET_AKTION, isAktionActive, isAktionForced } from '@/lib/promo';
 import { TAX_RATE, toNetLineItems } from '@/lib/order-line-items';
+import { buildStripePositions, sanitizeLineItemDisplays } from '@/lib/stripe-line-items';
 
 // ============================================================================
 // TypeScript Interfaces
@@ -77,6 +78,8 @@ interface CreateOrderRequestBody {
   couponCode?: string;
   /** Cart-Snapshot für serverseitige Coupon-Re-Validation. */
   cartItemsForValidation?: CartItemForValidation[];
+  /** Nur Beschriftung der Stripe-Positionen, geht nicht an WooCommerce. */
+  line_item_displays?: unknown;
 }
 
 // ============================================================================
@@ -124,6 +127,7 @@ export async function POST(request: NextRequest) {
       attribution,
       couponCode,
       cartItemsForValidation,
+      line_item_displays,
     } = body;
 
     // 2. Validierung
@@ -385,25 +389,35 @@ export async function POST(request: NextRequest) {
           payment_method === 'sofort' ||
           payment_method === 'klarna'
         ) {
-          const stripeLineItems = appliedCoupon
-            ? [
-                {
-                  name: consolidatedLabel,
-                  quantity: 1,
-                  price: euroToCents(orderTotalBrutto),
-                },
-              ]
-            : line_items.map((item) => ({
-                name: item.name || `Produkt #${item.product_id}`,
-                quantity: item.quantity,
-                price: euroToCents(parseFloat(item.total || '0') / item.quantity),
-              }));
+          // Eine Position über `order.total`: bei Gutschein immer, sonst als
+          // Rückfall, falls die Positionen nicht exakt aufgehen.
+          const singlePosition = [
+            {
+              name: consolidatedLabel,
+              quantity: 1,
+              price: euroToCents(orderTotalBrutto),
+            },
+          ];
 
-          const stripeShippingCost = appliedCoupon
-            ? undefined // bereits in order.total enthalten
-            : shipping_cost
-              ? euroToCents(shipping_cost)
-              : undefined;
+          const positions = appliedCoupon
+            ? null
+            : buildStripePositions(order, sanitizeLineItemDisplays(line_item_displays));
+
+          if (positions && !positions.ok) {
+            const summe = positions.sumCents === null ? 'nicht berechenbar' : (positions.sumCents / 100).toFixed(2);
+            const differenz =
+              positions.sumCents === null
+                ? 'nicht berechenbar'
+                : ((positions.sumCents - positions.orderCents) / 100).toFixed(2);
+            console.warn(
+              `[stripe-line-items] Rückfall auf eine Position: Bestellung ${order.id}, Summe Positionen ${summe}, order.total ${order.total}, Differenz ${differenz}`
+            );
+          }
+
+          const stripeLineItems = positions?.ok ? positions.lineItems : singlePosition;
+          // Im Rückfall und bei Gutschein ist der Versand in order.total enthalten.
+          const stripeShippingCost =
+            positions?.ok && positions.shippingCents > 0 ? positions.shippingCents : undefined;
 
           const stripePaymentMethod =
             payment_method === 'sofort'
