@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useCookieConsent } from '@/contexts/CookieConsentContext';
 
@@ -11,7 +11,7 @@ type Prefs = {
 };
 
 export const CookieConsent: React.FC = () => {
-  const { isBannerOpen, acceptAll, rejectAll, savePreferences, closeBanner, hasDecided } =
+  const { consent, isBannerOpen, acceptAll, rejectAll, savePreferences, closeBanner, hasDecided } =
     useCookieConsent();
   const [showSettings, setShowSettings] = useState(false);
   const [prefs, setPrefs] = useState<Prefs>({
@@ -19,6 +19,17 @@ export const CookieConsent: React.FC = () => {
     analytics: false,
     marketing: false,
   });
+
+  // Beim Öffnen den gespeicherten Stand vorbelegen, damit „Auswahl speichern“
+  // nicht unbeabsichtigt bestehende Einwilligungen widerruft.
+  useEffect(() => {
+    if (!isBannerOpen) return;
+    setPrefs({
+      functional: consent?.categories.functional ?? false,
+      analytics: consent?.categories.analytics ?? false,
+      marketing: consent?.categories.marketing ?? false,
+    });
+  }, [isBannerOpen, consent]);
 
   if (!isBannerOpen) return null;
 
@@ -122,6 +133,55 @@ export const CookieConsent: React.FC = () => {
                 checked={prefs.marketing}
                 onChange={() => toggle('marketing')}
               />
+              <details className="md:col-span-2 p-3 rounded border border-white/20 text-xs text-white/70">
+                <summary className="font-bold text-sm text-white cursor-pointer">
+                  Marketing – Details: OpenAI Pixel
+                </summary>
+                <dl className="mt-2 flex flex-col gap-2">
+                  <div>
+                    <dt className="font-bold">Name</dt>
+                    <dd>OpenAI Pixel</dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold">Anbieter</dt>
+                    <dd>
+                      OpenAI Ireland Limited, 1st Floor, The Liffey Trust Centre, 117–126 Sheriff Street
+                      Upper, Dublin 1, D01 YC43, Irland
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold">Zweck</dt>
+                    <dd>
+                      Messung und Optimierung von Werbung in ChatGPT (Seitenaufrufe, Produktansichten,
+                      Warenkorb, Kasse, Bestellungen)
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold">Datenübermittlung</dt>
+                    <dd>USA</dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold">Cookies/Speicher</dt>
+                    <dd>
+                      <ul>
+                        <li>__oppref (Cookie, 30 Tage)</li>
+                        <li>__obref (Cookie, 365 Tage)</li>
+                        <li>__oaiq_consent (Cookie, 30 Tage)</li>
+                        <li>oaiq_consent (Local Storage, ohne Ablaufdatum)</li>
+                        <li>oaiq_cs:RKDXHXFm5KTf5q2hiQUhBL (Session Storage, bis Sitzungsende)</li>
+                      </ul>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold">Datenschutz</dt>
+                    <dd>
+                      <Link href="/datenschutz" className="underline hover:text-brand">
+                        Datenschutzerklärung
+                      </Link>
+                    </dd>
+                  </div>
+                </dl>
+              </details>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2 justify-end">
