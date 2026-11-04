@@ -245,7 +245,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
         <div className="content-container grid grid-cols-[minmax(0,1fr)] items-center gap-6 lg:grid-cols-[7fr_5fr] lg:gap-16">
           <div className="relative aspect-[3/2] overflow-hidden rounded-3xl">
             <Image
-              src="/images/jobs/fachmarkt-aussen.webp"
+              src="/images/jobs/fachmarkt-aussen-neu.webp"
               alt="Der Bodenjäger-Fachmarkt in Hückelhoven"
               fill
               sizes="(max-width: 1024px) 100vw, 780px"
