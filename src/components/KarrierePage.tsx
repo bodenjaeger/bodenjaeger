@@ -41,13 +41,14 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
   return (
     <div className="bg-white">
       {/* Einstieg */}
-      <section className="overflow-hidden bg-dark pb-28 pt-9 text-white lg:pb-36 lg:pt-[72px]">
+      <section className="pt-4 lg:pt-6">
         <div className="content-container">
+          <div className="overflow-hidden rounded-[28px] bg-dark px-5 pb-28 pt-8 text-white lg:px-14 lg:pb-36 lg:pt-14">
           <p className="mb-6 flex items-center gap-2.5 text-sm font-bold">
             <span className="h-2.5 w-2.5 rounded-full bg-white" />
             Karriere bei Bodenjäger · Hückelhoven
           </p>
-          <div className="grid items-end gap-8 lg:grid-cols-[6fr_5fr] lg:gap-14">
+          <div className="grid grid-cols-[minmax(0,1fr)] items-end gap-8 lg:grid-cols-[6fr_5fr] lg:gap-14">
             <div>
               <h1
                 className="font-bold tracking-[-0.035em] text-white"
@@ -72,19 +73,20 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
               </div>
             </div>
             <div>
-              <div className="grid grid-cols-6 items-start gap-1.5 lg:gap-2">
+              <div className="grid grid-cols-3 items-start gap-1.5 lg:grid-cols-6 lg:gap-2">
                 {TEAM_DIELEN.map((person, index) => (
                   <div
                     key={person.foto}
-                    className={`relative aspect-[1/3] overflow-hidden rounded-full lg:aspect-[1/3.4] ${DIELEN_VERSATZ[index]} ${index % 2 ? 'mt-4' : ''}`}
+                    className={`relative aspect-[3/5] overflow-hidden rounded-full lg:aspect-[1/3.4] ${DIELEN_VERSATZ[index]} ${index % 3 === 1 ? 'mt-4' : ''}`}
                   >
                     <Image
                       src={`/images/fachmarkt-hueckelhoven/team/${person.foto}.png`}
                       alt={`${person.name}, ${person.funktion}`}
                       fill
                       priority
-                      sizes="(max-width: 1024px) 16vw, 110px"
-                      className="object-cover object-[50%_22%]"
+                      quality={90}
+                      sizes="(max-width: 1024px) 50vw, 420px"
+                      className="origin-[50%_30%] scale-[1.35] object-cover"
                     />
                   </div>
                 ))}
@@ -94,13 +96,14 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
               </p>
             </div>
           </div>
+          </div>
         </div>
       </section>
 
       {/* Offene Stellen */}
       <section id="stellen" className="relative z-[2] -mt-[72px] scroll-mt-40 lg:-mt-[88px]">
         <div className="content-container">
-          <div className="rounded-[22px] bg-white p-2 shadow-[0_24px_60px_rgba(46,45,50,0.16)] lg:rounded-[28px] lg:p-4">
+          <div className="mx-2 rounded-[22px] bg-white p-2 shadow-[0_24px_60px_rgba(46,45,50,0.16)] lg:mx-8 lg:rounded-[28px] lg:p-4">
             <h2 className="p-3 text-[22px] font-bold text-dark lg:px-5 lg:py-4 lg:text-[28px]">Offene Stellen</h2>
             {stellen.map((stelle) => (
               <a
@@ -113,7 +116,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
                     src={stelle.bild}
                     alt=""
                     fill
-                    sizes="64px"
+                    sizes="128px"
                     className="object-cover"
                     style={{ objectPosition: stelle.bildPosition }}
                   />
@@ -134,7 +137,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
             >
               <span
                 aria-hidden="true"
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f1f1f3] text-2xl font-bold text-dark lg:h-16 lg:w-16 lg:text-[32px]"
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-ash text-2xl font-bold text-dark lg:h-16 lg:w-16 lg:text-[32px]"
               >
                 ?
               </span>
@@ -172,7 +175,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
             </h2>
             <div className="space-y-14 lg:space-y-24">
               {stellen.map((stelle, index) => (
-                <article key={stelle.id} className="grid items-center gap-5 lg:grid-cols-2 lg:gap-[72px]">
+                <article key={stelle.id} className="grid grid-cols-[minmax(0,1fr)] items-center gap-5 lg:grid-cols-2 lg:gap-[72px]">
                   <div
                     className={`relative aspect-[5/4] overflow-hidden rounded-[28px] ${index % 2 ? 'lg:order-2' : ''}`}
                   >
@@ -188,7 +191,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
                   <div>
                     <div className="flex flex-wrap gap-1.5 text-[13px] font-bold">
                       <span className="rounded-full bg-dark px-3 py-1 text-white">{stelle.umfang}</span>
-                      <span className="rounded-full bg-[#f1f1f3] px-3 py-1 text-dark">Hückelhoven</span>
+                      <span className="rounded-full bg-ash px-3 py-1 text-dark">Hückelhoven</span>
                     </div>
                     <h3
                       className="mb-5 mt-3.5 font-bold tracking-[-0.02em] text-dark"
@@ -243,7 +246,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
 
       {/* Arbeitsplatz */}
       <section className="py-14 lg:py-24">
-        <div className="content-container grid items-center gap-6 lg:grid-cols-[7fr_5fr] lg:gap-16">
+        <div className="content-container grid grid-cols-[minmax(0,1fr)] items-center gap-6 lg:grid-cols-[7fr_5fr] lg:gap-16">
           <div className="relative aspect-[3/2] overflow-hidden rounded-3xl">
             <Image
               src="/images/fachmarkt-hueckelhoven/hero-DSCF2859.jpg"
@@ -281,7 +284,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
           <h2 className="font-bold text-dark" style={H2_STYLE}>
             Bereit? Das geht schnell.
           </h2>
-          <ol className="mt-7 grid gap-7 border-l-[3px] border-dark lg:mt-14 lg:grid-cols-3 lg:gap-0 lg:border-l-0 lg:border-t-[3px]">
+          <ol className="mt-7 grid grid-cols-[minmax(0,1fr)] gap-7 border-l-[3px] border-dark lg:mt-14 lg:grid-cols-3 lg:gap-0 lg:border-l-0 lg:border-t-[3px]">
             {WEG.map((schritt, index) => (
               <li key={schritt.titel} className="relative pl-5 lg:pl-0 lg:pr-8">
                 <span className="absolute -left-2.5 top-1.5 h-[17px] w-[17px] rounded-full bg-brand lg:-top-2.5 lg:left-0" />
@@ -299,17 +302,18 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
       {/* Kontakt */}
       <section id="kontakt" className="scroll-mt-40 pb-14 pt-14 lg:py-24">
         <div className="content-container">
-          <div className="grid overflow-hidden rounded-[28px] bg-dark text-white lg:grid-cols-[5fr_7fr]">
+          <div className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-[28px] bg-dark text-white lg:grid-cols-[5fr_7fr]">
             <div className="relative aspect-square lg:aspect-auto lg:min-h-[560px]">
               <Image
                 src="/images/fachmarkt-hueckelhoven/team/dominik-jaeger.png"
                 alt="Dominik Jäger, Geschäftsführer"
                 fill
-                sizes="(max-width: 1024px) 100vw, 580px"
+                quality={90}
+                sizes="(max-width: 1024px) 100vw, 760px"
                 className="object-cover object-[50%_15%]"
               />
             </div>
-            <div className="flex flex-col justify-center gap-5 p-6 lg:p-14">
+            <div className="flex min-w-0 flex-col justify-center gap-5 p-5 lg:p-14">
               <h2
                 className="font-bold tracking-[-0.02em] text-white"
                 style={{ fontSize: 'clamp(2rem, 3.4vw, 2.9rem)', lineHeight: 1.1 }}
@@ -340,7 +344,7 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
                   </span>
                   <span className="min-w-0">
                     <span className="block text-sm text-mid">Mail schreiben</span>
-                    <span className="block break-words text-lg font-bold leading-tight lg:text-2xl">{KARRIERE_MAIL}</span>
+                    <span className="block text-base font-bold leading-tight [overflow-wrap:anywhere] lg:text-2xl">{KARRIERE_MAIL}</span>
                     <span className="block text-sm text-mid">Stell deine Frage einfach formlos</span>
                   </span>
                 </a>
