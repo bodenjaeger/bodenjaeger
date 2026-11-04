@@ -5,7 +5,7 @@ import {
   INITIATIV_URL,
   KARRIERE_MAIL,
   LAUFBAND,
-  TEAM_DIELEN,
+  TEAM_REIHEN,
   WEG,
   type Stelle,
 } from '@/content/karriere';
@@ -15,7 +15,6 @@ const KICKER = 'mb-3 text-sm font-bold uppercase tracking-[0.2em] text-brand';
 const H2_STYLE = { fontSize: 'clamp(2.25rem, 4.5vw, 3.5rem)' };
 const BTN_ROT =
   'inline-flex min-h-[52px] items-center justify-center rounded-xl bg-brand px-7 py-3 text-center font-bold text-white transition-colors hover:bg-[#c8161e]';
-const DIELEN_VERSATZ = ['lg:mt-14', 'lg:mt-2', 'lg:mt-20', 'lg:mt-6', 'lg:mt-24', 'lg:mt-0'];
 
 function Haken() {
   return (
@@ -69,21 +68,25 @@ export default function KarrierePage({ stellen }: { stellen: Stelle[] }) {
               </div>
             </div>
             <div>
-              <div className="grid grid-cols-3 items-start gap-1.5 lg:grid-cols-6 lg:gap-2">
-                {TEAM_DIELEN.map((person, index) => (
-                  <div
-                    key={person.foto}
-                    className={`relative aspect-[3/5] overflow-hidden rounded-full lg:aspect-[1/3.4] ${DIELEN_VERSATZ[index]} ${index % 3 === 1 ? 'mt-4' : ''}`}
-                  >
-                    <Image
-                      src={`/images/fachmarkt-hueckelhoven/team/${person.foto}.png`}
-                      alt={`${person.name}, ${person.funktion}`}
-                      fill
-                      priority
-                      quality={90}
-                      sizes="(max-width: 1024px) 50vw, 420px"
-                      className="origin-[50%_30%] scale-[1.35] object-cover"
-                    />
+              <div className="flex flex-col gap-2 lg:gap-3">
+                {TEAM_REIHEN.map((reihe, index) => (
+                  <div key={index} className="flex justify-center gap-2 lg:gap-3">
+                    {reihe.map((person) => (
+                      <div
+                        key={person.foto}
+                        className="relative aspect-square w-[23%] overflow-hidden rounded-full ring-1 ring-white/15"
+                      >
+                        <Image
+                          src={`/images/team/${person.foto}.webp`}
+                          alt={person.alt}
+                          fill
+                          priority
+                          quality={90}
+                          sizes="(max-width: 1024px) 25vw, 160px"
+                          className="object-cover"
+                        />
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>

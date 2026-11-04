@@ -90,13 +90,24 @@ export const STELLEN: Stelle[] = [
 
 export const INITIATIV_URL = 'https://join.com/companies/bodenjaeger/spontaneous-application'
 
-export const TEAM_DIELEN = [
-  { name: 'Dominik Jäger', funktion: 'Geschäftsführer', foto: 'dominik-jaeger' },
-  { name: 'Sascha Glogowskyj', funktion: 'Fachberater', foto: 'sascha-glogowskyj' },
-  { name: 'Daniel Schulze', funktion: 'Projektleiter Verlegung', foto: 'daniel-schulze' },
-  { name: 'Hans-Dieter Wittmers', funktion: 'Fachberater', foto: 'hans-dieter-wittmers' },
-  { name: 'Julian Ritterbex', funktion: 'Lagerist', foto: 'julian-ritterbex' },
-  { name: 'Stephan Hallen', funktion: 'Fachberater', foto: 'stephan-hallen' },
+/** Team-Gesichter im Einstieg, Reihe für Reihe (3-4-3). Dateien: public/images/team/ */
+export const TEAM_REIHEN = [
+  [
+    { foto: 'dominik-jaeger', alt: 'Dominik Jäger, Geschäftsführer' },
+    { foto: 'mitarbeiterin', alt: 'Mitarbeiterin von Bodenjäger' },
+    { foto: 'sascha-glogowskyj', alt: 'Sascha Glogowskyj, Fachberater' },
+  ],
+  [
+    { foto: 'daniel-schulze', alt: 'Daniel Schulze, Projektleiter Verlegung' },
+    { foto: 'mitarbeiter-cap', alt: 'Mitarbeiter von Bodenjäger' },
+    { foto: 'hans-dieter-wittmers', alt: 'Hans-Dieter Wittmers, Fachberater' },
+    { foto: 'mitarbeiter-bart', alt: 'Mitarbeiter von Bodenjäger' },
+  ],
+  [
+    { foto: 'stephan-hallen', alt: 'Stephan Hallen, Fachberater' },
+    { foto: 'mitarbeiter-tattoo', alt: 'Mitarbeiter von Bodenjäger' },
+    { foto: 'julian-ritterbex', alt: 'Julian Ritterbex, Lagerist' },
+  ],
 ] as const
 
 export const LAUFBAND = [
