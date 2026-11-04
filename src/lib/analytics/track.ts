@@ -146,7 +146,7 @@ export const track = {
 
 /** localStorage-Eintrag des Cookie-Banners (CookieConsentContext). */
 export const CONSENT_STORAGE_KEY = 'bodenjaeger-cookie-consent';
-export const CONSENT_VERSION = 1;
+export const CONSENT_VERSION = 2;
 
 const DEFAULT_DENIED = {
   ad_storage: 'denied',
