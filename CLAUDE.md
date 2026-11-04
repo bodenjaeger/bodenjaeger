@@ -162,6 +162,16 @@ Use inline styles for CSS variable gradients: `style={{ background: 'var(--gradi
 
 **`.content-container`** — custom utility class (not Tailwind), max-width 1400px with responsive padding.
 
+### Design-Referenz für neue und überarbeitete Seiten
+
+Vom Kunden festgelegt: `src/components/KarrierePage.tsx` ist die Vorlage, damit die Seiten einheitlich wirken.
+
+- Einstieg als dunkle Fläche (`bg-dark`, `rounded-[28px]`) mit Abstand zum Header, große fette Headline mit Akzent in `text-brand`
+- Wichtigste Inhalte als weiße Karte mit Schatten, die den unteren Rand des Einstiegs überlappt
+- Rotes Laufband (`.karriere-laufband`), Abschnitte im Wechsel Weiß und `bg-pale`
+- Kicker in Versalien und `text-brand`, Bilder mit großen Radien, rote Häkchen-Kreise, Buttons `rounded-xl bg-brand`
+- Nur Shop-Farben; Gelb nicht als Akzent verwenden
+
 ### Price Type Gotcha
 
 `StoreApiProduct` (in `woocommerce.ts`) has `price` as a **number** (e.g., `29.99`) from the Jaeger API. There is also an optional `prices?: { price: string }` field where price is in **cents as a string** (e.g., `"2999"`) from the legacy Store API shape. Always use `product.price` (number) for Jaeger API data.

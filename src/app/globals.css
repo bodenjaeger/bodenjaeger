@@ -25,6 +25,17 @@ input[type="number"] {
   .fm-kenburns { animation: none; transform: none; }
 }
 
+/* Laufband der Karriereseite. Bei prefers-reduced-motion statisch. */
+@keyframes karriere-laufband {
+  to { transform: translateX(-50%); }
+}
+.karriere-laufband {
+  animation: karriere-laufband 38s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .karriere-laufband { animation: none; }
+}
+
 :root {
   /* Brand Colors */
   --color-primary: #ed1b24;        /* Bodenjäger Rot */

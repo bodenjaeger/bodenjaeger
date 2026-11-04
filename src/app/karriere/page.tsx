@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { wordPressClient } from '@/lib/wordpress';
 import KarrierePage from '@/components/KarrierePage';
-import { notFound } from 'next/navigation';
+import { STELLEN } from '@/content/karriere';
+import { isJoinStelleOnline } from '@/lib/join-status';
 import { buildMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = buildMetadata({
@@ -10,14 +10,12 @@ export const metadata: Metadata = buildMetadata({
   description: 'Werde Teil des Bodenjäger-Teams: offene Stellen und dein Weg zur Bewerbung beim Bodenbelags-Fachhandel aus Hückelhoven.',
 });
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
 export default async function KarrierePageRoute() {
-  const page = await wordPressClient.getPageBySlug('karriere');
+  const kandidaten = STELLEN.filter((stelle) => stelle.aktiv);
+  const online = await Promise.all(kandidaten.map((stelle) => isJoinStelleOnline(stelle.joinUrl)));
+  const stellen = kandidaten.filter((_, index) => online[index]);
 
-  if (!page) {
-    notFound();
-  }
-
-  return <KarrierePage page={page} />;
+  return <KarrierePage stellen={stellen} />;
 }
