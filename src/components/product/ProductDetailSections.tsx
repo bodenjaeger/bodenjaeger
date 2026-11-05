@@ -2,6 +2,8 @@
 
 import { useState, type ReactNode } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { SERVICE_LINKS } from '@/content/service';
 import { ChevronRight, CirclePlay, FileText, HandHelping, Package, Truck, Warehouse, Wrench } from 'lucide-react';
 import { FREE_SAMPLE_LIMIT } from '@/lib/sampleUtils';
 import type { ProductMedia } from '@/lib/product-media';
@@ -22,7 +24,8 @@ interface Section {
   content: ReactNode;
 }
 
-function AccordionSection({ section }: { section: Section }) {
+// Mobil Akkordeon, Desktop Reiter. Der Inhalt bleibt immer im HTML, damit ihn auch Google liest.
+function DetailSection({ section, desktopActive }: { section: Section; desktopActive: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <section id={section.id} className="scroll-mt-24 border-b border-ash lg:border-0">
@@ -35,7 +38,9 @@ function AccordionSection({ section }: { section: Section }) {
         {section.label}
         <ChevronRight className={`h-5 w-5 transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true" />
       </button>
-      <div className={`${open ? 'block' : 'hidden'} pb-6 lg:block lg:pb-0`}>{section.content}</div>
+      <div className={`${open ? 'block' : 'hidden'} ${desktopActive ? 'lg:block' : 'lg:hidden'} pb-6 lg:pb-0`}>
+        {section.content}
+      </div>
     </section>
   );
 }
@@ -104,7 +109,6 @@ export default function ProductDetailSections({ product, features, media }: Prod
       label: 'Technische Daten',
       content: (
         <>
-          <h2 className="mb-4 hidden text-2xl font-bold text-dark lg:block">Technische Daten</h2>
           <div className="bj-specs-table" dangerouslySetInnerHTML={{ __html: specs }} />
         </>
       ),
@@ -117,7 +121,6 @@ export default function ProductDetailSections({ product, features, media }: Prod
       label: 'Verlegung & Pflege',
       content: (
         <>
-          <h2 className="mb-4 hidden text-2xl font-bold text-dark lg:block">Verlegung &amp; Pflege</h2>
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="rounded-xl border border-ash bg-white px-4">
               {media.verlegeanleitung && <DocumentLink href={media.verlegeanleitung} label="Verlegeanleitung (PDF)" action="Download" icon={<FileText className="h-7 w-7" aria-hidden="true" />} />}
@@ -142,49 +145,49 @@ export default function ProductDetailSections({ product, features, media }: Prod
 
   const currentId = activeId ?? sections[0].id;
   const benefits = [
-    { icon: Package, title: 'Kostenlose Muster', text: `Bis zu ${FREE_SAMPLE_LIMIT} Muster gratis` },
-    { icon: Truck, title: 'Schnelle Lieferung', text: product.lieferzeit || '3-7 Arbeitstage' },
-    { icon: HandHelping, title: 'Fachberatung', text: 'Persönlich & kompetent' },
-    { icon: Warehouse, title: 'Einlagerung', text: 'Bis zu 12 Monate kostenfrei' },
-    { icon: Wrench, title: 'Verlegeservice', text: 'Im Umkreis von ca. 50 km' },
+    { icon: Package, title: 'Kostenlose Muster', text: `Bis zu ${FREE_SAMPLE_LIMIT} Muster gratis`, href: SERVICE_LINKS.musterBestellen },
+    { icon: Truck, title: 'Schnelle Lieferung', text: product.lieferzeit || '3-7 Arbeitstage', href: SERVICE_LINKS.lieferung },
+    { icon: HandHelping, title: 'Fachberatung', text: 'Persönlich & kompetent', href: SERVICE_LINKS.fachberatung },
+    { icon: Warehouse, title: 'Einlagerung', text: 'Bis zu 12 Monate kostenfrei', href: SERVICE_LINKS.einlagerung },
+    { icon: Wrench, title: 'Verlegeservice', text: 'Im Umkreis von ca. 50 km', href: SERVICE_LINKS.verlegeservice },
   ];
 
   return (
     <div className="mt-8 lg:mt-10">
-      {/* Desktop: Sprungnavigation, alle Abschnitte bleiben sichtbar */}
-      <nav aria-label="Produktinformationen" className="mb-8 hidden gap-2 border-b border-ash lg:flex">
+      <div role="tablist" aria-label="Produktinformationen" className="mb-6 hidden gap-2 lg:flex">
         {sections.map((section) => (
-          <a
+          <button
             key={section.id}
-            href={`#${section.id}`}
+            type="button"
+            role="tab"
+            aria-selected={currentId === section.id}
             onClick={() => setActiveId(section.id)}
-            aria-current={currentId === section.id ? 'true' : undefined}
-            className={`-mb-px border-b-2 px-5 py-3 text-sm ${
-              currentId === section.id ? 'border-brand font-bold text-dark' : 'border-transparent text-mid hover:text-dark'
+            className={`rounded-lg px-5 py-2.5 text-sm transition-colors ${
+              currentId === section.id ? 'bg-dark font-bold text-white' : 'bg-pale text-mid hover:bg-ash hover:text-dark'
             }`}
           >
             {section.label}
-          </a>
+          </button>
         ))}
-      </nav>
+      </div>
 
-      <div className="lg:space-y-10">
-        {sections.slice(0, 1).map((section) => <AccordionSection key={section.id} section={section} />)}
+      {sections.map((section) => (
+        <DetailSection key={section.id} section={section} desktopActive={currentId === section.id} />
+      ))}
 
-        <ul className="hidden grid-cols-5 gap-4 rounded-xl bg-pale p-5 lg:grid">
-          {benefits.map(({ icon: Icon, title, text }) => (
-            <li key={title} className="flex items-center gap-3">
+      <ul className="mt-10 hidden grid-cols-5 gap-2 rounded-xl border border-ash p-3 lg:grid">
+        {benefits.map(({ icon: Icon, title, text, href }) => (
+          <li key={title}>
+            <Link href={href} className="flex h-full items-center gap-3 rounded-lg p-2 transition-colors hover:bg-pale">
               <Icon className="h-8 w-8 flex-shrink-0 text-brand" strokeWidth={1.5} aria-hidden="true" />
               <span>
                 <span className="block text-sm font-bold text-dark">{title}</span>
                 <span className="block text-xs text-mid">{text}</span>
               </span>
-            </li>
-          ))}
-        </ul>
-
-        {sections.slice(1).map((section) => <AccordionSection key={section.id} section={section} />)}
-      </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

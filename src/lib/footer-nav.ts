@@ -241,23 +241,6 @@ export const SHIPPING_BADGES: FooterBadge[] = [
   { label: 'Bodenjäger', enabled: true, mark: 'bodenjaeger' },
 ]
 
-/**
- * Shop-Bewertung bei Trusted Shops, wie sie im Footer steht.
- *
- * ACHTUNG — manuell gepflegt. Es gibt im Projekt keine Anbindung an die
- * eTrusted-API; der Wert wird NICHT automatisch aktualisiert. Er muss mit der
- * tatsächlichen Note im Trusted-Shops-Profil übereinstimmen, sonst ist die
- * Angabe eine falsche Werbeaussage. Die aktuelle Note liefert daneben das
- * Floating-Trustbadge (components/TrustedShops.tsx) — dort gegenprüfen.
- *
- * Herkunft des aktuellen Werts: Designvorlage „Footer_2026"
- * (Stand 23.09.2026), NOCH NICHT gegen das echte Profil verifiziert.
- */
-export const TRUSTED_SHOPS_BEWERTUNG = {
-  note: 4.6,
-  maximum: 5,
-} as const
-
 export const TRUST_ZONE_TEXTE = {
   trustedShops: {
     titel: 'Trusted Shops',

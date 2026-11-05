@@ -28,6 +28,8 @@ import ProductSummary from './ProductSummary';
 import ProductDetailSections from './ProductDetailSections';
 import { extractProductFeatures } from '@/lib/product-features';
 import type { ProductMedia } from '@/lib/product-media';
+import { getPrimaryCategory } from '@/lib/product-category';
+import type { TrustedShopsRating } from '@/lib/trusted-shops';
 
 interface ProductPageContentProps {
   product: StoreApiProduct;
@@ -37,6 +39,7 @@ interface ProductPageContentProps {
   sockelleisteOptions: StoreApiProduct[];
   sparpaketProducts?: StoreApiProduct[];  // nur Klebe-Vinyl, sonst leer
   media?: ProductMedia;  // optionale PDFs, Video, Visualisierung
+  trustedShopsRating?: TrustedShopsRating | null;
 }
 
 export default function ProductPageContent({
@@ -46,7 +49,8 @@ export default function ProductPageContent({
   daemmungOptions,
   sockelleisteOptions,
   sparpaketProducts = [],
-  media = {}
+  media = {},
+  trustedShopsRating = null
 }: ProductPageContentProps) {
   // ✅ USE ROOT-LEVEL FIELDS (backend/ROOT_LEVEL_FIELDS.md)
   const paketinhalt = product.paketinhalt || 1;
@@ -291,6 +295,7 @@ export default function ProductPageContent({
     };
   }, [product, quantities, selectedDaemmung, selectedSockelleiste, daemmungProduct, sockelleisteProduct, sparpaketAnzeige]);
 
+  const primaryCategory = getPrimaryCategory(product.categories);
   const features = useMemo(() => extractProductFeatures(product.short_description), [product.short_description]);
 
   // Handle quantity changes from QuantitySelector
@@ -798,7 +803,7 @@ export default function ProductPageContent({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 overflow-x-hidden">
+    <div className="min-h-screen bg-white py-8 overflow-x-hidden">
       <div className="content-container">
         {isAccessory ? (
           // ========== SIMPLE PRODUCT LAYOUT for Accessories ==========
@@ -808,10 +813,10 @@ export default function ProductPageContent({
           <>
             <nav aria-label="Brotkrumen" className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-mid">
               <Link href="/" className="hover:text-dark">Startseite</Link>
-              {product.categories?.[0] && (
+              {primaryCategory && (
                 <>
                   <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  <Link href={`/category/${product.categories[0].slug}`} className="hover:text-dark">{product.categories[0].name}</Link>
+                  <Link href={`/category/${primaryCategory.slug}`} className="hover:text-dark">{primaryCategory.name}</Link>
                 </>
               )}
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -826,13 +831,14 @@ export default function ProductPageContent({
                   product={product}
                   features={features}
                   media={media}
+                  rating={trustedShopsRating}
                   showSampleButton={isFloorProduct}
                   isOrderingSample={isOrderingSample}
                   onOrderSample={handleOrderSample}
                 />
               </div>
 
-              <aside className="min-w-0 space-y-4 rounded-xl border-ash lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start lg:border lg:bg-white lg:p-5 lg:shadow-sm">
+              <aside className="min-w-0 space-y-4 rounded-xl border-ash lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start lg:border lg:bg-white lg:p-5">
                 <ProductInfo
                   product={product}
                   daemmungProduct={daemmungProduct}

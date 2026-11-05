@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, Expand, Play, X } from 'lucide-react';
 import type { StoreApiProduct } from '@/lib/woocommerce';
@@ -22,6 +22,45 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
 
   const goToNext = () => {
     setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  };
+
+  const touchStartX = useRef<number | null>(null);
+  const lastWheelAt = useRef(0);
+
+  // Großansicht: Pfeiltasten und Esc, Seite dahinter nicht scrollen
+  useEffect(() => {
+    if (!isZoomed) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsZoomed(false);
+      if (event.key === 'ArrowLeft') setCurrentImageIndex((i) => (i === 0 ? images.length - 1 : i - 1));
+      if (event.key === 'ArrowRight') setCurrentImageIndex((i) => (i === images.length - 1 ? 0 : i + 1));
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isZoomed, images.length]);
+
+  // Scrollen/Trackpad: pro Geste nur ein Bild weiter
+  const handleWheel = (event: React.WheelEvent) => {
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    const now = Date.now();
+    if (Math.abs(delta) < 20 || now - lastWheelAt.current < 400) return;
+    lastWheelAt.current = now;
+    if (delta > 0) goToNext();
+    else goToPrevious();
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const distance = event.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(distance) < 50) return;
+    if (distance < 0) goToNext();
+    else goToPrevious();
   };
 
   const selectImage = (index: number) => {
@@ -207,13 +246,16 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
           aria-label={product.name}
           className="fixed inset-0 z-50 bg-black/90"
           onClick={() => setIsZoomed(false)}
+          onWheel={images.length > 1 ? handleWheel : undefined}
+          onTouchStart={(event) => { touchStartX.current = event.touches[0].clientX; }}
+          onTouchEnd={images.length > 1 ? handleTouchEnd : undefined}
         >
           <Image
             src={currentImage.src}
             alt={currentImage.alt || product.name}
             fill
             sizes="100vw"
-            className="object-contain p-4"
+            className="object-contain p-4 sm:px-20"
           />
           <button
             onClick={() => setIsZoomed(false)}
@@ -223,6 +265,27 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
           >
             <X className="h-6 w-6" />
           </button>
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={(event) => { event.stopPropagation(); goToPrevious(); }}
+                className="absolute left-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white text-dark sm:left-5"
+                aria-label="Vorheriges Bild"
+              >
+                <ChevronLeft className="h-7 w-7" />
+              </button>
+              <button
+                onClick={(event) => { event.stopPropagation(); goToNext(); }}
+                className="absolute right-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white text-dark sm:right-5"
+                aria-label="Nächstes Bild"
+              >
+                <ChevronRight className="h-7 w-7" />
+              </button>
+              <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-sm text-white">
+                {currentImageIndex + 1} / {images.length}
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>

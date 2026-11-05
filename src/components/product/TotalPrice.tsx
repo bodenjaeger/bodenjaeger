@@ -30,6 +30,9 @@ interface TotalPriceProps {
   sparpaket?: SparpaketQuantityCalculation | null;  // Klebe-Vinyl Sparpaket
 }
 
+// Individuelle Angebote erst ab dieser Fläche
+const ANGEBOT_AB_M2 = 100;
+
 export default function TotalPrice({
   quantities,
   prices,
@@ -282,13 +285,15 @@ export default function TotalPrice({
         )}
       </button>
 
-      <button
-        type="button"
-        onClick={handleRequestQuote}
-        className="mt-2 w-full py-2 text-center text-xs font-semibold text-mid underline hover:text-dark"
-      >
-        Individuelles Angebot anfragen
-      </button>
+      {quantities.floor.actualM2 >= ANGEBOT_AB_M2 && (
+        <button
+          type="button"
+          onClick={handleRequestQuote}
+          className="mt-2 w-full py-2 text-center text-xs font-semibold text-mid underline hover:text-dark"
+        >
+          Individuelles Angebot anfragen
+        </button>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { Box, FileText } from 'lucide-react';
 import StarRating from '@/components/footer/StarRating';
-import { TRUSTED_SHOPS_BEWERTUNG } from '@/lib/footer-nav';
+import type { TrustedShopsRating } from '@/lib/trusted-shops';
 import type { ProductMedia } from '@/lib/product-media';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 
@@ -11,6 +11,7 @@ interface ProductSummaryProps {
   product: StoreApiProduct;
   features: string[];
   media: ProductMedia;
+  rating: TrustedShopsRating | null;
   showSampleButton: boolean;
   isOrderingSample: boolean;
   onOrderSample: () => void;
@@ -20,29 +21,30 @@ export default function ProductSummary({
   product,
   features,
   media,
+  rating,
   showSampleButton,
   isOrderingSample,
   onOrderSample,
 }: ProductSummaryProps) {
-  const { note, maximum } = TRUSTED_SHOPS_BEWERTUNG;
-  const noteText = note.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const noteText = rating?.note.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const subtitle = product.show_text_produktuebersicht ? product.text_produktuebersicht : null;
 
   return (
     <div className="min-w-0">
-      {product.categories?.[0] && <p className="text-sm text-mid">{product.categories[0].name}</p>}
-      <h1 className="mt-1 text-2xl font-bold leading-tight text-dark lg:text-[32px]">{product.name}</h1>
+      <h1 className="text-2xl font-bold leading-tight text-dark lg:text-[32px]">{product.name}</h1>
       {subtitle && <p className="mt-2 text-sm text-mid">{subtitle}</p>}
 
       {/* Bewusst als Shopbewertung beschriftet: keine Bewertung dieses Produkts */}
-      <div
-        className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mid"
-        role="img"
-        aria-label={`Trusted Shops Shopbewertung ${noteText} von ${maximum}`}
-      >
-        <StarRating note={note} maximum={maximum} />
-        <span><span className="font-bold text-dark">{noteText}</span> Shopbewertung bei Trusted Shops</span>
-      </div>
+      {rating && (
+        <div
+          className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mid"
+          role="img"
+          aria-label={`Trusted Shops Shopbewertung ${noteText} von ${rating.maximum}, ${rating.anzahl} Bewertungen`}
+        >
+          <StarRating note={rating.note} maximum={rating.maximum} />
+          <span><span className="font-bold text-dark">{noteText}</span> Shopbewertung bei Trusted Shops ({rating.anzahl})</span>
+        </div>
+      )}
 
       {product.sku && <p className="mt-2 text-xs text-mid">Art.-Nr.: {product.sku}</p>}
 

@@ -56,7 +56,7 @@ export default function ZubehoerSlider({
   const [addedProductId, setAddedProductId] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const { addToCart } = useCart();
+  const { addToCart, cartItems, openCartDrawer } = useCart();
 
   // Hilfsfunktion: Für "Zubehör für Sockelleisten" die ausgewählte Sockelleiste nutzen,
   // für alle anderen Kategorien das Hauptprodukt
@@ -243,15 +243,16 @@ export default function ZubehoerSlider({
           </h2>
 
           {/* Kategorie-Navigation */}
-          <div className="mb-4 flex gap-1 overflow-x-auto border-b border-ash scrollbar-hide">
+          <div className="mb-4 flex gap-2 overflow-x-auto scrollbar-hide">
             {availableCategories.map((category) => (
               <button
                 key={category.metaKey}
                 onClick={() => setActiveCategory(category.metaKey)}
-                className={`-mb-px flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors ${
+                aria-pressed={activeCategory === category.metaKey}
+                className={`flex-shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
                   activeCategory === category.metaKey
-                    ? 'border-brand font-bold text-dark'
-                    : 'border-transparent text-mid hover:text-dark'
+                    ? 'bg-dark font-bold text-white'
+                    : 'bg-pale text-mid hover:bg-ash hover:text-dark'
                 }`}
               >
                 {category.name}
@@ -392,8 +393,8 @@ export default function ZubehoerSlider({
                   onClick={scrollLeft}
                   className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full shadow-lg hover:shadow-xl items-center justify-center transition-all z-10 ${
                     canScrollLeft
-                      ? 'bg-dark text-brand cursor-pointer'
-                      : 'bg-dark/50 text-brand/40 cursor-not-allowed'
+                      ? 'bg-dark text-white cursor-pointer'
+                      : 'bg-dark/50 text-white/60 cursor-not-allowed'
                   }`}
                   disabled={!canScrollLeft}
                   aria-label="Zurück"
@@ -408,8 +409,8 @@ export default function ZubehoerSlider({
                   onClick={scrollRight}
                   className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full shadow-lg hover:shadow-xl items-center justify-center transition-all z-10 ${
                     canScrollRight
-                      ? 'bg-dark text-brand cursor-pointer'
-                      : 'bg-dark/50 text-brand/40 cursor-not-allowed'
+                      ? 'bg-dark text-white cursor-pointer'
+                      : 'bg-dark/50 text-white/60 cursor-not-allowed'
                   }`}
                   disabled={!canScrollRight}
                   aria-label="Weitere Produkte"
@@ -428,6 +429,21 @@ export default function ZubehoerSlider({
               </div>
             )}
           </div>
+
+          {cartItems.length > 0 && (
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={openCartDrawer}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-dark px-5 text-sm font-bold text-white transition-colors hover:bg-[#1a1a1d]"
+              >
+                Weiter zum Warenkorb
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
