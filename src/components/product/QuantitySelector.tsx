@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { readSetAuswahl, writeSetAuswahl } from '@/lib/set-auswahl';
 import { Info } from 'lucide-react';
 
 interface QuantitySelectorProps {
@@ -9,6 +10,7 @@ interface QuantitySelectorProps {
   einheitFull?: string;          // Ausgeschrieben, z.B. "Quadratmeter", "Kilogramm"
   verpackungsartFull?: string;   // Ausgeschrieben, z.B. "Paket(e)", "Stück"
   initialPackages?: number;      // Startwert (Klebe-Vinyl: 5 für das Sparpaket)
+  auswahlProductId?: number;     // Menge bleibt für dieses Produkt beim Neuladen erhalten
   onQuantityChange?: (packages: number, sqm: number) => void;
   showVerschnitt?: boolean;      // Hinweis nur bei Böden
 }
@@ -19,6 +21,7 @@ export default function QuantitySelector({
   einheitFull,
   verpackungsartFull,
   initialPackages = 1,
+  auswahlProductId,
   onQuantityChange,
   showVerschnitt = true
 }: QuantitySelectorProps) {
@@ -39,6 +42,18 @@ export default function QuantitySelector({
   const ceilPackages = (m2: number) => Math.max(1, Math.ceil((m2 - 1e-9) / paketinhalt));
 
   const packages = ceilPackages(sqm);
+
+  // Gespeicherte Menge nach dem Laden übernehmen
+  useEffect(() => {
+    if (!auswahlProductId) return;
+    const saved = readSetAuswahl(auswahlProductId).m2;
+    if (!saved || saved <= 0) return;
+    setSqm(saved);
+    setSqmInputValue(saved.toFixed(2));
+    setPackagesInputValue(ceilPackages(saved).toString());
+    onQuantityChange?.(ceilPackages(saved), saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auswahlProductId]);
 
   const handlePackagesInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

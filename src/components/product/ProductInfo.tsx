@@ -74,6 +74,7 @@ export default function ProductInfo({
 
   return (
     <SetAngebot
+      auswahlProductId={product.id}
       setangebotTitel={setangebotTitel}
       productName={product.name}
       productImage={productImage}
