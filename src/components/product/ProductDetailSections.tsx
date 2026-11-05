@@ -7,6 +7,7 @@ import { SERVICE_LINKS } from '@/content/service';
 import { ChevronRight, CirclePlay, FileText, HandHelping, Package, Truck, Warehouse, Wrench } from 'lucide-react';
 import { FREE_SAMPLE_LIMIT } from '@/lib/sampleUtils';
 import type { ProductMedia } from '@/lib/product-media';
+import { formatLieferzeit } from '@/lib/product-features';
 import { parseProductSpecs, pickHighlightSpecs } from '@/lib/product-specs';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 
@@ -29,7 +30,7 @@ interface Section {
 function DetailSection({ section, desktopActive }: { section: Section; desktopActive: boolean }) {
   const [open, setOpen] = useState(false);
   return (
-    <section id={section.id} className="scroll-mt-24 border-b border-ash lg:border-0">
+    <section id={section.id} className="mb-3 scroll-mt-24 rounded-xl border border-ash px-4 lg:mb-0 lg:rounded-none lg:border-0 lg:px-0">
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -115,7 +116,7 @@ export default function ProductDetailSections({ product, features, media }: Prod
           {specRows.length > 0 ? (
             <>
               {highlightSpecs.length > 0 && (
-                <dl className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <dl className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
                   {highlightSpecs.map((spec) => (
                     <div key={spec.label} className="rounded-xl bg-pale p-4">
                       <dt className="text-xs text-mid">{spec.label}</dt>
@@ -127,8 +128,8 @@ export default function ProductDetailSections({ product, features, media }: Prod
               <dl className="grid gap-x-12 md:grid-cols-2">
                 {specRows.map((spec) => (
                   <div key={spec.label} className="flex items-baseline justify-between gap-6 border-b border-ash py-3 text-sm">
-                    <dt className="text-mid">{spec.label}</dt>
-                    <dd className="text-right font-bold text-dark">{spec.value}</dd>
+                    <dt className="min-w-0 text-mid">{spec.label}</dt>
+                    <dd className="min-w-0 text-right font-bold text-dark [overflow-wrap:anywhere]">{spec.value}</dd>
                   </div>
                 ))}
               </dl>
@@ -172,7 +173,7 @@ export default function ProductDetailSections({ product, features, media }: Prod
   const currentId = activeId ?? sections[0].id;
   const benefits = [
     { icon: Package, title: 'Kostenlose Muster', text: `Bis zu ${FREE_SAMPLE_LIMIT} Muster gratis`, href: SERVICE_LINKS.musterBestellen },
-    { icon: Truck, title: 'Schnelle Lieferung', text: product.lieferzeit || '3-7 Arbeitstage', href: SERVICE_LINKS.lieferung },
+    { icon: Truck, title: 'Schnelle Lieferung', text: formatLieferzeit(product.lieferzeit), href: SERVICE_LINKS.lieferung },
     { icon: HandHelping, title: 'Fachberatung', text: 'Persönlich & kompetent', href: SERVICE_LINKS.fachberatung },
     { icon: Warehouse, title: 'Einlagerung', text: 'Bis zu 12 Monate kostenfrei', href: SERVICE_LINKS.einlagerung },
     { icon: Wrench, title: 'Verlegeservice', text: 'Im Umkreis von ca. 50 km', href: SERVICE_LINKS.verlegeservice },

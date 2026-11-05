@@ -221,7 +221,7 @@ export default function ZubehoerSlider({
   }
 
   return (
-    <section className="border-b border-ash lg:rounded-xl lg:border lg:bg-white lg:p-5">
+    <section className="rounded-xl border border-ash bg-white px-4 lg:p-5">
       {/* Mobil: Akkordeon wie die übrigen Abschnitte */}
       <button
         type="button"
@@ -298,7 +298,7 @@ export default function ZubehoerSlider({
                     return (
                       <div
                         key={product.id}
-                        className="flex-shrink-0 w-[calc(25%-12px)] min-w-[160px] snap-start"
+                        className="flex-shrink-0 w-[calc(25%-12px)] min-w-[150px] snap-start"
                       >
                         <article className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
                           <div className="flex flex-col h-full">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import type { SetQuantityCalculation, SparpaketQuantityCalculation } from '@/lib/setCalculations';
@@ -58,11 +59,32 @@ export default function TotalPrice({
     return () => observer.disconnect();
   }, [hasData]);
 
-  // Schwebende Elemente rutschen über die Leiste (globals.css)
+  // Schwebende Elemente: über die Leiste schieben bzw. vom großen Button wegnehmen (globals.css)
   useEffect(() => {
     document.body.classList.toggle('kaufleiste-sichtbar', hasData && !cartButtonVisible);
-    return () => document.body.classList.remove('kaufleiste-sichtbar');
+    document.body.classList.toggle('kaufbutton-sichtbar', hasData && cartButtonVisible);
+    return () => document.body.classList.remove('kaufleiste-sichtbar', 'kaufbutton-sichtbar');
   }, [hasData, cartButtonVisible]);
+
+  // Mobile Browserleisten fahren beim Scrollen ein und aus: Leiste am sichtbaren Rand halten
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const update = () => {
+      const verdeckt = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      document.documentElement.style.setProperty('--kaufleiste-abstand', `${Math.round(verdeckt)}px`);
+    };
+    update();
+    viewport.addEventListener('resize', update);
+    viewport.addEventListener('scroll', update);
+    window.addEventListener('scroll', update, { passive: true });
+    return () => {
+      viewport.removeEventListener('resize', update);
+      viewport.removeEventListener('scroll', update);
+      window.removeEventListener('scroll', update);
+      document.documentElement.style.removeProperty('--kaufleiste-abstand');
+    };
+  }, []);
 
   // Show loading state if data not yet available
   if (!quantities || !prices) {
@@ -266,7 +288,7 @@ export default function TotalPrice({
             <p className="mt-0.5 text-sm font-bold text-cta">Du sparst {savings?.toFixed(2).replace('.', ',')} €</p>
           )}
         </div>
-        <p className="whitespace-nowrap text-3xl font-bold text-dark">{endpreis.toFixed(2).replace('.', ',')} €</p>
+        <p className="whitespace-nowrap text-[28px] font-bold leading-none text-dark sm:text-3xl">{endpreis.toFixed(2).replace('.', ',')} €</p>
       </div>
 
       {/* Aktion: Gratis-Pakete */}
@@ -315,8 +337,10 @@ export default function TotalPrice({
       )}
 
       {/* Kaufleiste mobil */}
-      {!cartButtonVisible && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ash bg-white px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] lg:hidden">
+      {!cartButtonVisible && createPortal(
+        <div
+          style={{ bottom: 'var(--kaufleiste-abstand, 0px)' }}
+          className="fixed inset-x-0 z-30 border-t border-ash bg-white px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] lg:hidden">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="whitespace-nowrap text-xl font-bold leading-tight text-dark">{endpreis.toFixed(2).replace('.', ',')} €</p>
@@ -340,7 +364,8 @@ export default function TotalPrice({
               )}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

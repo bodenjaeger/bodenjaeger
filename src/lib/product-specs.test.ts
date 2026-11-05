@@ -19,4 +19,8 @@ describe('pickHighlightSpecs', () => {
     const specs = labels.map((label) => ({ label, value: 'x' }));
     expect(pickHighlightSpecs(specs).map((s) => s.label)).toEqual(['Nutzschicht', 'Nutzungsklasse', 'Gesamtstärke', 'Dielenmaß']);
   });
+
+  it('lässt lange Werte aus den Kacheln', () => {
+    expect(pickHighlightSpecs([{ label: 'Fußbodenheizung', value: 'Ja, Warmwasserfußbodenheizung' }])).toEqual([]);
+  });
 });

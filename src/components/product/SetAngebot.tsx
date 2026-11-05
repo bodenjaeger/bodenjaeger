@@ -230,18 +230,17 @@ export default function SetAngebot({
       </div>
 
       {/* Set-Preis (STATISCHER M²-PREIS) */}
-      <div className="mt-3 border-t border-ash pt-3 text-right">
-        <p className="text-xs font-bold uppercase tracking-wide text-dark">Set-Preis</p>
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-sm text-mid">
-            {vergleichspreisProM2 > setAngebotPreisProM2 && (
-              <>statt <span className="line-through">{formatPreis(vergleichspreisProM2)} €/{einheit}</span></>
-            )}
-          </span>
-          <span className="whitespace-nowrap text-3xl font-bold text-dark">
-            {formatPreis(setAngebotPreisProM2)} €/{einheit}
-          </span>
+      <div className="mt-3 flex items-end justify-between gap-3 border-t border-ash pt-3">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wide text-dark">Set-Preis</p>
+          {vergleichspreisProM2 > setAngebotPreisProM2 && (
+            <p className="text-xs text-mid">statt <span className="line-through">{formatPreis(vergleichspreisProM2)} €/{einheit}</span></p>
+          )}
         </div>
+        <p className="whitespace-nowrap font-bold text-dark">
+          <span className="text-2xl">{formatPreis(setAngebotPreisProM2)} €</span>
+          <span className="text-sm font-normal text-mid"> /{einheit}</span>
+        </p>
       </div>
 
       {/* Modal für Produktauswahl */}

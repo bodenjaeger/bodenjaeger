@@ -30,11 +30,14 @@ export function parseProductSpecs(html: string | null | undefined): ProductSpec[
 
 const HIGHLIGHTS = [/nutzschicht/i, /nutzungsklasse/i, /gesamtst|aufbauh|st(ä|ae)rke/i, /dielenma|format|abmessung/i, /fu(ß|ss)boden/i, /wasser/i];
 
+/** Längere Texte passen nicht in eine Kachel und bleiben in der Liste. */
+const MAX_KACHEL_ZEICHEN = 22;
+
 /** Bis zu vier wichtige Werte für die Kacheln oben. */
 export function pickHighlightSpecs(specs: ProductSpec[]): ProductSpec[] {
   const picked: ProductSpec[] = [];
   for (const pattern of HIGHLIGHTS) {
-    const spec = specs.find((s) => pattern.test(s.label) && !picked.includes(s));
+    const spec = specs.find((s) => pattern.test(s.label) && s.value.length <= MAX_KACHEL_ZEICHEN && !picked.includes(s));
     if (spec) picked.push(spec);
     if (picked.length === 4) break;
   }

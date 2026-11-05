@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractProductFeatures } from './product-features';
+import { extractProductFeatures, formatLieferzeit } from './product-features';
 
 describe('extractProductFeatures', () => {
   it('liest Listen mit Attributen und liefert alle Einträge', () => {
@@ -13,5 +13,12 @@ describe('extractProductFeatures', () => {
 
   it('kommt mit leeren Werten klar', () => {
     expect(extractProductFeatures(null)).toEqual([]);
+  });
+});
+
+describe('formatLieferzeit', () => {
+  it('entfernt den doppelten Abholhinweis', () => {
+    expect(formatLieferzeit('3-7 Arbeitstage oder im Markt abholen')).toBe('3-7 Arbeitstage');
+    expect(formatLieferzeit(null)).toBe('3-7 Arbeitstage');
   });
 });

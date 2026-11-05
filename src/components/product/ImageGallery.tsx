@@ -24,6 +24,8 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
     setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
+  const thumbsRef = useRef<HTMLDivElement>(null);
+  const [canScrollThumbs, setCanScrollThumbs] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const lastWheelAt = useRef(0);
 
@@ -43,6 +45,27 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [isZoomed, images.length]);
+
+  // Weitere Vorschaubilder erkennbar machen und das aktive Bild im Streifen sichtbar halten
+  const updateThumbArrow = () => {
+    const strip = thumbsRef.current;
+    if (strip) setCanScrollThumbs(strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 4);
+  };
+
+  useEffect(() => {
+    updateThumbArrow();
+    window.addEventListener('resize', updateThumbArrow);
+    return () => window.removeEventListener('resize', updateThumbArrow);
+  }, [images.length, videoUrl]);
+
+  useEffect(() => {
+    const strip = thumbsRef.current;
+    const thumb = strip?.children[currentImageIndex] as HTMLElement | undefined;
+    if (!strip || !thumb) return;
+    if (thumb.offsetLeft < strip.scrollLeft || thumb.offsetLeft + thumb.offsetWidth > strip.scrollLeft + strip.clientWidth) {
+      strip.scrollTo({ left: thumb.offsetLeft, behavior: 'smooth' });
+    }
+  }, [currentImageIndex]);
 
   // Scrollen/Trackpad: pro Geste nur ein Bild weiter
   const handleWheel = (event: React.WheelEvent) => {
@@ -201,40 +224,56 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
         </button>
       </div>
 
-      {/* Thumbnails */}
+      {/* Thumbnails: Streifen zum Wischen, Pfeil zeigt weitere Bilder an */}
       {(images.length > 1 || videoUrl) && (
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 sm:gap-3">
-          {images.slice(0, videoUrl ? 4 : 5).map((image, index) => (
+        <div className="relative">
+          <div
+            ref={thumbsRef}
+            onScroll={updateThumbArrow}
+            className="relative flex snap-x gap-2 overflow-x-auto [scrollbar-width:none] sm:gap-3 [&::-webkit-scrollbar]:hidden"
+          >
+            {images.map((image, index) => (
+              <button
+                key={image.id || index}
+                onClick={() => selectImage(index)}
+                aria-label={`Bild ${index + 1} von ${images.length} anzeigen`}
+                className={`relative aspect-[4/3] w-[calc((100%-1.5rem)/4)] flex-shrink-0 snap-start overflow-hidden rounded-lg border-2 transition-all sm:w-[calc((100%-3rem)/5)] ${
+                  currentImageIndex === index ? 'border-brand' : 'border-transparent hover:border-ash'
+                }`}
+              >
+                <Image
+                  src={image.src}
+                  alt={image.alt || `${product.name} Thumbnail ${index + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 25vw, 150px"
+                  quality={60}
+                />
+              </button>
+            ))}
+            {videoUrl && (
+              <a
+                href={videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Verlegevideo ansehen"
+                className="flex aspect-[4/3] w-[calc((100%-1.5rem)/4)] flex-shrink-0 snap-start items-center justify-center rounded-lg bg-ash sm:w-[calc((100%-3rem)/5)]"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-dark text-white">
+                  <Play className="h-4 w-4 fill-current" />
+                </span>
+              </a>
+            )}
+          </div>
+          {canScrollThumbs && (
             <button
-              key={image.id || index}
-              onClick={() => selectImage(index)}
-              aria-label={`Bild ${index + 1} anzeigen`}
-              className={`relative aspect-[4/3] overflow-hidden rounded-lg border-2 transition-all ${
-                currentImageIndex === index ? 'border-brand' : 'border-transparent hover:border-ash'
-              } ${!videoUrl && index === 4 ? 'hidden sm:block' : ''}`}
+              type="button"
+              onClick={() => thumbsRef.current?.scrollBy({ left: thumbsRef.current.clientWidth / 2, behavior: 'smooth' })}
+              aria-label="Weitere Bilder anzeigen"
+              className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-dark text-white shadow-md"
             >
-              <Image
-                src={image.src}
-                alt={image.alt || `${product.name} Thumbnail ${index + 1}`}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 25vw, 150px"
-                quality={60}
-              />
+              <ChevronRight className="h-5 w-5" />
             </button>
-          ))}
-          {videoUrl && (
-            <a
-              href={videoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Verlegevideo ansehen"
-              className="flex aspect-[4/3] items-center justify-center rounded-lg bg-ash"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-dark text-white">
-                <Play className="h-4 w-4 fill-current" />
-              </span>
-            </a>
           )}
         </div>
       )}

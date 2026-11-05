@@ -26,7 +26,7 @@ import TotalPrice from './TotalPrice';
 import ZubehoerSlider from './ZubehoerSlider';
 import ProductSummary from './ProductSummary';
 import ProductDetailSections from './ProductDetailSections';
-import { extractProductFeatures } from '@/lib/product-features';
+import { extractProductFeatures, formatLieferzeit } from '@/lib/product-features';
 import type { ProductMedia } from '@/lib/product-media';
 import { getPrimaryCategory } from '@/lib/product-category';
 import type { TrustedShopsRating } from '@/lib/trusted-shops';
@@ -669,7 +669,7 @@ export default function ProductPageContent({
                 <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
                 <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
               </svg>
-              <span><span className="font-bold">Lieferzeit:</span> {product.lieferzeit || '3-7 Arbeitstage'} oder im Markt abholen</span>
+              <span><span className="font-bold">Lieferzeit:</span> {formatLieferzeit(product.lieferzeit)} oder im Markt abholen</span>
             </div>
           </div>
           )}
@@ -808,7 +808,7 @@ export default function ProductPageContent({
   };
 
   return (
-    <div className="min-h-screen bg-white py-8 overflow-x-hidden">
+    <div className={`min-h-screen bg-white py-8 overflow-x-clip ${isAccessory ? '' : 'pb-28 lg:pb-8'}`}>
       <div className="content-container">
         {isAccessory ? (
           // ========== SIMPLE PRODUCT LAYOUT for Accessories ==========
@@ -843,7 +843,7 @@ export default function ProductPageContent({
                 />
               </div>
 
-              <aside className="min-w-0 space-y-4 rounded-xl border-ash lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start lg:border lg:bg-white lg:p-5">
+              <aside className="min-w-0 space-y-4 rounded-xl border border-ash bg-white p-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start lg:p-5">
                 <ProductInfo
                   product={product}
                   daemmungProduct={daemmungProduct}
@@ -884,7 +884,7 @@ export default function ProductPageContent({
                   {product.show_lieferzeit && (
                     <li className="flex items-center gap-3">
                       <Truck className="h-5 w-5 flex-shrink-0 text-dark" aria-hidden="true" />
-                      Lieferzeit: {product.lieferzeit || '3-7 Arbeitstage'} oder im Markt abholen
+                      Lieferzeit: {formatLieferzeit(product.lieferzeit)} oder im Markt abholen
                     </li>
                   )}
                   <li className="flex items-center gap-3">

@@ -165,8 +165,9 @@ export default function QuantitySelector({
           <button
             type="button"
             onClick={() => setShowInfo(!showInfo)}
-            className="absolute -top-1 -left-1 z-10"
+            className="absolute -top-0.5 right-0 z-10 flex h-6 w-6 items-center justify-center"
             aria-label="Verschnitt-Info anzeigen"
+            aria-expanded={showInfo}
           >
             <div className="w-6 h-6 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors">
               <svg
@@ -189,12 +190,13 @@ export default function QuantitySelector({
           </div>
 
           {/* Counter Container with Dividers */}
-          <div className="bg-white rounded-xl shadow-sm border border-ash overflow-hidden flex items-stretch h-12 w-full">
+          <div className="bg-white rounded-lg border border-ash overflow-hidden flex items-stretch h-12 w-full">
             {/* Minus Button */}
             <button
               type="button"
+              aria-label="Ein Paket weniger"
               onClick={decrementPackages}
-              className="w-[16%] flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-extrabold text-2xl disabled:cursor-not-allowed border-r border-ash"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-bold text-xl disabled:cursor-not-allowed disabled:text-gray-300 border-r border-ash"
               disabled={packages <= 1}
             >
               -
@@ -207,15 +209,17 @@ export default function QuantitySelector({
               onChange={handlePackagesInputChange}
               onBlur={handlePackagesBlur}
               min="1"
-              className="w-[68%] text-center bg-white border-0 outline-none text-gray-900 font-semibold text-base [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              inputMode="numeric"
+              className="min-w-0 flex-1 text-center bg-white border-0 outline-none text-gray-900 font-semibold text-base [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               style={{ MozAppearance: 'textfield' }}
             />
 
             {/* Plus Button */}
             <button
               type="button"
+              aria-label="Ein Paket mehr"
               onClick={incrementPackages}
-              className="w-[16%] flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-extrabold text-2xl border-l border-ash"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-bold text-xl border-l border-ash"
             >
               +
             </button>
@@ -230,12 +234,13 @@ export default function QuantitySelector({
           </label>
 
           {/* Counter Container with Dividers */}
-          <div className="bg-white rounded-xl shadow-sm border border-ash overflow-hidden flex items-stretch h-12 w-full">
+          <div className="bg-white rounded-lg border border-ash overflow-hidden flex items-stretch h-12 w-full">
             {/* Minus Button */}
             <button
               type="button"
+              aria-label="Ein Paket weniger"
               onClick={decrementSqm}
-              className="w-[16%] flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-extrabold text-2xl disabled:cursor-not-allowed border-r border-ash"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-bold text-xl disabled:cursor-not-allowed disabled:text-gray-300 border-r border-ash"
               disabled={sqm <= paketinhalt}
             >
               -
@@ -249,15 +254,17 @@ export default function QuantitySelector({
               onBlur={handleSqmBlur}
               min={paketinhalt}
               step="0.01"
-              className="w-[68%] text-center bg-white border-0 outline-none text-gray-900 font-semibold text-base [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              inputMode="decimal"
+              className="min-w-0 flex-1 text-center bg-white border-0 outline-none text-gray-900 font-semibold text-base [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               style={{ MozAppearance: 'textfield' }}
             />
 
             {/* Plus Button */}
             <button
               type="button"
+              aria-label="Ein Paket mehr"
               onClick={incrementSqm}
-              className="w-[16%] flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-extrabold text-2xl border-l border-ash"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-bold text-xl border-l border-ash"
             >
               +
             </button>
