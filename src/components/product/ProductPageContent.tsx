@@ -42,7 +42,7 @@ interface ProductPageContentProps {
   daemmungOptions: StoreApiProduct[];
   sockelleisteOptions: StoreApiProduct[];
   sparpaketProducts?: StoreApiProduct[];  // nur Klebe-Vinyl, sonst leer
-  media?: ProductMedia;  // optionale PDFs, Video, Visualisierung
+  media?: ProductMedia;  // optionale PDFs, Video
   trustedShopsRating?: TrustedShopsRating | null;
 }
 

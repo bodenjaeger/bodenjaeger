@@ -13,7 +13,7 @@ describe('parseProductMedia', () => {
     expect(parseProductMedia([
       { key: 'bj_datenblatt_url', value: '' },
       { key: 'bj_video_url', value: 'javascript:alert(1)' },
-      { key: 'bj_visualizer_url', value: 42 },
+      { key: 'bj_pflegeanleitung_url', value: 42 },
     ])).toEqual({});
     expect(parseProductMedia(undefined)).toEqual({});
   });
