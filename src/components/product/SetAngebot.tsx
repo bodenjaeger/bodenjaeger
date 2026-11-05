@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { ChevronRight, X } from 'lucide-react';
 import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
+import { lockPageScroll } from '@/lib/scroll-lock';
 
 // Klebe-Vinyl Sparpaket: kostenlose Zeilen unter der Sockelleiste
 export interface SparpaketAnzeige {
@@ -123,11 +124,10 @@ export default function SetAngebot({
         setModalType(null);
       }
     };
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const unlock = lockPageScroll();
     window.addEventListener('keydown', onKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      unlock();
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [isModalOpen]);

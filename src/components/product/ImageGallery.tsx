@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, Expand, Play, X } from 'lucide-react';
 import type { StoreApiProduct } from '@/lib/woocommerce';
+import { lockPageScroll } from '@/lib/scroll-lock';
 
 interface ImageGalleryProps {
   product: StoreApiProduct;
@@ -38,11 +39,10 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
       if (event.key === 'ArrowLeft') setCurrentImageIndex((i) => (i === 0 ? images.length - 1 : i - 1));
       if (event.key === 'ArrowRight') setCurrentImageIndex((i) => (i === images.length - 1 ? 0 : i + 1));
     };
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const unlock = lockPageScroll();
     window.addEventListener('keydown', onKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      unlock();
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [isZoomed, images.length]);
@@ -68,9 +68,10 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
     }
   }, [currentImageIndex]);
 
-  // Scrollen/Trackpad: pro Geste nur ein Bild weiter
+  // Nur seitliches Wischen am Trackpad wechselt das Bild, senkrechtes Scrollen bewirkt nichts
   const handleWheel = (event: React.WheelEvent) => {
-    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+    const delta = event.deltaX;
     const now = Date.now();
     if (Math.abs(delta) < 20 || now - lastWheelAt.current < 400) return;
     lastWheelAt.current = now;
@@ -200,7 +201,7 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
           <>
             <button
               onClick={goToPrevious}
-              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white text-dark shadow-lg hover:bg-pale"
+              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash"
               aria-label="Vorheriges Bild"
             >
               <ChevronLeft className="h-6 w-6" />
@@ -208,7 +209,7 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
 
             <button
               onClick={goToNext}
-              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white text-dark shadow-lg hover:bg-pale"
+              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash"
               aria-label="Nächstes Bild"
             >
               <ChevronRight className="h-6 w-6" />
@@ -218,7 +219,7 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
 
         <button
           onClick={() => setIsZoomed(true)}
-          className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-lg bg-dark/85 text-white hover:bg-dark"
+          className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash"
           aria-label="Bild vergrößern"
         >
           <Expand className="h-5 w-5" />
@@ -271,7 +272,7 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
               type="button"
               onClick={() => thumbsRef.current?.scrollBy({ left: thumbsRef.current.clientWidth / 2, behavior: 'smooth' })}
               aria-label="Weitere Bilder anzeigen"
-              className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-dark text-white shadow-md"
+              className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -285,7 +286,7 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
           role="dialog"
           aria-modal="true"
           aria-label={product.name}
-          className="fixed inset-0 z-[100] bg-black/90"
+          className="fixed inset-0 z-[100] touch-none overscroll-none bg-black/90"
           onClick={() => setIsZoomed(false)}
           onWheel={images.length > 1 ? handleWheel : undefined}
           onTouchStart={(event) => { touchStartX.current = event.touches[0].clientX; }}
@@ -301,7 +302,7 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
           <button
             onClick={() => setIsZoomed(false)}
             autoFocus
-            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white text-dark"
+            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash"
             aria-label="Schließen"
           >
             <X className="h-6 w-6" />
@@ -310,17 +311,17 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
             <>
               <button
                 onClick={(event) => { event.stopPropagation(); goToPrevious(); }}
-                className="absolute left-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white text-dark sm:left-5"
+                className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash sm:left-5"
                 aria-label="Vorheriges Bild"
               >
-                <ChevronLeft className="h-7 w-7" />
+                <ChevronLeft className="h-6 w-6" />
               </button>
               <button
                 onClick={(event) => { event.stopPropagation(); goToNext(); }}
-                className="absolute right-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white text-dark sm:right-5"
+                className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash sm:right-5"
                 aria-label="Nächstes Bild"
               >
-                <ChevronRight className="h-7 w-7" />
+                <ChevronRight className="h-6 w-6" />
               </button>
               <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-sm text-white">
                 {currentImageIndex + 1} / {images.length}

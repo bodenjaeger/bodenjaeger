@@ -204,7 +204,7 @@ export default function ProductDetailSections({ product, features, media }: Prod
             aria-selected={currentId === section.id}
             onClick={() => setActiveId(section.id)}
             className={`rounded-t-lg border border-b-0 px-5 py-2.5 text-sm transition-colors ${
-              currentId === section.id ? 'border-pale bg-pale font-bold text-dark' : 'border-ash bg-white text-mid hover:bg-pale hover:text-dark'
+              currentId === section.id ? 'border-panel bg-panel font-bold text-dark' : 'border-ash bg-white text-mid hover:bg-panel hover:text-dark'
             }`}
           >
             {section.label}
@@ -213,7 +213,7 @@ export default function ProductDetailSections({ product, features, media }: Prod
       </div>
 
       {/* Karteikarte: aktiver Reiter und Fläche gehen ineinander über */}
-      <div className="lg:rounded-b-xl lg:rounded-tr-xl lg:bg-pale lg:p-6">
+      <div className="lg:rounded-b-xl lg:rounded-tr-xl lg:bg-panel lg:p-8">
         {sections.map((section) => (
           <DetailSection key={section.id} section={section} desktopActive={currentId === section.id} />
         ))}

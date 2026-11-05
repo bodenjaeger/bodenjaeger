@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import BrandLoader from '@/components/BrandLoader';
 import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import { useCart } from '@/contexts/CartContext';
@@ -143,6 +145,7 @@ export default function ZubehoerSlider({
 
         console.log(`✅ Loaded ${loadedProducts.length} products via API`);
         setProducts(loadedProducts);
+        scrollContainerRef.current?.scrollTo({ left: 0 });
         // Hinterlegte IDs ohne lieferbares Produkt: Reiter ausblenden
         if (loadedProducts.length === 0) {
           setLeereKategorien((prev) => [...prev, `${source.id}:${activeCategory}`]);
@@ -238,10 +241,23 @@ export default function ZubehoerSlider({
 
       <div className={`${mobileOpen ? 'block' : 'hidden'} pb-6 lg:block lg:pb-0`}>
         <div>
-          <h2 className="mb-3 hidden text-lg lg:block">
-            <span className="font-bold text-dark">Passendes Zubehör</span>
-            <span className="font-normal text-mid"> – Für ein perfektes Ergebnis</span>
-          </h2>
+          <div className="mb-3 hidden items-center justify-between gap-4 lg:flex">
+            <h2 className="text-lg">
+              <span className="font-bold text-dark">Passendes Zubehör</span>
+              <span className="font-normal text-mid"> – Für ein perfektes Ergebnis</span>
+            </h2>
+            {/* Pfeile im Kopf, damit sie nie auf den Produkten liegen */}
+            {(canScrollLeft || canScrollRight) && (
+              <div className="flex flex-shrink-0 gap-2">
+                <button type="button" onClick={scrollLeft} disabled={!canScrollLeft} aria-label="Zurück" className="flex h-10 w-10 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash disabled:text-gray-300 disabled:hover:bg-white">
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button type="button" onClick={scrollRight} disabled={!canScrollRight} aria-label="Weitere Produkte" className="flex h-10 w-10 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash disabled:text-gray-300 disabled:hover:bg-white">
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+            )}
+          </div>
 
           {cartItems.some((item) => item.setItemType === 'floor' && item.id === product?.id) && (
             <p role="status" className="mb-3 text-sm font-bold text-cta">✓ Dein Set liegt im Warenkorb. Das passt dazu:</p>
@@ -256,8 +272,8 @@ export default function ZubehoerSlider({
                 aria-pressed={activeCategory === category.metaKey}
                 className={`flex-shrink-0 whitespace-nowrap rounded-t-lg border border-b-0 px-3 py-2 text-sm transition-colors ${
                   activeCategory === category.metaKey
-                    ? 'border-pale bg-pale font-bold text-dark'
-                    : 'border-ash bg-white text-mid hover:bg-pale hover:text-dark'
+                    ? 'border-panel bg-panel font-bold text-dark'
+                    : 'border-ash bg-white text-mid hover:bg-panel hover:text-dark'
                 }`}
               >
                 {category.name}
@@ -266,11 +282,11 @@ export default function ZubehoerSlider({
           </div>
 
           {/* Produkt-Slider auf der Karteikarte */}
-          <div className="relative rounded-b-xl bg-pale p-3 md:px-8">
-            {/* Loading State */}
+          <div className="relative min-h-72 rounded-b-xl rounded-tr-xl bg-panel p-3">
+            {/* Beim Reiterwechsel bleibt die Höhe erhalten, damit die Seite nicht springt */}
             {loading && (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+              <div className="absolute inset-0 z-10 flex items-center justify-center">
+                <BrandLoader label="Zubehör wird geladen" />
               </div>
             )}
 
@@ -282,11 +298,11 @@ export default function ZubehoerSlider({
             )}
 
             {/* Products */}
-            {!loading && !error && products.length > 0 && (
+            {!error && products.length > 0 && (
               <>
                 <div
                   ref={scrollContainerRef}
-                  className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4 snap-x snap-mandatory"
+                  className={`${loading ? 'pointer-events-none opacity-30' : ''} flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory`}
                   style={{
                     scrollbarWidth: 'none',
                     msOverflowStyle: 'none',
@@ -402,37 +418,6 @@ export default function ZubehoerSlider({
                   })}
                 </div>
 
-                {/* Scroll Left Button */}
-                <button
-                  onClick={scrollLeft}
-                  className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full shadow-lg hover:shadow-xl items-center justify-center transition-all z-10 ${
-                    canScrollLeft
-                      ? 'bg-dark text-white cursor-pointer'
-                      : 'bg-dark/50 text-white/60 cursor-not-allowed'
-                  }`}
-                  disabled={!canScrollLeft}
-                  aria-label="Zurück"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-
-                {/* Scroll Right Button */}
-                <button
-                  onClick={scrollRight}
-                  className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full shadow-lg hover:shadow-xl items-center justify-center transition-all z-10 ${
-                    canScrollRight
-                      ? 'bg-dark text-white cursor-pointer'
-                      : 'bg-dark/50 text-white/60 cursor-not-allowed'
-                  }`}
-                  disabled={!canScrollRight}
-                  aria-label="Weitere Produkte"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
               </>
             )}
 
