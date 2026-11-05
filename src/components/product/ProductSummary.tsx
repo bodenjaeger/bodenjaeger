@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Box, Check, FileText } from 'lucide-react';
+import { Check, FileText } from 'lucide-react';
 import StarRating from '@/components/footer/StarRating';
 import type { TrustedShopsRating } from '@/lib/trusted-shops';
 import type { ProductMedia } from '@/lib/product-media';
@@ -70,30 +70,35 @@ export default function ProductSummary({
       <div className="mt-6 space-y-3">
         {showSampleButton && (
           <div>
-            {sampleInCart ? (
+            {/* Roomvo setzt „Boden virtuell verlegen“ neben diesen Button und erkennt ihn über
+                button:has(img[alt='Musterbox']): Alt-Text und Bild nicht entfernen. Hinterlegt
+                Roomvo den Boden nicht, erscheint kein Visualizer-Button. */}
+            <div>
               <button
                 type="button"
-                onClick={onShowCart}
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-cta bg-white px-4 py-3 text-sm font-bold text-cta transition-colors hover:bg-cta/5"
-              >
-                <Check className="h-5 w-5" aria-hidden="true" />
-                Muster im Warenkorb – ansehen
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onOrderSample}
+                onClick={sampleInCart ? onShowCart : onOrderSample}
                 disabled={isOrderingSample}
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-cta px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-cta-dark disabled:cursor-not-allowed disabled:opacity-60"
+                className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                  sampleInCart ? 'border-2 border-cta bg-white text-cta hover:bg-cta/5' : 'bg-cta text-white hover:bg-cta-dark'
+                }`}
               >
-                <Image src="/images/Icons/musterbox-weiss.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />
-                {isOrderingSample
-                  ? 'Lädt …'
-                  : freeSamplesRemaining > 0
-                    ? 'Kostenlose Muster bestellen'
-                    : `Muster bestellen (${sampleSurcharge.toFixed(2).replace('.', ',')} € Fracht)`}
+                <Image
+                  src="/images/Icons/musterbox-weiss.png"
+                  alt="Musterbox"
+                  width={20}
+                  height={20}
+                  className={`h-5 w-5 object-contain ${sampleInCart ? 'hidden' : ''}`}
+                />
+                {sampleInCart && <Check className="h-5 w-5" aria-hidden="true" />}
+                {sampleInCart
+                  ? 'Muster im Warenkorb – ansehen'
+                  : isOrderingSample
+                    ? 'Lädt …'
+                    : freeSamplesRemaining > 0
+                      ? 'Kostenlose Muster bestellen'
+                      : `Muster bestellen (${sampleSurcharge.toFixed(2).replace('.', ',')} € Fracht)`}
               </button>
-            )}
+            </div>
             {sampleInCart && (
               <p className="mt-1.5 text-center text-xs text-mid" role="status">
                 {freeSamplesRemaining > 0
@@ -102,18 +107,6 @@ export default function ProductSummary({
               </p>
             )}
           </div>
-        )}
-
-        {media.visualizer && (
-          <a
-            href={media.visualizer}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-brand bg-white px-4 py-3 text-sm font-bold text-brand transition-colors hover:bg-brand/5"
-          >
-            <Box className="h-5 w-5" aria-hidden="true" />
-            Boden virtuell verlegen
-          </a>
         )}
       </div>
 

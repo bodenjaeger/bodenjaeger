@@ -87,7 +87,7 @@ export default function ProductDetailSections({ product, features, media, isFloo
         <div className={`grid gap-8 lg:gap-12 ${description && features.length > 0 ? 'lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]' : ''}`}>
           {description && (
             <div
-              className="min-w-0 max-w-[68ch] [overflow-wrap:anywhere] [&_img]:h-auto [&_img]:max-w-full text-[15px] leading-7 text-mid [&>p:first-child]:mb-5 [&>p:first-child]:text-lg [&>p:first-child]:leading-8 [&>p:first-child]:text-dark [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-dark [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-dark [&_li]:mb-1 [&_p]:mb-4 [&_strong]:font-bold [&_strong]:text-dark [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5"
+              className="min-w-0 max-w-[68ch] [overflow-wrap:anywhere] [&_img]:h-auto [&_img]:max-w-full text-[15px] leading-7 text-mid [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-dark [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-dark [&_li]:mb-1 [&_p]:mb-4 [&_strong]:font-bold [&_strong]:text-dark [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5"
               dangerouslySetInnerHTML={{ __html: description }}
             />
           )}

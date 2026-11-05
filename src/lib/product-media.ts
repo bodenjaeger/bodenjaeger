@@ -1,5 +1,5 @@
 /**
- * Optionale Inhalte der Produktseite (PDFs, Video, externe Visualisierung).
+ * Optionale Inhalte der Produktseite (PDFs, Video).
  *
  * Gepflegt werden sie in WooCommerce am Produkt unter „Benutzerdefinierte
  * Felder“. Der Wert ist jeweils die vollständige URL, z. B. aus der Mediathek.
@@ -10,7 +10,6 @@ export const PRODUCT_MEDIA_FIELDS = {
   verlegeanleitung: 'bj_verlegeanleitung_url',
   pflegeanleitung: 'bj_pflegeanleitung_url',
   video: 'bj_video_url',
-  visualizer: 'bj_visualizer_url',
 } as const;
 
 export type ProductMedia = Partial<Record<keyof typeof PRODUCT_MEDIA_FIELDS, string>>;
