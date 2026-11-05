@@ -16,13 +16,8 @@ import {
   type ActiveFilters,
   type FilterIndexProduct,
 } from '@/lib/category-filters';
-import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar, CategoryFilterToggle, useFilterCollapse } from '@/components/category/CategoryFilters';
-import {
-  PROMO_BODENART_TABS,
-  getPromoBodenart,
-  getPromoDiscount,
-  type PromoBodenart,
-} from '@/lib/black-weeks';
+import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar, CategoryFilterToggle, ListingToolbar, useFilterCollapse } from '@/components/category/CategoryFilters';
+import { PROMO_BODENART_TABS, getPromoBodenart, getPromoDiscount } from '@/lib/black-weeks';
 
 const DISCOUNT_SORT = 'discount-desc';
 
@@ -69,7 +64,6 @@ interface BlackWeeksListingProps {
  * ohne Aktionskachel, die gehört nicht auf die Aktionsseite selbst.
  */
 export default function BlackWeeksListing({ products, filterIndex = [] }: BlackWeeksListingProps) {
-  const [art, setArt] = useState<PromoBodenart | 'alle'>('alle');
   const [sort, setSort] = useState(DISCOUNT_SORT);
   const [page, setPage] = useState(1);
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>(NO_FILTERS);
@@ -79,27 +73,29 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
   const [urlGelesen, setUrlGelesen] = useState(false);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    // Ältere Links nutzen noch ?art=vinyl
     const urlArt = params.get('art');
     const urlSort = params.get('sort');
     const urlPage = parseInt(params.get('page') || '', 10);
-    if (urlArt) setArt(urlArt as PromoBodenart);
     if (urlSort) setSort(urlSort);
     if (urlPage > 1) setPage(urlPage);
-    setActiveFilters(parseActiveFilters(Object.fromEntries(params.entries()), PROMO_FILTER_ATTRIBUTES));
+    const fromUrl = parseActiveFilters(Object.fromEntries(params.entries()), PROMO_FILTER_ATTRIBUTES);
+    if (urlArt && !fromUrl.values.bodenart) fromUrl.values.bodenart = [urlArt];
+    setActiveFilters(fromUrl);
     setUrlGelesen(true);
   }, []);
   useEffect(() => {
     if (!urlGelesen) return;
     const params = new URLSearchParams(window.location.search);
     const setzen = (key: string, value: string | null) => (value ? params.set(key, value) : params.delete(key));
-    setzen('art', art === 'alle' ? null : art);
+    params.delete('art');
     setzen('sort', sort === DISCOUNT_SORT ? null : sort);
     setzen('page', page > 1 ? String(page) : null);
     for (const attribute of [...PROMO_FILTER_ATTRIBUTES.map(filterSlug), 'preis-von', 'preis-bis']) params.delete(attribute);
     new URLSearchParams(filtersToQuery(activeFilters)).forEach((value, key) => params.set(key, value));
     const query = params.toString();
     window.history.replaceState(window.history.state, '', query ? `?${query}` : window.location.pathname);
-  }, [art, sort, page, urlGelesen, activeFilters]);
+  }, [sort, page, urlGelesen, activeFilters]);
   const [addonProductsMap, setAddonProductsMap] = useState<Map<number, StoreApiProduct>>(new Map());
   const gridTopRef = useRef<HTMLDivElement>(null);
 
@@ -128,25 +124,25 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
       .catch(() => {});
   }, [products]);
 
-  const counts = useMemo(() => {
-    const result: Record<string, number> = { alle: products.length };
-    products.forEach((p) => {
-      const a = getPromoBodenart(p);
-      if (a) result[a] = (result[a] || 0) + 1;
+  // Bodenart kommt aus den Kategorien des Produkts, alles andere aus den Attributen
+  const entries = useMemo<FilterIndexProduct[]>(() => {
+    const byId = new Map(filterIndex.map((entry) => [entry.id, entry]));
+    return products.map((p) => {
+      const art = getPromoBodenart(p);
+      const label = PROMO_BODENART_TABS.find((t) => t.value === art)?.label;
+      const entry = byId.get(p.id);
+      return {
+        id: p.id,
+        price: entry?.price ?? p.price ?? 0,
+        attributes: { ...entry?.attributes, ...(label ? { bodenart: [label] } : {}) },
+      };
     });
-    return result;
-  }, [products]);
-
-  const byArt = useMemo(
-    () => (art === 'alle' ? products : products.filter((p) => getPromoBodenart(p) === art)),
-    [products, art]
-  );
-  const indexById = useMemo(() => new Map(filterIndex.map((entry) => [entry.id, entry])), [filterIndex]);
+  }, [products, filterIndex]);
   const filterState = useMemo(() => {
-    const entries = byArt.map((p) => indexById.get(p.id)).filter((e): e is FilterIndexProduct => Boolean(e));
     const state = buildFilterState(entries, PROMO_FILTER_ATTRIBUTES, activeFilters, 'm²');
     return state.facets.length > 0 ? state : null;
-  }, [byArt, indexById, activeFilters]);
+  }, [entries, activeFilters]);
+  const bodenartFacet = filterState?.facets.find((f) => f.key === 'bodenart');
   const applyFilters = (next: ActiveFilters) => {
     setActiveFilters(next);
     setPage(1);
@@ -154,14 +150,15 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
   const showSidebar = Boolean(filterState) && !collapsed;
 
   const filtered = useMemo(() => {
+    const byId = new Map(entries.map((entry) => [entry.id, entry]));
     const matching = hasActiveFilters(activeFilters)
-      ? byArt.filter((p) => {
-          const entry = indexById.get(p.id);
+      ? products.filter((p) => {
+          const entry = byId.get(p.id);
           return entry ? matchesFilters(entry, activeFilters) : false;
         })
-      : byArt;
+      : products;
     return sortProducts(matching, sort);
-  }, [byArt, indexById, activeFilters, sort]);
+  }, [products, entries, activeFilters, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PRODUCTS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
@@ -172,8 +169,18 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
     gridTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Tabs ohne Produkte ausblenden — „Alle“ bleibt immer.
-  const tabs = PROMO_BODENART_TABS.filter((t) => t.value === 'alle' || counts[t.value]);
+  const toggleBodenart = (slug: string | null) => {
+    const current = activeFilters.values.bodenart ?? [];
+    const updated = slug === null ? [] : current.includes(slug) ? current.filter((v) => v !== slug) : [...current, slug];
+    const values = { ...activeFilters.values };
+    if (updated.length > 0) values.bodenart = updated;
+    else delete values.bodenart;
+    applyFilters({ ...activeFilters, values });
+  };
+  const quickClass = (active: boolean) =>
+    `h-9 shrink-0 cursor-pointer rounded-xl border px-4 text-sm font-semibold transition-colors ${
+      active ? 'border-brand bg-brand text-white' : 'border-ash bg-white text-dark hover:border-mid'
+    }`;
 
   // Fenster wie im Kategorie-Listing: Seite 1 + letzte + aktuelle ±1, dazwischen „…“
   const pages: (number | 'ellipsis')[] = [];
@@ -190,56 +197,35 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
 
   return (
     <div ref={gridTopRef} className="scroll-mt-48">
-      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        {/* Bodenart-Tabs */}
-        <div role="group" aria-label="Nach Bodenart filtern" className="flex flex-wrap gap-2">
-          {tabs.map((tab) => {
-            const active = art === tab.value;
-            return (
-              <button
-                key={tab.value}
-                type="button"
-                aria-pressed={active}
-                onClick={() => {
-                  setArt(tab.value);
-                  setPage(1);
-                }}
-                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-                  active ? 'border-brand bg-brand text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                {tab.label} ({counts[tab.value] || 0})
-              </button>
-            );
-          })}
-        </div>
+      <ListingToolbar
+        filterControls={filterState ? (
+          <>
+            <CategoryFilterButton state={filterState} apply={applyFilters} />
+            <CategoryFilterToggle collapsed={collapsed} onToggle={toggle} />
+          </>
+        ) : undefined}
+        count={`${filtered.length} ${filtered.length === 1 ? 'Produkt' : 'Produkte'}${totalPages > 1 ? ` (Seite ${currentPage} von ${totalPages})` : ''}`}
+        sort={sort}
+        sortOptions={PROMO_SORT_OPTIONS}
+        onSortChange={(value) => {
+          setSort(value);
+          setPage(1);
+        }}
+      />
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
-          {filterState && (
-            <div className="flex items-center gap-3">
-              <CategoryFilterButton state={filterState} apply={applyFilters} />
-              <CategoryFilterToggle collapsed={collapsed} onToggle={toggle} />
-            </div>
-          )}
-          <p className="text-gray-600">
-            {filtered.length} {filtered.length === 1 ? 'Produkt' : 'Produkte'} gefunden
-            {totalPages > 1 && ` (Seite ${currentPage} von ${totalPages})`}
-          </p>
-          <select
-            value={sort}
-            aria-label="Sortierung"
-            onChange={(e) => {
-              setSort(e.target.value);
-              setPage(1);
-            }}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            {PROMO_SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
+      {/* Schnellauswahl: am Handy und bei eingeklappter Spalte, derselbe Stand wie im Filter */}
+      {bodenartFacet && (
+        <div role="group" aria-label="Nach Bodenart filtern" className={`mb-4 flex gap-2 overflow-x-auto pb-1 ${collapsed ? '' : 'lg:hidden'}`}>
+          <button type="button" aria-pressed={!activeFilters.values.bodenart} onClick={() => toggleBodenart(null)} className={quickClass(!activeFilters.values.bodenart)}>
+            Alle
+          </button>
+          {bodenartFacet.values.map((value) => (
+            <button key={value.slug} type="button" aria-pressed={value.selected} onClick={() => toggleBodenart(value.slug)} className={quickClass(value.selected)}>
+              {value.label} ({value.count})
+            </button>
+          ))}
         </div>
-      </div>
+      )}
 
       <div className={showSidebar ? 'lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-7' : ''}>
       {filterState && showSidebar && <CategoryFilterSidebar state={filterState} apply={applyFilters} />}

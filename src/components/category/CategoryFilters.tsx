@@ -130,7 +130,7 @@ function FilterPanel({ state, apply, pending, onClose }: FilterProps & { onClose
                         checked={value.selected}
                         disabled={disabled}
                         onChange={(e) => toggleValue(facet.key, value.slug, e.target.checked)}
-                        className="h-[18px] w-[18px] flex-none cursor-[inherit] accent-[#ed1b24]"
+                        className="filter-check"
                       />
                       {facet.key === 'farbgebung' && FARBEN[value.slug] && (
                         <span className="h-[18px] w-[18px] flex-none rounded-full border border-black/15" style={{ background: FARBEN[value.slug] }} />
@@ -185,7 +185,7 @@ export function CategoryFilterButton(props: FilterProps) {
 
   return (
     <>
-      <button type="button" onClick={() => setSheetOpen(true)} className="cursor-pointer rounded-lg bg-dark px-4 py-2 text-sm font-semibold text-white lg:hidden">
+      <button type="button" onClick={() => setSheetOpen(true)} className="h-11 w-full cursor-pointer rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-[#d11820] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:hidden">
         {count > 0 ? `Filtern (${count})` : 'Filtern'}
       </button>
       {sheetOpen && createPortal(
@@ -206,8 +206,8 @@ export function CategoryFilterChips({ state, apply }: FilterProps) {
   const { active } = state;
   if (!hasActiveFilters(active)) return null;
 
-  const chipClass = 'inline-flex cursor-pointer items-center gap-2 rounded-full border border-ash bg-white px-3 py-1 text-[13px] text-dark hover:border-mid';
-  const cross = <span aria-hidden="true" className="font-bold text-[#d11820]">×</span>;
+  const chipClass = 'inline-flex cursor-pointer items-center gap-2 rounded-lg bg-brand px-3 py-1.5 text-[13px] font-medium text-white hover:bg-[#d11820] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2';
+  const cross = <span aria-hidden="true" className="font-bold">×</span>;
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-1.5">
@@ -270,8 +270,42 @@ export function useFilterCollapse() {
 /** Ein- und Ausblenden der Filterspalte, nur ab Desktop-Breite. */
 export function CategoryFilterToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   return (
-    <button type="button" aria-expanded={!collapsed} onClick={onToggle} className="hidden cursor-pointer whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-dark hover:bg-gray-100 lg:inline-block">
+    <button type="button" aria-expanded={!collapsed} onClick={onToggle} className="hidden h-11 cursor-pointer whitespace-nowrap rounded-xl border border-ash bg-white px-4 text-sm font-semibold text-dark hover:border-mid focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:inline-block">
       {collapsed ? 'Filter einblenden' : 'Filter ausblenden'}
     </button>
+  );
+}
+
+interface ListingToolbarProps {
+  filterControls?: React.ReactNode;
+  count: string;
+  sort: string;
+  sortOptions: ReadonlyArray<{ value: string; label: string }>;
+  onSortChange: (value: string) => void;
+}
+
+/** Leiste über den Produkten: Filter, Trefferzahl und Sortierung in einer Höhe. */
+export function ListingToolbar({ filterControls, count, sort, sortOptions, onSortChange }: ListingToolbarProps) {
+  return (
+    <div className="mb-5 grid grid-cols-2 items-center gap-3 lg:flex lg:justify-between">
+      <div className={`flex items-center gap-4 ${filterControls ? '' : 'hidden lg:flex'}`}>
+        {filterControls}
+        <p className="hidden text-sm font-medium text-mid lg:block">{count}</p>
+      </div>
+      <div className={`relative ${filterControls ? '' : 'col-span-2 lg:col-span-1'}`}>
+        <select
+          value={sort}
+          aria-label="Sortierung"
+          onChange={(e) => onSortChange(e.target.value)}
+          className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-ash bg-white pl-4 pr-9 text-sm font-semibold text-dark hover:border-mid focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:w-auto"
+        >
+          {sortOptions.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dark"><Chevron open={false} /></span>
+      </div>
+      <p className="col-span-2 text-sm font-medium text-mid lg:hidden">{count}</p>
+    </div>
   );
 }

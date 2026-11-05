@@ -9,6 +9,7 @@ import {
   type FilterState,
 } from '@/lib/category-filters';
 
+const BODENARTEN = ['Vinylboden', 'Laminat', 'Parkett'];
 const INDEX_REVALIDATE_SECONDS = 300;
 const MAX_INDEX_PAGES = 20;
 
@@ -32,7 +33,7 @@ export async function loadFilterIndex(categoryId: number, sort: string, attribut
       page: String(page),
       orderby,
       order,
-      _fields: 'id,price,attributes',
+      _fields: 'id,price,attributes,categories',
     });
     const response = await fetch(`${baseUrl}/wp-json/wc/v3/products?${params}`, {
       headers: { Authorization: `Basic ${auth}` },
@@ -44,11 +45,17 @@ export async function loadFilterIndex(categoryId: number, sort: string, attribut
       id: number;
       price: string;
       attributes?: Array<{ name: string; options: string[] }>;
+      categories?: Array<{ name: string }>;
     }>;
     for (const item of items) {
       const attributes: Record<string, string[]> = {};
       for (const attribute of item.attributes ?? []) {
         if (wanted.has(attribute.name)) attributes[filterSlug(attribute.name)] = attribute.options;
+      }
+      // Die Bodenart steht nicht in den Attributen, sondern in den Kategorien
+      if (wanted.has('Bodenart') && Object.keys(attributes).length > 0) {
+        const bodenart = BODENARTEN.filter((name) => item.categories?.some((c) => c.name === name));
+        if (bodenart.length > 0) attributes.bodenart = bodenart;
       }
       // Ohne Filterwerte (z. B. Muster) gehört ein Produkt nicht in die Filterliste
       if (Object.keys(attributes).length > 0) {

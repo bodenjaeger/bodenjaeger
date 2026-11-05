@@ -9,9 +9,9 @@ const LAMINAT = ['Farbgebung', 'Optik', 'Nutzungsklasse', 'Abriebklasse', 'Stär
 const PARKETT = ['Farbgebung', 'Optik', 'Oberfläche', 'Sortierung', 'Verlegeart'];
 const SOCKELLEISTEN = ['Höhe', 'Material', 'Überstreichbar'];
 
-const MUSTERBOX = ['Art des Vinylbodens', 'Farbgebung', 'Optik', 'Kollektion', 'Marke'];
+const MUSTERBOX = ['Bodenart', 'Art des Vinylbodens', 'Farbgebung', 'Optik', 'Kollektion', 'Marke'];
 /** Aktionsseite: Bodenarten gemischt, nur Filter, die überall passen. */
-export const PROMO_FILTER_ATTRIBUTES = ['Farbgebung', 'Optik', 'Kollektion', 'Verlegeart', 'Nutzungsklasse', 'Stärke', 'Marke'];
+export const PROMO_FILTER_ATTRIBUTES = ['Bodenart', 'Farbgebung', 'Optik', 'Kollektion', 'Verlegeart', 'Nutzungsklasse', 'Stärke', 'Marke'];
 
 const FILTERS_BY_CATEGORY: Record<string, string[]> = {
   vinylboden: VINYL,

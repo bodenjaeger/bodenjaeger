@@ -8,7 +8,7 @@ import Image from 'next/image';
 import UnifiedProductCard from '@/components/UnifiedProductCard';
 import { SORT_OPTIONS, listingHref } from '@/lib/category-listing';
 import { filtersToQuery, hasActiveFilters, type FilterState } from '@/lib/category-filters';
-import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar, CategoryFilterToggle, useFilterCollapse, useFilterNavigation } from '@/components/category/CategoryFilters';
+import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar, CategoryFilterToggle, ListingToolbar, useFilterCollapse, useFilterNavigation } from '@/components/category/CategoryFilters';
 import PromoTile from '@/components/black-weeks/PromoTile';
 import { PROMO_TILE_EVERY, PROMO_TILE_POSITION } from '@/lib/black-weeks';
 
@@ -208,33 +208,22 @@ export default function CategoryPageClient({
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-gray-600 mb-4 sm:mb-0">
-              {totalProducts} {totalProducts === 1 ? 'Produkt' : 'Produkte'} gefunden
-              {totalPages > 1 && ` (Seite ${currentPage} von ${totalPages})`}
-            </p>
-
-            {/* Sorting Options */}
-            <div className="flex items-center space-x-3">
-              {filterState && <CategoryFilterButton state={filterState} apply={apply} pending={pending} />}
-              {filterState && <CategoryFilterToggle collapsed={collapsed} onToggle={toggle} />}
-              <select
-                value={sortBy}
-                onChange={(e) => {
-                  // Sortierwechsel startet wieder auf Seite 1
-                  const href = listingHref(pathname, 1, e.target.value, filterQuery);
-                  startTransition(() => router.push(href, { scroll: false }));
-                }}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {/* Erste Option = DEFAULT_SORT, damit das Dropdown beim
-                    Seitenaufruf den tatsächlich sortierten Zustand zeigt. */}
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <ListingToolbar
+            filterControls={filterState ? (
+              <>
+                <CategoryFilterButton state={filterState} apply={apply} pending={pending} />
+                <CategoryFilterToggle collapsed={collapsed} onToggle={toggle} />
+              </>
+            ) : undefined}
+            count={`${totalProducts} ${totalProducts === 1 ? 'Produkt' : 'Produkte'}${totalPages > 1 ? ` (Seite ${currentPage} von ${totalPages})` : ''}`}
+            sort={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={(value) => {
+              // Sortierwechsel startet wieder auf Seite 1
+              const href = listingHref(pathname, 1, value, filterQuery);
+              startTransition(() => router.push(href, { scroll: false }));
+            }}
+          />
         </div>
 
         <div className={showSidebar ? 'lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-7' : ''}>
