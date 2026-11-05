@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
+import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import type { SetQuantityCalculation, SparpaketQuantityCalculation } from '@/lib/setCalculations';
 import { useCart } from '@/contexts/CartContext';
@@ -285,17 +286,17 @@ export default function TotalPrice({
         <div className="min-w-0">
           <p className="text-sm text-dark">Gesamtpreis <span className="text-xs">(inkl. MwSt.)</span></p>
           {hasSavings && (
-            <p className="mt-0.5 text-sm font-bold text-cta">Du sparst {savings?.toFixed(2).replace('.', ',')} €</p>
+            <p className="mt-0.5 text-sm font-bold text-cta">Du sparst {formatPrice(savings ?? 0)} €</p>
           )}
         </div>
-        <p className="whitespace-nowrap text-[28px] font-bold leading-none text-dark sm:text-3xl">{endpreis.toFixed(2).replace('.', ',')} €</p>
+        <p className="whitespace-nowrap text-[28px] font-bold leading-none text-dark sm:text-3xl">{formatPrice(endpreis)} €</p>
       </div>
 
       {/* Aktion: Gratis-Pakete */}
       {aktion.freePackages > 0 && (
         <p className="mt-2 text-sm font-semibold text-brand">
           {aktion.freePackages === 1 ? '1 Paket' : `${aktion.freePackages} Pakete`} gratis – du sparst{' '}
-          {aktion.discount.toFixed(2).replace('.', ',')} €
+          {formatPrice(aktion.discount)} €
         </p>
       )}
 
@@ -343,7 +344,7 @@ export default function TotalPrice({
           className="fixed inset-x-0 z-30 border-t border-ash bg-white px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] lg:hidden">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="whitespace-nowrap text-xl font-bold leading-tight text-dark">{endpreis.toFixed(2).replace('.', ',')} €</p>
+              <p className="whitespace-nowrap text-xl font-bold leading-tight text-dark">{formatPrice(endpreis)} €</p>
               <p className="truncate text-xs text-mid">
                 {quantities.floor.actualM2.toFixed(2).replace('.', ',')} m² · {quantities.floor.packages} {quantities.floor.packages === 1 ? 'Paket' : 'Pakete'} · inkl. MwSt.
               </p>

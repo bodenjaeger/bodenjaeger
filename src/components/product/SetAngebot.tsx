@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronRight } from 'lucide-react';
+import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 
 // Klebe-Vinyl Sparpaket: kostenlose Zeilen unter der Sockelleiste
@@ -45,7 +46,7 @@ interface SetAngebotProps {
   sparpaket?: SparpaketAnzeige | null;
 }
 
-const formatPreis = (preis: number) => preis.toFixed(2).replace('.', ',');
+const formatPreis = formatPrice;
 
 interface SetZeile {
   key: string;
@@ -314,7 +315,7 @@ export default function SetAngebot({
                           </p>
                         )}
                         <p className="text-base font-medium text-gray-700">
-                          {optionPrice.toFixed(2).replace('.', ',')} €/{option.einheit_short || einheit}
+                          {formatPrice(optionPrice)} €/{option.einheit_short || einheit}
                         </p>
                       </div>
 
@@ -327,7 +328,7 @@ export default function SetAngebot({
                           </div>
                         ) : (
                           <div className="text-red-600 font-bold text-lg">
-                            <div>+{priceDifference.toFixed(2).replace('.', ',')} €</div>
+                            <div>+{formatPrice(priceDifference)} €</div>
                             <div className="text-xs font-normal">(Aufpreis)</div>
                           </div>
                         )}
@@ -388,7 +389,7 @@ export default function SetAngebot({
                           </p>
                         )}
                         <p className="text-base font-medium text-gray-700">
-                          {optionPrice.toFixed(2).replace('.', ',')} €/{option.einheit_short || sockelleisteEinheit}
+                          {formatPrice(optionPrice)} €/{option.einheit_short || sockelleisteEinheit}
                         </p>
                       </div>
 
@@ -401,7 +402,7 @@ export default function SetAngebot({
                           </div>
                         ) : (
                           <div className="text-red-600 font-bold text-lg">
-                            <div>+{priceDifference.toFixed(2).replace('.', ',')} €</div>
+                            <div>+{formatPrice(priceDifference)} €</div>
                             <div className="text-xs font-normal">(Aufpreis)</div>
                           </div>
                         )}

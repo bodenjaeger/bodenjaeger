@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import { useCart } from '@/contexts/CartContext';
 import { track } from '@/lib/analytics/track';
@@ -378,7 +379,7 @@ export default function ZubehoerSlider({
                               {/* Preis */}
                               <div className="mt-auto text-right">
                                 <div className="whitespace-nowrap text-lg font-bold leading-tight text-dark sm:text-xl">
-                                  {price.toFixed(2).replace('.', ',')} €
+                                  {formatPrice(price)} €
                                 </div>
                                 <div className="truncate text-xs text-mid">pro {unit}</div>
                               </div>
