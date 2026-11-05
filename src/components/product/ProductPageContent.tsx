@@ -283,17 +283,19 @@ export default function ProductPageContent({
     }
 
     // SCHRITT 4: GESAMTPREISE
-    // Streichpreis pro m²: immer dynamisch berechnet aus den gewählten Produkten
-    // (setangebot_einzelpreis ist statisch und kennt keine Premium-Optionen)
-    const gesamtStreichpreisProM2 = bodenComparisonPricePerM2 + daemmungRegularPricePerUnit + sockelleisteRegularPricePerUnit;
-    // comparisonPriceTotal = Streichpreis × m² (konsistent mit per-m²-Anzeige in SetAngebot)
+    // Vergleich mit denselben Mengen, die der Kunde bekommt. Aufpreis-Zubehör läuft über ganze Pakete,
+    // deshalb darf hier nicht der m²-Preis × Bodenfläche stehen (sonst wirkt das Set teurer als einzeln).
     // Klebe-Vinyl Sparpaket (Kundenvorgabe): Bauchemie mit der vorgegebenen Menge pro m² × Preis des
     // großen Gebindes – dieselben Werte wie die Set-Zeilen, nicht die aufgerundeten Gebinde.
     // Unter Mindestmenge fällt die Bauchemie aus dem Streichpreis.
     const sparpaketRegularProM2 = sparpaketAnzeige?.aktiv
       ? sparpaketAnzeige.zeilen.reduce((sum, z) => sum + z.regularPreisProM2, 0)
       : 0;
-    const comparisonPriceTotal = quantities.floor.actualM2 * (gesamtStreichpreisProM2 + sparpaketRegularProM2);
+    const comparisonPriceTotal =
+      bodenComparisonPriceTotal +
+      (quantities.insulation?.actualM2 ?? 0) * daemmungRegularPricePerUnit +
+      (quantities.baseboard?.actualLfm ?? 0) * sockelleisteRegularPricePerUnit +
+      quantities.floor.actualM2 * sparpaketRegularProM2;
     // totalDisplayPrice = Set-Preis (was der Kunde MIT Set bezahlt)
     const totalDisplayPrice = bodenPriceTotal + daemmungSetPrice + sockelleisteSetPrice;
     const savings = comparisonPriceTotal - totalDisplayPrice;

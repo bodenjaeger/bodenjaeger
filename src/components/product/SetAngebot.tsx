@@ -108,7 +108,6 @@ export default function SetAngebot({
   daemmungStandardPrice = 0,
   sockelleisteStandardPrice = 0,
   onProductSelection,
-  savingsPercent,
   sparpaket = null
 }: SetAngebotProps) {
   // Modal state
@@ -176,8 +175,10 @@ export default function SetAngebot({
     ? sparpaket.zeilen.reduce((sum, z) => sum + z.regularPreisProM2, 0)
     : 0;
   const vergleichspreisProM2 = regularPrice + daemmungRegularPricePerUnit + sockelleisteRegularPricePerUnit + sparpaketRegularProM2;
-  // Rabatt = Summe der Einzelpreise gegenüber Verkaufspreis (vom Parent berechnet)
-  const ersparnisProzent = savingsPercent || 0;
+  // Rabatt = die beiden m²-Preise, die hier stehen. Unabhängig von Menge und Paketen.
+  const ersparnisProzent = vergleichspreisProM2 > 0
+    ? ((vergleichspreisProM2 - setAngebotPreisProM2) / vergleichspreisProM2) * 100
+    : 0;
 
   // Handle button clicks
   const openModal = (type: 'daemmung' | 'sockelleiste') => {
