@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import Image from 'next/image';
-import { MinusIcon, PlusIcon } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronRight, MinusIcon, Package, PackageCheck, Phone, PlusIcon, Truck } from 'lucide-react';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import { calculateSetQuantities, calculateSparpaketQuantities } from '@/lib/setCalculations';
 import { KLEBEVINYL_SPARPAKET } from '@/content/klebevinyl-sparpaket';
@@ -23,6 +24,10 @@ import ProductInfo from './ProductInfo';
 import QuantitySelector from './QuantitySelector';
 import TotalPrice from './TotalPrice';
 import ZubehoerSlider from './ZubehoerSlider';
+import ProductSummary from './ProductSummary';
+import ProductDetailSections from './ProductDetailSections';
+import { extractProductFeatures } from '@/lib/product-features';
+import type { ProductMedia } from '@/lib/product-media';
 
 interface ProductPageContentProps {
   product: StoreApiProduct;
@@ -31,6 +36,7 @@ interface ProductPageContentProps {
   daemmungOptions: StoreApiProduct[];
   sockelleisteOptions: StoreApiProduct[];
   sparpaketProducts?: StoreApiProduct[];  // nur Klebe-Vinyl, sonst leer
+  media?: ProductMedia;  // optionale PDFs, Video, Visualisierung
 }
 
 export default function ProductPageContent({
@@ -39,7 +45,8 @@ export default function ProductPageContent({
   sockelleisteProduct,
   daemmungOptions,
   sockelleisteOptions,
-  sparpaketProducts = []
+  sparpaketProducts = [],
+  media = {}
 }: ProductPageContentProps) {
   // ✅ USE ROOT-LEVEL FIELDS (backend/ROOT_LEVEL_FIELDS.md)
   const paketinhalt = product.paketinhalt || 1;
@@ -268,11 +275,8 @@ export default function ProductPageContent({
     // totalDisplayPrice = Set-Preis (was der Kunde MIT Set bezahlt)
     const totalDisplayPrice = bodenPriceTotal + daemmungSetPrice + sockelleisteSetPrice;
     const savings = comparisonPriceTotal - totalDisplayPrice;
-    // ✅ Backend-Wert verwenden (setangebot_ersparnis_prozent) — konsistent mit Produktkarten
-    // Klebe-Vinyl Sparpaket (Kundenvorgabe): höherer Wert aus Backend und berechneter Ersparnis
-    const backendPercent = product.setangebot_ersparnis_prozent || 0;
-    const berechnetPercent = comparisonPriceTotal > 0 ? (savings / comparisonPriceTotal) * 100 : 0;
-    const savingsPercent = hasSparpaket ? Math.max(backendPercent, berechnetPercent) : backendPercent;
+    // Rabatt (Kundenvorgabe): Summe der Einzelpreise gegenüber unserem Verkaufspreis
+    const savingsPercent = comparisonPriceTotal > 0 && savings > 0 ? (savings / comparisonPriceTotal) * 100 : 0;
 
     return {
       totalDisplayPrice,
@@ -285,7 +289,9 @@ export default function ProductPageContent({
       sockelleisteSetPricePerUnit,
       sockelleisteRegularPricePerUnit,
     };
-  }, [product, quantities, selectedDaemmung, selectedSockelleiste, daemmungProduct, sockelleisteProduct, sparpaketAnzeige, hasSparpaket]);
+  }, [product, quantities, selectedDaemmung, selectedSockelleiste, daemmungProduct, sockelleisteProduct, sparpaketAnzeige]);
+
+  const features = useMemo(() => extractProductFeatures(product.short_description), [product.short_description]);
 
   // Handle quantity changes from QuantitySelector
   const handleQuantityChange = (newPackages: number, newSqm: number) => {
@@ -299,98 +305,6 @@ export default function ProductPageContent({
     setSelectedDaemmung(daemmung);
     setSelectedSockelleiste(sockelleiste);
   }, []);
-
-  // ========== PRODUCT TABS (Beschreibung / Eigenschaften) ==========
-
-  const ProductTabs = ({ product }: { product: StoreApiProduct }) => {
-    const [activeTab, setActiveTab] = useState<'beschreibung' | 'eigenschaften' | null>('beschreibung');
-
-    const rawBeschreibung = product.artikelbeschreibung || '';
-    // ChatGPT-UI-HTML bereinigen: Nur <p>, <strong>, <em>, <br>, <ul>, <li>, <ol> behalten
-    const cleanHtml = (html: string): string => {
-      // Entferne alle div-Wrapper (ChatGPT kopiert UI-Container mit)
-      let cleaned = html.replace(/<div[^>]*>/gi, '').replace(/<\/div>/gi, '');
-      // Entferne class/style/data-Attribute von allen Tags
-      cleaned = cleaned.replace(/<(\w+)\s+[^>]*?>/gi, '<$1>');
-      return cleaned.trim();
-    };
-    const cleanedBeschreibung = cleanHtml(rawBeschreibung);
-    const beschreibung = cleanedBeschreibung.includes('<p')
-      ? cleanedBeschreibung
-      : cleanedBeschreibung.replace(/\r?\n\r?\n/g, '<br/><br/>').replace(/\r?\n/g, '<br/>');
-    const descriptionHtml = product.description || '';
-    const hasBeschreibung = !!beschreibung;
-    const hasEigenschaften = descriptionHtml.includes('<table') || descriptionHtml.includes('bj-specs');
-
-    if (!hasBeschreibung && !hasEigenschaften) return null;
-
-    const toggleTab = (tab: 'beschreibung' | 'eigenschaften') => {
-      setActiveTab(activeTab === tab ? null : tab);
-    };
-
-    return (
-      <div style={{ width: '100%' }}>
-        {/* Tab Buttons */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '0' }}>
-          {hasBeschreibung && (
-            <button
-              onClick={() => toggleTab('beschreibung')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '10px 32px', borderRadius: '9999px',
-                fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: 'none',
-                backgroundColor: activeTab === 'beschreibung' ? '#e5e5e5' : '#fff',
-                color: '#2e2d32',
-                outline: activeTab === 'beschreibung' ? 'none' : '1px solid #d1d5db',
-              }}
-            >
-              Artikelbeschreibung
-              <svg style={{ width: '16px', height: '16px', transform: activeTab === 'beschreibung' ? 'rotate(0)' : 'rotate(-90deg)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          )}
-          {hasEigenschaften && (
-            <button
-              onClick={() => toggleTab('eigenschaften')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '10px 32px', borderRadius: '9999px',
-                fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: 'none',
-                backgroundColor: activeTab === 'eigenschaften' ? '#e5e5e5' : '#fff',
-                color: '#2e2d32',
-                outline: activeTab === 'eigenschaften' ? 'none' : '1px solid #d1d5db',
-              }}
-            >
-              Weitere Artikeldetails
-              <svg style={{ width: '16px', height: '16px', transform: activeTab === 'eigenschaften' ? 'rotate(0)' : 'rotate(-90deg)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        {/* Tab Content */}
-        {activeTab && (
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: 'clamp(16px, 4vw, 32px)', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-            {activeTab === 'beschreibung' && hasBeschreibung && (
-              <div
-                style={{ color: '#2e2d32', fontSize: '14px', lineHeight: '1.75' }}
-                dangerouslySetInnerHTML={{ __html: beschreibung }}
-              />
-            )}
-
-            {activeTab === 'eigenschaften' && hasEigenschaften && (
-              <div
-                className="bj-specs-table"
-                dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-              />
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   // ========== SIMPLE PRODUCT LAYOUT COMPONENTS (for Accessories) ==========
 
@@ -890,195 +804,101 @@ export default function ProductPageContent({
           // ========== SIMPLE PRODUCT LAYOUT for Accessories ==========
           <SimpleProductLayout />
         ) : (
-          // ========== SET-ANGEBOT LAYOUT for Main Products (100% UNCHANGED) ==========
+          // ========== SET-ANGEBOT LAYOUT for Main Products ==========
           <>
-        {/* Main Product Section - 2 Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-8 mb-12 w-full">
-          {/* LEFT COLUMN - Image Gallery */}
-          <div className="space-y-6">
-            <ImageGallery product={product} rabattProzent={hasSparpaket ? prices?.savingsPercent : undefined} />
+            <nav aria-label="Brotkrumen" className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-mid">
+              <Link href="/" className="hover:text-dark">Startseite</Link>
+              {product.categories?.[0] && (
+                <>
+                  <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Link href={`/category/${product.categories[0].slug}`} className="hover:text-dark">{product.categories[0].name}</Link>
+                </>
+              )}
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="font-bold text-dark" aria-current="page">{product.name}</span>
+            </nav>
 
-            {/* Action Buttons - Only for floor products */}
-            {isFloorProduct && (
-              <div className="w-full">
-                <button
-                  onClick={handleOrderSample}
-                  disabled={isOrderingSample}
-                  className="w-full px-3 sm:px-4 py-3 rounded-lg text-white text-sm sm:text-base font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: 'var(--color-bg-darkest)' }}
-                >
-                  {isOrderingSample ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      <span className="truncate">Lädt...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Image
-                        src="/images/Icons/musterbox-weiss.png"
-                        alt="Musterbox"
-                        width={20}
-                        height={20}
-                        className="w-5 h-5 object-contain flex-shrink-0"
-                      />
-                      <span className="truncate">Kostenloses Muster bestellen</span>
-                    </>
+            {/* Mobil in DOM-Reihenfolge: Galerie/Infos, Kaufbox, Zubehör */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr]">
+              <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:col-start-1 lg:row-start-1">
+                <ImageGallery product={product} hideDiscount videoUrl={media.video} />
+                <ProductSummary
+                  product={product}
+                  features={features}
+                  media={media}
+                  showSampleButton={isFloorProduct}
+                  isOrderingSample={isOrderingSample}
+                  onOrderSample={handleOrderSample}
+                />
+              </div>
+
+              <aside className="min-w-0 space-y-4 rounded-xl border-ash lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start lg:border lg:bg-white lg:p-5 lg:shadow-sm">
+                <ProductInfo
+                  product={product}
+                  daemmungProduct={daemmungProduct}
+                  sockelleisteProduct={sockelleisteProduct}
+                  daemmungOptions={daemmungOptions}
+                  sockelleisteOptions={sockelleisteOptions}
+                  onProductSelection={handleProductSelection}
+                  savingsPercent={prices?.savingsPercent}
+                  daemmungSetPricePerUnit={prices?.daemmungSetPricePerUnit || 0}
+                  daemmungRegularPricePerUnit={prices?.daemmungRegularPricePerUnit || 0}
+                  sockelleisteSetPricePerUnit={prices?.sockelleisteSetPricePerUnit || 0}
+                  sockelleisteRegularPricePerUnit={prices?.sockelleisteRegularPricePerUnit || 0}
+                  sparpaket={sparpaketAnzeige}
+                />
+
+                <QuantitySelector
+                  paketinhalt={paketinhalt}
+                  einheit={einheit}
+                  einheitFull={product.einheit || undefined}
+                  verpackungsartFull={product.verpackungsart || undefined}
+                  initialPackages={initialPackages}
+                  onQuantityChange={handleQuantityChange}
+                />
+
+                <TotalPrice
+                  quantities={quantities}
+                  prices={prices}
+                  einheit={einheit}
+                  product={product}
+                  selectedDaemmung={selectedDaemmung}
+                  selectedSockelleiste={selectedSockelleiste}
+                  daemmungProduct={daemmungProduct}
+                  sockelleisteProduct={sockelleisteProduct}
+                  sparpaket={sparpaket}
+                />
+
+                <ul className="space-y-2.5 text-sm text-mid">
+                  {product.show_lieferzeit && (
+                    <li className="flex items-center gap-3">
+                      <Truck className="h-5 w-5 flex-shrink-0 text-dark" aria-hidden="true" />
+                      Lieferzeit: {product.lieferzeit || '3-7 Arbeitstage'} oder im Markt abholen
+                    </li>
                   )}
-                </button>
-              </div>
-            )}
+                  <li className="flex items-center gap-3">
+                    <PackageCheck className="h-5 w-5 flex-shrink-0 text-dark" aria-hidden="true" />
+                    Lieferung frei ab 999 €
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <Package className="h-5 w-5 flex-shrink-0 text-dark" aria-hidden="true" />
+                    Kostenlose Einlagerung bis zu 12 Monate
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <Phone className="h-5 w-5 flex-shrink-0 text-dark" aria-hidden="true" />
+                    <a href="tel:+492433938884" className="hover:text-dark">Persönliche Beratung: 02433 938884</a>
+                  </li>
+                </ul>
 
-            {/* Service Icons - only on desktop (on mobile shown after Zahlungsarten) */}
-            <div className="hidden lg:block space-y-0 text-base sm:text-lg lg:text-2xl text-gray-700">
-              <div className="flex items-center gap-2 sm:gap-3 pb-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/telefon-schieferschwarz.png"
-                  alt="Telefon"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Persönliche Beratung unter 02433938884</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/lager-schieferschwarz.png"
-                  alt="Lager"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Kostenlose Einlagerung bis zu 12 Monate</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/termin-schieferschwarz.png"
-                  alt="Termin"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Lieferung zum Wunschtermin</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 pt-3">
-                <Image
-                  src="/images/Icons/lieferung-schieferschwarz.png"
-                  alt="Lieferung"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Kostenlose Lieferung ab 999€</span>
+                <ZahlungsIcons />
+              </aside>
+
+              <div id="zubehoer-section" className="min-w-0 scroll-mt-24 lg:col-start-1 lg:row-start-2 lg:self-start">
+                <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
               </div>
             </div>
-          </div>
 
-          {/* RIGHT COLUMN - Product Info & Cart */}
-          <div className="space-y-6">
-            <ProductInfo
-              product={product}
-              daemmungProduct={daemmungProduct}
-              sockelleisteProduct={sockelleisteProduct}
-              daemmungOptions={daemmungOptions}
-              sockelleisteOptions={sockelleisteOptions}
-              onProductSelection={handleProductSelection}
-              comparisonPriceTotal={prices?.comparisonPriceTotal || undefined}
-              totalDisplayPrice={prices?.totalDisplayPrice}
-              savingsAmount={prices?.savings || undefined}
-              savingsPercent={prices?.savingsPercent}
-              daemmungSetPricePerUnit={prices?.daemmungSetPricePerUnit || 0}
-              daemmungRegularPricePerUnit={prices?.daemmungRegularPricePerUnit || 0}
-              sockelleisteSetPricePerUnit={prices?.sockelleisteSetPricePerUnit || 0}
-              sockelleisteRegularPricePerUnit={prices?.sockelleisteRegularPricePerUnit || 0}
-              sparpaket={sparpaketAnzeige}
-            />
-
-            {/* Quantity + Price Container with Gray Background */}
-            <div className="bg-ash rounded-md p-4">
-              {/* Quantity Selector */}
-              <QuantitySelector
-                paketinhalt={paketinhalt}
-                einheit={einheit}
-                einheitFull={product.einheit || undefined}
-                verpackungsartFull={product.verpackungsart || undefined}
-                initialPackages={initialPackages}
-                onQuantityChange={handleQuantityChange}
-              />
-
-              {/* Total Price with integrated buttons */}
-              <TotalPrice
-                quantities={quantities}
-                prices={prices}
-                einheit={einheit}
-                product={product}
-                selectedDaemmung={selectedDaemmung}
-                selectedSockelleiste={selectedSockelleiste}
-                daemmungProduct={daemmungProduct}
-                sockelleisteProduct={sockelleisteProduct}
-                sparpaket={sparpaket}
-                lieferzeit={product.lieferzeit || '3-7 Arbeitstage'}
-                showLieferzeit={!!product.show_lieferzeit}
-              />
-            </div>
-
-            {/* Zahlungsarten – kleine Logo-Reihe wie im Footer */}
-            <ZahlungsIcons />
-
-            {/* Service Icons - mobile only (on desktop shown in left column) */}
-            <div className="lg:hidden space-y-0 text-base sm:text-lg text-gray-700">
-              <div className="flex items-center gap-2 sm:gap-3 pb-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/telefon-schieferschwarz.png"
-                  alt="Telefon"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Persönliche Beratung unter 02433938884</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/lager-schieferschwarz.png"
-                  alt="Lager"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Kostenlose Einlagerung bis zu 12 Monate</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/termin-schieferschwarz.png"
-                  alt="Termin"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Lieferung zum Wunschtermin</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 pt-3">
-                <Image
-                  src="/images/Icons/lieferung-schieferschwarz.png"
-                  alt="Lieferung"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Kostenlose Lieferung ab 999€</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Zubehör Slider Section */}
-        <div id="zubehoer-section" className="mb-8">
-          <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
-        </div>
-
-        <ProductTabs product={product} />
+            <ProductDetailSections product={product} features={features} media={media} />
           </>
         )}
       </div>

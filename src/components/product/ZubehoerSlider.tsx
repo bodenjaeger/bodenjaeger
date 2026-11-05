@@ -54,8 +54,9 @@ export default function ZubehoerSlider({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [addedProductId, setAddedProductId] = useState<number | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const { addToCart, openCartDrawer } = useCart();
+  const { addToCart } = useCart();
 
   // Hilfsfunktion: Für "Zubehör für Sockelleisten" die ausgewählte Sockelleiste nutzen,
   // für alle anderen Kategorien das Hauptprodukt
@@ -220,61 +221,43 @@ export default function ZubehoerSlider({
   }
 
   return (
-    <section className="bg-white rounded-lg shadow-md">
-      <div className="flex flex-col lg:flex-row">
-        {/* LINKE SEITE - Info Box (Fixed) */}
-        <div className="lg:w-[280px] flex-shrink-0 bg-ash p-6 lg:sticky lg:top-0 lg:self-start">
-          <h2 className="text-2xl font-bold text-dark mb-4">
-            Passendes Zubehör:
+    <section className="border-b border-ash lg:rounded-xl lg:border lg:bg-white lg:p-5">
+      {/* Mobil: Akkordeon wie die übrigen Abschnitte */}
+      <button
+        type="button"
+        onClick={() => setMobileOpen(!mobileOpen)}
+        aria-expanded={mobileOpen}
+        className="flex min-h-14 w-full items-center justify-between text-left text-base font-bold text-dark lg:hidden"
+      >
+        Passendes Zubehör
+        <svg className={`h-5 w-5 transition-transform ${mobileOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <div className={`${mobileOpen ? 'block' : 'hidden'} pb-6 lg:block lg:pb-0`}>
+        <div>
+          <h2 className="mb-3 hidden text-lg lg:block">
+            <span className="font-bold text-dark">Passendes Zubehör</span>
+            <span className="font-normal text-mid"> – Für ein perfektes Ergebnis</span>
           </h2>
 
-          <p className="text-base text-gray-700 mb-4">
-            Hier findest du unsere Vorauswahl der passenden Zubehörprodukte zu deiner obigen Produktauswahl.
-          </p>
-
-          <p className="text-sm text-gray-600 mb-6">
-            Die Anzahl der Produkte kannst du ganz einfach im Warenkorb anpassen.
-          </p>
-
-          <button
-            onClick={openCartDrawer}
-            className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg text-white font-bold hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: 'var(--color-bg-darkest)' }}
-          >
-            Weiter zum Warenkorb
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-
-        {/* RECHTE SEITE - Kategorien + Slider */}
-        <div className="flex-1 p-6 lg:p-8">
           {/* Kategorie-Navigation */}
-          {availableCategories.length > 0 && (
-            <div className="mb-6 overflow-x-auto scrollbar-hide">
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 min-w-min">
-                {availableCategories.map((category) => (
-                  <button
-                    key={category.metaKey}
-                    onClick={() => setActiveCategory(category.metaKey)}
-                    className={`px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center justify-between gap-1.5 ${
-                      activeCategory === category.metaKey
-                        ? 'bg-gray-200 font-semibold text-gray-900'
-                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="flex-1 text-left">
-                      {category.name}
-                    </span>
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="mb-4 flex gap-1 overflow-x-auto border-b border-ash scrollbar-hide">
+            {availableCategories.map((category) => (
+              <button
+                key={category.metaKey}
+                onClick={() => setActiveCategory(category.metaKey)}
+                className={`-mb-px flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm transition-colors ${
+                  activeCategory === category.metaKey
+                    ? 'border-brand font-bold text-dark'
+                    : 'border-transparent text-mid hover:text-dark'
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
 
           {/* Produkt-Slider */}
           <div className="relative px-0 md:px-6">

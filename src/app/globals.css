@@ -103,6 +103,8 @@ input[type="number"] {
   --color-navy: #1e40af;     /* Dunkelblau       → text-navy,  bg-navy    */
   --color-ocean: #5095cb;    /* Mittelblau       → text-ocean, bg-ocean   */
   --color-success: #28a745;  /* Grün             → text-success, bg-success */
+  --color-cta: #15803d;      /* Grüner Button    → bg-cta (Weiß lesbar, Kontrast ≥ 4,5:1) */
+  --color-cta-dark: #116631; /* Hover             → bg-cta-dark */
 
   /* Shop-Header → bg-hdr-bg, text-hdr-link, border-hdr-line usw. */
   --color-hdr-bg: var(--hdr-bg);

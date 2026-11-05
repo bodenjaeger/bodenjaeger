@@ -28,8 +28,6 @@ interface TotalPriceProps {
   daemmungProduct: StoreApiProduct | null;  // Standard dämmung for price calculation
   sockelleisteProduct: StoreApiProduct | null;  // Standard sockelleiste for price calculation
   sparpaket?: SparpaketQuantityCalculation | null;  // Klebe-Vinyl Sparpaket
-  lieferzeit?: string;
-  showLieferzeit?: boolean;
 }
 
 export default function TotalPrice({
@@ -40,9 +38,7 @@ export default function TotalPrice({
   selectedSockelleiste,
   daemmungProduct,
   sockelleisteProduct,
-  sparpaket = null,
-  lieferzeit = '3-7 Arbeitstage',
-  showLieferzeit = true
+  sparpaket = null
 }: TotalPriceProps) {
   const [addedToCart, setAddedToCart] = useState(false);
   const { addSetToCart, openCartDrawer } = useCart();
@@ -240,107 +236,59 @@ export default function TotalPrice({
   };
 
   return (
-    <div className="p-0">
-      {/* 1. GESAMTSUMMEN-HEADER */}
-      <div className="flex items-center justify-between mb-4 gap-2">
-        <span className="text-dark text-sm sm:text-xl md:text-2xl lg:text-3xl font-bold min-w-0">
-          Gesamtsumme <span className="text-[10px] sm:text-sm md:text-base font-normal">(inkl. MwSt.)</span>
-        </span>
-        <div className="text-right flex-shrink-0">
-          <div className="text-[#000000] font-bold text-xl sm:text-2xl md:text-[28px] lg:text-[32px] leading-tight">
-            {endpreis.toFixed(2).replace('.', ',')}€
-          </div>
+    <div>
+      {/* 1. GESAMTPREIS + ERSPARNIS */}
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-pale px-3 py-2.5">
+        <div className="min-w-0">
+          <p className="text-sm text-dark">Gesamtpreis <span className="text-xs">(inkl. MwSt.)</span></p>
+          {hasSavings && (
+            <p className="mt-0.5 text-sm font-bold text-cta">Du sparst {savings?.toFixed(2).replace('.', ',')} €</p>
+          )}
         </div>
+        <p className="whitespace-nowrap text-3xl font-bold text-dark">{endpreis.toFixed(2).replace('.', ',')} €</p>
       </div>
 
       {/* Aktion: Gratis-Pakete */}
       {aktion.freePackages > 0 && (
-        <div className="font-semibold text-sm md:text-base text-brand">
+        <p className="mt-2 text-sm font-semibold text-brand">
           {aktion.freePackages === 1 ? '1 Paket' : `${aktion.freePackages} Pakete`} gratis – du sparst{' '}
-          {aktion.discount.toFixed(2).replace('.', ',')}€
-        </div>
-      )}
-
-      {/* 2. ERSPARNIS-BOX */}
-      {hasSavings && (
-        <div className="py-2 my-4">
-          <div
-            className="font-semibold text-sm md:text-base"
-            style={{ color: 'var(--color-success)' }}
-          >
-            Du sparst {savings?.toFixed(2).replace('.', ',')}€ ({Math.round(savingsPercent || 0)}%)
-          </div>
-        </div>
+          {aktion.discount.toFixed(2).replace('.', ',')} €
+        </p>
       )}
 
       {/* Success Message */}
       {addedToCart && (
-        <div className="bg-[#d4edda] border border-[#c3e6cb] text-[#155724] px-4 py-3 rounded-lg mb-4 flex items-center">
-          <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          <span className="font-medium text-sm">
-            Set mit {totalPackages} Paketen erfolgreich in den Warenkorb gelegt!
-          </span>
+        <div role="status" className="mt-3 rounded-lg border border-[#c3e6cb] bg-[#d4edda] px-4 py-3 text-sm font-medium text-[#155724]">
+          Set mit {totalPackages} Paketen erfolgreich in den Warenkorb gelegt!
         </div>
       )}
 
-      {/* 4. CTA BUTTONS */}
-      <div className="grid grid-cols-2 gap-3 mt-5 mb-4">
-        {/* Sekundär-Button: Individuelles Angebot */}
-        <button
-          type="button"
-          onClick={handleRequestQuote}
-          className="w-full bg-transparent border border-dark hover:bg-[#f5f5f5] text-dark font-semibold text-[9px] sm:text-[10px] md:text-xs text-center leading-tight rounded-md transition-colors" style={{ padding: '5px' }}
-        >
-          Individuelles Angebot anfragen
-        </button>
+      {/* 2. CTA */}
+      <button
+        type="button"
+        onClick={handleAddToCart}
+        disabled={addedToCart}
+        className={`mt-4 flex min-h-14 w-full items-center justify-center gap-3 rounded-lg text-base font-bold text-white transition-all ${
+          addedToCart ? 'bg-[#155724]' : 'bg-dark hover:bg-[#1a1a1d] active:scale-[0.98]'
+        }`}
+      >
+        {addedToCart ? (
+          'Set hinzugefügt!'
+        ) : (
+          <>
+            <Image src="/images/Icons/warenkorb-weiss.png" alt="" width={22} height={22} className="h-[22px] w-[22px]" />
+            In den Warenkorb
+          </>
+        )}
+      </button>
 
-        {/* Primär-Button: In den Warenkorb */}
-        <button
-          type="button"
-          onClick={handleAddToCart}
-          disabled={addedToCart}
-          className={`w-full font-semibold text-[9px] sm:text-[10px] md:text-xs text-center leading-tight rounded-lg transition-all ${
-            addedToCart
-              ? 'bg-[#155724] hover:bg-[#0f4419] text-white'
-              : 'bg-dark hover:bg-[#1a1a1d] active:scale-[0.98] text-white'
-          }`} style={{ padding: '5px' }}
-        >
-          {addedToCart ? (
-            <span className="flex items-center justify-center">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Set hinzugefügt!
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              <Image
-                src="/images/Icons/warenkorb-weiss.png"
-                alt=""
-                width={20}
-                height={20}
-                className="w-5 h-5"
-              />
-              In den Warenkorb
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* 5. LIEFERHINWEIS — nur wenn show_lieferzeit aktiv */}
-      {showLieferzeit && (
-      <div className="text-left text-[#666666] text-[13px] md:text-sm pt-3 mt-3 border-t border-ash">
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-            <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-          </svg>
-          <span><span className="font-bold">Lieferzeit:</span> {lieferzeit} oder im Markt abholen</span>
-        </div>
-      </div>
-      )}
+      <button
+        type="button"
+        onClick={handleRequestQuote}
+        className="mt-2 w-full py-2 text-center text-xs font-semibold text-mid underline hover:text-dark"
+      >
+        Individuelles Angebot anfragen
+      </button>
     </div>
   );
 }

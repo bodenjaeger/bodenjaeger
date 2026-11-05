@@ -5,6 +5,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { buildProductSchema, buildBreadcrumbSchema } from "@/lib/schema";
 import { buildProductMetaDescription } from "@/lib/product-description";
 import { buildMetadata } from "@/lib/seo";
+import type { ProductMedia } from "@/lib/product-media";
 import { SITE_URL, productUrl, categoryUrl } from "@/lib/site";
 import { KLEBEVINYL_SPARPAKET, SPARPAKET_PRODUKT_IDS } from "@/content/klebevinyl-sparpaket";
 
@@ -106,6 +107,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   let daemmungOptions: StoreApiProduct[] = [];
   let sockelleisteOptions: StoreApiProduct[] = [];
   let sparpaketProducts: StoreApiProduct[] = [];
+  let media: ProductMedia = {};
 
   try {
     product = await wooCommerceClient.getProduct(slug);
@@ -249,6 +251,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     if (details?.description) {
       product.description = details.description;
     }
+    media = details?.media ?? {};
   } catch (error) {
     console.error('Error fetching product:', error);
     notFound();
@@ -273,6 +276,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         daemmungOptions={daemmungOptions}
         sockelleisteOptions={sockelleisteOptions}
         sparpaketProducts={sparpaketProducts}
+        media={media}
       />
     </>
   );
