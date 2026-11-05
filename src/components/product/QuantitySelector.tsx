@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Info } from 'lucide-react';
 
 interface QuantitySelectorProps {
   paketinhalt: number;
@@ -162,27 +163,6 @@ export default function QuantitySelector({
       <div className={`grid ${showBothFields ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
         {/* Paket Counter */}
         <div className="relative order-2">
-          <button
-            type="button"
-            onClick={() => setShowInfo(!showInfo)}
-            className="absolute -top-0.5 right-0 z-10 flex h-6 w-6 items-center justify-center"
-            aria-label="Verschnitt-Info anzeigen"
-            aria-expanded={showInfo}
-          >
-            <div className="w-6 h-6 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors">
-              <svg
-                className="w-4 h-4 text-black"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-          </button>
           <div className="flex items-center justify-center mb-2">
             <label className="text-sm font-medium text-gray-700">
               {packageLabel}
@@ -273,9 +253,19 @@ export default function QuantitySelector({
         )}
       </div>
 
+      <button
+        type="button"
+        onClick={() => setShowInfo(!showInfo)}
+        aria-expanded={showInfo}
+        className="mt-2 inline-flex items-center gap-1.5 py-1 text-xs text-mid hover:text-dark"
+      >
+        <Info className="h-3.5 w-3.5" aria-hidden="true" />
+        Wie viel Verschnitt einplanen?
+      </button>
+
       {/* Verschnitt Info Box */}
       {showInfo && (
-        <div className="mt-4 p-4 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 shadow-sm relative">
+        <div className="mt-2 p-4 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 shadow-sm relative">
           <button
             type="button"
             onClick={() => setShowInfo(false)}

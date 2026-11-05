@@ -208,6 +208,9 @@ export default function ZubehoerSlider({
     });
     track.addToCart([ga4Item], paketpreis);
 
+    // Seitlicher Warenkorb: Menge kann dort direkt angepasst werden
+    openCartDrawer();
+
     // Visuelles Feedback
     setAddedProductId(product.id);
     setTimeout(() => {
@@ -351,37 +354,28 @@ export default function ZubehoerSlider({
                               )}
 
                               {/* Preis */}
-                              <div className="text-right">
-                                <div className="text-2xl font-bold text-gray-900">
-                                  {price.toFixed(2).replace('.', ',')}€
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  pro {unit}
+                              <div className="mt-auto flex items-end justify-between gap-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleAddToCart(product, e)}
+                                  aria-label={`${product.name} in den Warenkorb`}
+                                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-white transition-colors ${
+                                    addedProductId === product.id ? 'bg-cta' : 'bg-dark hover:bg-black'
+                                  }`}
+                                >
+                                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                  </svg>
+                                </button>
+                                <div className="min-w-0 text-right">
+                                  <div className="whitespace-nowrap text-lg font-bold leading-tight text-dark sm:text-xl">
+                                    {price.toFixed(2).replace('.', ',')} €
+                                  </div>
+                                  <div className="truncate text-xs text-mid">pro {unit}</div>
                                 </div>
                               </div>
                             </div>
                           </div>
-
-                          {/* Warenkorb Button (absolute) */}
-                          <button
-                            onClick={(e) => handleAddToCart(product, e)}
-                            className={`absolute bottom-3 left-3 w-10 h-10 rounded-full text-white flex items-center justify-center transition-all shadow-lg z-10 ${
-                              addedProductId === product.id
-                                ? 'bg-green-600 scale-110'
-                                : 'bg-black hover:bg-gray-800'
-                            }`}
-                            aria-label="In den Warenkorb"
-                          >
-                            {addedProductId === product.id ? (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                            ) : (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                              </svg>
-                            )}
-                          </button>
                         </article>
                       </div>
                     );
@@ -431,7 +425,7 @@ export default function ZubehoerSlider({
           </div>
 
           {cartItems.length > 0 && (
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex justify-start pb-4 lg:justify-end lg:pb-0">
               <button
                 type="button"
                 onClick={openCartDrawer}

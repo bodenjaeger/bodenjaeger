@@ -173,7 +173,7 @@ export default function ProductDetailSections({ product, features, media }: Prod
   const currentId = activeId ?? sections[0].id;
   const benefits = [
     { icon: Package, title: 'Kostenlose Muster', text: `Bis zu ${FREE_SAMPLE_LIMIT} Muster gratis`, href: SERVICE_LINKS.musterBestellen },
-    { icon: Truck, title: 'Schnelle Lieferung', text: formatLieferzeit(product.lieferzeit), href: SERVICE_LINKS.lieferung },
+    { icon: Truck, title: 'Lieferung', text: product.show_lieferzeit ? formatLieferzeit(product.lieferzeit) : 'Frei ab 999 €', href: SERVICE_LINKS.lieferung },
     { icon: HandHelping, title: 'Fachberatung', text: 'Persönlich & kompetent', href: SERVICE_LINKS.fachberatung },
     { icon: Warehouse, title: 'Einlagerung', text: 'Bis zu 12 Monate kostenfrei', href: SERVICE_LINKS.einlagerung },
     { icon: Wrench, title: 'Verlegeservice', text: 'Im Umkreis von ca. 50 km', href: SERVICE_LINKS.verlegeservice },
