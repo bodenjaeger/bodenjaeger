@@ -145,10 +145,20 @@ export function matchesFilters(product: FilterIndexProduct, active: ActiveFilter
 }
 
 const FARB_REIHENFOLGE = ['hell', 'mittel', 'dunkel'];
+/** Vom Kunden festgelegt: von der Einstiegs- bis zur Luxus-Kollektion. */
+const KOLLEKTION_REIHENFOLGE = ['Essence Line', 'Authentic Line', 'Heritage Line', 'Klassik', 'Exquisit', 'Premium', 'Premium +', 'Luxus'];
 
 function sortValues(key: string, labels: string[]): string[] {
   if (key === 'farbgebung') {
     return [...labels].sort((a, b) => FARB_REIHENFOLGE.indexOf(a) - FARB_REIHENFOLGE.indexOf(b));
+  }
+  if (key === 'kollektion') {
+    // Unbekannte Kollektionen landen hinten statt vorne
+    const rang = (label: string) => {
+      const position = KOLLEKTION_REIHENFOLGE.indexOf(label);
+      return position === -1 ? KOLLEKTION_REIHENFOLGE.length : position;
+    };
+    return [...labels].sort((a, b) => rang(a) - rang(b));
   }
   if (key === 'staerke' || key === 'hoehe') {
     return [...labels].sort((a, b) => parseFloat(a.replace(',', '.')) - parseFloat(b.replace(',', '.')));
