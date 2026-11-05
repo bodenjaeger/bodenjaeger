@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
@@ -48,6 +48,9 @@ export default function TotalPrice({
   const [addedToCart, setAddedToCart] = useState(false);
   const { addSetToCart, openCartDrawer, cartItems } = useCart();
   const cartButtonRef = useRef<HTMLButtonElement>(null);
+  // Warenkorb liegt im Browser: erst nach dem Laden auswerten, sonst weicht er vom Server-HTML ab
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Show loading state if data not yet available
   if (!quantities || !prices) {
@@ -82,7 +85,7 @@ export default function TotalPrice({
     (quantities.baseboard?.packages || 0);
 
   // Genau dieses Set liegt schon im Warenkorb: nicht versehentlich ein zweites Mal hinzufügen
-  const setImWarenkorb = cartItems.some((item) => {
+  const setImWarenkorb = mounted && cartItems.some((item) => {
     if (item.setItemType !== 'floor' || item.id !== product.id || item.quantity !== quantities.floor.packages) return false;
     const bestandteil = (typ: string) => cartItems.find((i) => i.setId === item.setId && i.setItemType === typ)?.id;
     return bestandteil('insulation') === (quantities.insulation ? selectedDaemmung?.id : undefined)

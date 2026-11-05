@@ -57,6 +57,9 @@ export default function ZubehoerSlider({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(true);
+  // Warenkorb liegt im Browser: erst nach dem Laden auswerten, sonst weicht er vom Server-HTML ab
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const { addToCart, cartItems, openCartDrawer, setSingleItemQuantity } = useCart();
 
@@ -259,7 +262,7 @@ export default function ZubehoerSlider({
             )}
           </div>
 
-          {cartItems.some((item) => item.setItemType === 'floor' && item.id === product?.id) && (
+          {mounted && cartItems.some((item) => item.setItemType === 'floor' && item.id === product?.id) && (
             <p role="status" className="mb-3 text-sm font-bold text-cta">✓ Dein Set liegt im Warenkorb. Das passt dazu:</p>
           )}
 
@@ -429,7 +432,7 @@ export default function ZubehoerSlider({
             )}
           </div>
 
-          {cartItems.length > 0 && (
+          {mounted && cartItems.length > 0 && (
             <div className="mt-3 flex justify-start pb-4 lg:justify-end lg:pb-0">
               <button
                 type="button"
