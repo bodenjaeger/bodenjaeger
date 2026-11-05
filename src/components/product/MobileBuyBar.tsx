@@ -57,7 +57,7 @@ export default function MobileBuyBar({ targetRef, price, details, onAction, acti
   return createPortal(
     <div
       style={{ bottom: 'var(--kaufleiste-abstand, 0px)' }}
-      className="fixed inset-x-0 z-30 border-t border-ash bg-white px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] lg:hidden"
+      className="fixed inset-x-0 z-30 border-t border-ash bg-white px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3 max-lg:rounded-t-2xl shadow-[0_-4px_16px_rgba(0,0,0,0.08)] lg:hidden"
     >
       <div className="flex items-center gap-2 sm:gap-3">
         <button

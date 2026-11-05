@@ -12,6 +12,8 @@ import {
   FREE_SAMPLE_LIMIT,
   SAMPLE_SHIPPING_SURCHARGE,
   SAMPLE_SLUG_PREFIX,
+  findSampleProduct,
+  sampleSlugsFor,
 } from '@/lib/sampleUtils';
 import { useCart } from '@/contexts/CartContext';
 import { useAlert } from '@/hooks/useAlert';
@@ -59,10 +61,17 @@ export default function ProductPageContent({
   const einheit = product.einheit_short || 'm²';
 
   // Cart context
-  const { addSampleToCart, getFreeSamplesRemaining } = useCart();
+  const { addSampleToCart, getFreeSamplesRemaining, cartItems, openCartDrawer } = useCart();
+
+  // Warenkorb liegt im Browser: erst nach dem Laden auswerten
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const sampleSlugs = sampleSlugsFor(product.slug);
+  const sampleInCart = mounted && cartItems.some((item) => item.isSample && sampleSlugs.includes(item.product.slug));
+  const freeSamplesRemaining = mounted ? getFreeSamplesRemaining() : FREE_SAMPLE_LIMIT;
 
   // Alert modal
-  const { alertState, showSuccess, showError, showInfo, closeAlert } = useAlert();
+  const { alertState, showError, closeAlert } = useAlert();
 
   // Klebe-Vinyl Sparpaket: Produktseite startet mit der Mindestmenge
   const hasSparpaket = sparpaketProducts.length > 0;
@@ -315,6 +324,18 @@ export default function ProductPageContent({
     if (Math.abs(verschoben) > 1) window.scrollBy({ top: verschoben, behavior: 'instant' });
   }, [sparpaketZeilen]);
 
+  // Brotkrume führt zur zuletzt besuchten Listenseite derselben Kategorie (z. B. ?page=2)
+  const categoryPath = primaryCategory ? `/category/${primaryCategory.slug}` : null;
+  const [categoryHref, setCategoryHref] = useState(categoryPath);
+  useEffect(() => {
+    try {
+      const letzte = sessionStorage.getItem('letzte-liste');
+      if (categoryPath && letzte?.startsWith(`${categoryPath}?`)) setCategoryHref(letzte);
+    } catch {
+      // Speicher nicht verfügbar: normaler Kategorielink
+    }
+  }, [categoryPath]);
+
   const features = useMemo(() => extractProductFeatures(product.short_description), [product.short_description]);
 
   // Handle quantity changes from QuantitySelector
@@ -341,14 +362,7 @@ export default function ProductPageContent({
     setIsOrderingSample(true);
 
     try {
-      const sampleSlug = `${SAMPLE_SLUG_PREFIX}${product.slug}`;
-      const response = await fetch(`/api/products/samples?slug=${encodeURIComponent(sampleSlug)}`);
-      if (!response.ok) {
-        throw new Error('Fehler beim Suchen des Musters');
-      }
-
-      const results: StoreApiProduct[] = await response.json();
-      const sampleProduct = Array.isArray(results) && results.length > 0 ? results[0] : null;
+      const sampleProduct = await findSampleProduct<StoreApiProduct>(product.slug);
 
       if (!sampleProduct) {
         showError(
@@ -358,16 +372,8 @@ export default function ProductPageContent({
         return;
       }
 
-      const freeSamplesRemaining = getFreeSamplesRemaining();
       const result = addSampleToCart(sampleProduct);
-
-      if (result.status === 'duplicate') {
-        showInfo(
-          `Ein Muster von "${product.name}" befindet sich bereits in Ihrem Warenkorb.`,
-          'Bereits im Warenkorb'
-        );
-        return;
-      }
+      if (result.status === 'duplicate') return;
 
       // GA4 add_to_cart — Muster (price = 0; Aufschlag steckt im Versand, nicht im Item)
       const sampleItem = mapProductToItem(sampleProduct, 1, {
@@ -376,18 +382,6 @@ export default function ProductPageContent({
         pricePerUnitOverride: 0,
       });
       track.addToCart([sampleItem], 0);
-
-      const surchargeLabel = SAMPLE_SHIPPING_SURCHARGE.toFixed(2).replace('.', ',');
-      const followUp = freeSamplesRemaining > 1
-        ? `Sie können noch ${freeSamplesRemaining - 1} weitere Muster versandkostenfrei bestellen.\nAb dem ${FREE_SAMPLE_LIMIT + 1}. Muster fallen ${surchargeLabel} € Fracht pro zusätzlichem Muster an.`
-        : freeSamplesRemaining === 1
-          ? `Sie haben alle ${FREE_SAMPLE_LIMIT} versandkostenfreien Muster verwendet.\nAb dem ${FREE_SAMPLE_LIMIT + 1}. Muster fallen ${surchargeLabel} € Fracht pro zusätzlichem Muster an.`
-          : `Für dieses zusätzliche Muster fallen ${surchargeLabel} € Fracht an.`;
-
-      showSuccess(
-        `Kostenloses Muster wurde in den Warenkorb gelegt!\n\n${followUp}`,
-        'Muster hinzugefügt'
-      );
     } catch (error) {
       console.error('Error ordering sample:', error);
       showError(
@@ -409,20 +403,18 @@ export default function ProductPageContent({
               {primaryCategory && (
                 <>
                   <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  <Link href={`/category/${primaryCategory.slug}`} className="hover:text-dark">{primaryCategory.name}</Link>
+                  <Link href={categoryHref ?? `/category/${primaryCategory.slug}`} className="hover:text-dark">{primaryCategory.name}</Link>
                 </>
               )}
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
               <span className="font-bold text-dark" aria-current="page">{product.name}</span>
             </nav>
 
-            {/* Mobil: Galerie/Infos, Kaufbox, Zubehör. Desktop: Spalten laufen mit und enden bündig */}
+            {/* Desktop: Spalten laufen mit und enden bündig, danach folgt das Zubehör */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
-              <StickyColumn className="contents lg:sticky lg:block lg:min-w-0 lg:self-start">
-                <div className="order-1 grid min-w-0 grid-cols-1 gap-6 lg:mb-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-                  <StickyColumn className="min-w-0 xl:sticky xl:self-start">
-                    <ImageGallery product={product} hideDiscount={!isAccessory} videoUrl={media.video} />
-                  </StickyColumn>
+              <StickyColumn keepInPlace className="min-w-0 lg:sticky lg:self-start">
+                <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+                  <ImageGallery product={product} hideDiscount={!isAccessory} videoUrl={media.video} />
                   <ProductSummary
                     product={product}
                     features={features}
@@ -431,15 +423,15 @@ export default function ProductPageContent({
                     showSampleButton={isFloorProduct}
                     isOrderingSample={isOrderingSample}
                     onOrderSample={handleOrderSample}
+                    sampleInCart={sampleInCart}
+                    freeSamplesRemaining={freeSamplesRemaining}
+                    sampleSurcharge={SAMPLE_SHIPPING_SURCHARGE}
+                    onShowCart={openCartDrawer}
                   />
-                </div>
-
-                <div id="zubehoer-section" className="order-3 min-w-0 scroll-mt-24">
-                  <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
                 </div>
               </StickyColumn>
 
-              <StickyColumn className={`order-2 min-w-0 lg:sticky lg:order-none lg:self-start ${isAccessory ? '' : 'mt-7'}`}>
+              <StickyColumn className={`min-w-0 lg:sticky lg:self-start ${isAccessory ? '' : 'mt-7'}`}>
               <aside className="space-y-4 rounded-xl border border-ash bg-white p-4 lg:p-5">
                 {isAccessory ? (
                   <AccessoryBuyBox product={product} />
@@ -488,6 +480,11 @@ export default function ProductPageContent({
                 )}
               </aside>
               </StickyColumn>
+            </div>
+
+            {/* Zubehör erst nach der Kaufbox, damit der Desktop oben ruhig bleibt */}
+            <div id="zubehoer-section" className="mt-6 min-w-0 scroll-mt-44 lg:mt-8 lg:scroll-mt-56">
+              <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
             </div>
 
             <ProductDetailSections product={product} features={features} media={media} isFloor={!isAccessory} />

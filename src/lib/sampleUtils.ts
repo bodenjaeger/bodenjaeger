@@ -11,6 +11,27 @@ export const SAMPLE_SHIPPING_SURCHARGE = 1.99;
 //   Muster: "muster-rigid-vinyl-vara-fjord"
 export const SAMPLE_SLUG_PREFIX = 'muster-';
 
+/**
+ * Mögliche Muster-Slugs eines Bodens. WordPress hängt bei doppelten Adressen
+ * „-2“ an (rigid-vinyl-vara-canyon-2), das Muster heißt dann trotzdem
+ * muster-rigid-vinyl-vara-canyon.
+ */
+export function sampleSlugsFor(productSlug: string): string[] {
+  const ohneZaehler = productSlug.replace(/-\d+$/, '');
+  return [...new Set([productSlug, ohneZaehler])].map((slug) => `${SAMPLE_SLUG_PREFIX}${slug}`);
+}
+
+/** Sucht das Muster zu einem Boden, zuerst über die exakte Adresse. */
+export async function findSampleProduct<T>(productSlug: string): Promise<T | null> {
+  for (const slug of sampleSlugsFor(productSlug)) {
+    const response = await fetch(`/api/products/samples?slug=${encodeURIComponent(slug)}`);
+    if (!response.ok) throw new Error('Fehler beim Suchen des Musters');
+    const results = await response.json();
+    if (Array.isArray(results) && results.length > 0) return results[0] as T;
+  }
+  return null;
+}
+
 // WooCommerce-Kategorie-ID der Muster-Kategorie ("muster").
 // Wird u.a. für Coupon-Validierung (Ausschluss von Mustern) verwendet.
 export const SAMPLE_CATEGORY_ID = 66;

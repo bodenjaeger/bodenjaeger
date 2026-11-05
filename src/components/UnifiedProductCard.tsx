@@ -10,7 +10,7 @@ import { useAlert } from '@/hooks/useAlert';
 import {
   FREE_SAMPLE_LIMIT,
   SAMPLE_SHIPPING_SURCHARGE,
-  SAMPLE_SLUG_PREFIX,
+  findSampleProduct,
   isMusterProduct,
 } from '@/lib/sampleUtils';
 import { useSparpaketStreichpreisProM2, sparpaketRabattProzent } from '@/hooks/useSparpaketStreichpreisProM2';
@@ -103,14 +103,7 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
     setIsOrderingSample(true);
 
     try {
-      const sampleSlug = `${SAMPLE_SLUG_PREFIX}${product.slug}`;
-      const response = await fetch(`/api/products/samples?slug=${encodeURIComponent(sampleSlug)}`);
-      if (!response.ok) {
-        throw new Error('Fehler beim Suchen des Musters');
-      }
-
-      const results: StoreApiProduct[] = await response.json();
-      const sampleProduct = Array.isArray(results) && results.length > 0 ? results[0] : null;
+      const sampleProduct = await findSampleProduct<StoreApiProduct>(product.slug);
 
       if (!sampleProduct) {
         showError(

@@ -92,7 +92,7 @@ export default function ProductDetailSections({ product, features, media, isFloo
             />
           )}
           {features.length > 0 && (
-            <div className="self-start rounded-xl bg-pale p-5 lg:sticky lg:top-24 lg:bg-white">
+            <div className="self-start rounded-xl bg-pale p-5 lg:bg-white">
               <h2 className="mb-4 text-lg font-bold text-dark">Vorteile auf einen Blick</h2>
               <ul className="space-y-3">
                 {features.map((feature) => (

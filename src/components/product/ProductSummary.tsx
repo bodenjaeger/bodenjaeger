@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Box, FileText } from 'lucide-react';
+import { Box, Check, FileText } from 'lucide-react';
 import StarRating from '@/components/footer/StarRating';
 import type { TrustedShopsRating } from '@/lib/trusted-shops';
 import type { ProductMedia } from '@/lib/product-media';
@@ -15,6 +15,10 @@ interface ProductSummaryProps {
   showSampleButton: boolean;
   isOrderingSample: boolean;
   onOrderSample: () => void;
+  sampleInCart: boolean;
+  freeSamplesRemaining: number;
+  sampleSurcharge: number;
+  onShowCart: () => void;
 }
 
 export default function ProductSummary({
@@ -25,6 +29,10 @@ export default function ProductSummary({
   showSampleButton,
   isOrderingSample,
   onOrderSample,
+  sampleInCart,
+  freeSamplesRemaining,
+  sampleSurcharge,
+  onShowCart,
 }: ProductSummaryProps) {
   const noteText = rating?.note.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const subtitle = product.show_text_produktuebersicht ? product.text_produktuebersicht : null;
@@ -61,15 +69,39 @@ export default function ProductSummary({
 
       <div className="mt-6 space-y-3">
         {showSampleButton && (
-          <button
-            type="button"
-            onClick={onOrderSample}
-            disabled={isOrderingSample}
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-cta px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-cta-dark disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Image src="/images/Icons/musterbox-weiss.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />
-            {isOrderingSample ? 'Lädt …' : 'Kostenlose Muster bestellen'}
-          </button>
+          <div>
+            {sampleInCart ? (
+              <button
+                type="button"
+                onClick={onShowCart}
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-cta bg-white px-4 py-3 text-sm font-bold text-cta transition-colors hover:bg-cta/5"
+              >
+                <Check className="h-5 w-5" aria-hidden="true" />
+                Muster im Warenkorb – ansehen
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onOrderSample}
+                disabled={isOrderingSample}
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-cta px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-cta-dark disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Image src="/images/Icons/musterbox-weiss.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />
+                {isOrderingSample
+                  ? 'Lädt …'
+                  : freeSamplesRemaining > 0
+                    ? 'Kostenlose Muster bestellen'
+                    : `Muster bestellen (${sampleSurcharge.toFixed(2).replace('.', ',')} € Fracht)`}
+              </button>
+            )}
+            {sampleInCart && (
+              <p className="mt-1.5 text-center text-xs text-mid" role="status">
+                {freeSamplesRemaining > 0
+                  ? `Noch ${freeSamplesRemaining} ${freeSamplesRemaining === 1 ? 'weiteres Muster' : 'weitere Muster'} versandkostenfrei`
+                  : `Jedes weitere Muster: ${sampleSurcharge.toFixed(2).replace('.', ',')} € Fracht`}
+              </p>
+            )}
+          </div>
         )}
 
         {media.visualizer && (

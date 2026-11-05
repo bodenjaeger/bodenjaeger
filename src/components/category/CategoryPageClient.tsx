@@ -90,6 +90,15 @@ export default function CategoryPageClient({
 
   const reload = () => router.refresh();
 
+  // Für den Rückweg von der Produktseite (Brotkrume)
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('letzte-liste', window.location.pathname + window.location.search);
+    } catch {
+      // Speicher nicht verfügbar: Brotkrume führt zur ersten Seite
+    }
+  }, [currentPage, sortBy]);
+
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">

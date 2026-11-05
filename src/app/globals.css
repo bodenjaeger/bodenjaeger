@@ -633,6 +633,6 @@ body.nav-menu-open [id^='trustbadge-container-'] {
   }
 
   body.kaufleiste-sichtbar [id^="trustbadge-container-"] {
-    bottom: calc(88px + var(--kaufleiste-abstand, 0px)) !important;
+    bottom: calc(100px + var(--kaufleiste-abstand, 0px)) !important;
   }
 }
