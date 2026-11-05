@@ -96,7 +96,7 @@ All prices calculated once in `ProductPageContent.tsx` (Single Source of Truth) 
 - Optionale PDFs, Video und Visualisierung: WooCommerce-Felder `bj_*_url` (`src/lib/product-media.ts`); leer = ausgeblendet
 - Trusted-Shops-Note kommt live aus `src/lib/trusted-shops.ts` (stündlich), ohne Antwort wird keine Note gezeigt
 - Rabatt in Prozent: Summe der Einzelpreise gegenüber Verkaufspreis, nicht `setangebot_ersparnis_prozent`
-- Product type detection by category slug (`vinylboden`, `laminat`, `parkett` → shows SetAngebot; `zubehoer` → simpler layout)
+- Alle Produkte teilen dieselbe Seitenoptik; Böden nutzen SetAngebot/TotalPrice, Nicht-Bodenbeläge `AccessoryBuyBox` (Zubehörkategorie oder ohne Bodenkategorie und Set)
 
 ### Provider Hierarchy (`layout.tsx`)
 

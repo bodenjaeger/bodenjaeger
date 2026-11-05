@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
@@ -11,6 +10,7 @@ import { track } from '@/lib/analytics/track';
 import { mapProductToItem } from '@/lib/analytics/mapItem';
 import type { GA4Item } from '@/lib/analytics/types';
 import { calculateProductAktion } from '@/lib/promo';
+import MobileBuyBar from './MobileBuyBar';
 
 // Simple price interface - prices come from backend!
 interface SetPrices {
@@ -48,44 +48,6 @@ export default function TotalPrice({
   const [addedToCart, setAddedToCart] = useState(false);
   const { addSetToCart, openCartDrawer, cartItems } = useCart();
   const cartButtonRef = useRef<HTMLButtonElement>(null);
-  const [cartButtonVisible, setCartButtonVisible] = useState(true);
-  const hasData = !!quantities && !!prices;
-
-  // Kaufleiste (nur mobil): sichtbar, solange der große Button außerhalb des Bildes ist
-  useEffect(() => {
-    const button = cartButtonRef.current;
-    if (!button) return;
-    const observer = new IntersectionObserver(([entry]) => setCartButtonVisible(entry.isIntersecting));
-    observer.observe(button);
-    return () => observer.disconnect();
-  }, [hasData]);
-
-  // Mobil keine schwebenden Buttons im Kaufbereich, das Trustbadge rutscht über die Leiste (globals.css)
-  useEffect(() => {
-    document.body.classList.toggle('kaufleiste-sichtbar', hasData && !cartButtonVisible);
-    document.body.classList.add('kaufbereich');
-    return () => document.body.classList.remove('kaufleiste-sichtbar', 'kaufbereich');
-  }, [hasData, cartButtonVisible]);
-
-  // Mobile Browserleisten fahren beim Scrollen ein und aus: Leiste am sichtbaren Rand halten
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    const update = () => {
-      const verdeckt = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-      document.documentElement.style.setProperty('--kaufleiste-abstand', `${Math.round(verdeckt)}px`);
-    };
-    update();
-    viewport.addEventListener('resize', update);
-    viewport.addEventListener('scroll', update);
-    window.addEventListener('scroll', update, { passive: true });
-    return () => {
-      viewport.removeEventListener('resize', update);
-      viewport.removeEventListener('scroll', update);
-      window.removeEventListener('scroll', update);
-      document.documentElement.style.removeProperty('--kaufleiste-abstand');
-    };
-  }, []);
 
   // Show loading state if data not yet available
   if (!quantities || !prices) {
@@ -340,44 +302,18 @@ export default function TotalPrice({
         </button>
       )}
 
-      {/* Kaufleiste mobil */}
-      {!cartButtonVisible && createPortal(
-        <div
-          style={{ bottom: 'var(--kaufleiste-abstand, 0px)' }}
-          className="fixed inset-x-0 z-30 border-t border-ash bg-white px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] lg:hidden">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new Event('kontakt-oeffnen'))}
-              aria-label="Kontakt öffnen"
-              className="flex h-12 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-brand active:opacity-80"
-            >
-              <Image src="/images/Icons/kontakt-weiss.png" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <p className="whitespace-nowrap text-lg font-bold leading-tight text-dark">{formatPrice(endpreis)} €</p>
-              <p className="truncate text-xs text-mid">
-                {quantities.floor.actualM2.toFixed(2).replace('.', ',')} m² · {quantities.floor.packages} {quantities.floor.packages === 1 ? 'Paket' : 'Pakete'} · inkl. MwSt.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={setImWarenkorb ? openCartDrawer : handleAddToCart}
-              className="flex min-h-12 flex-shrink-0 items-center gap-2 rounded-lg bg-dark px-3 text-sm font-bold text-white sm:px-4"
-            >
-              {setImWarenkorb ? (
-                '✓ Warenkorb ansehen'
-              ) : (
-                <>
-                  <Image src="/images/Icons/warenkorb-weiss.png" alt="" width={20} height={20} className="h-5 w-5 max-[419px]:hidden" />
-                  <span><span className="max-[359px]:hidden">In den </span>Warenkorb</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
+      <MobileBuyBar
+        targetRef={cartButtonRef}
+        price={`${formatPrice(endpreis)} €`}
+        details={`${quantities.floor.actualM2.toFixed(2).replace('.', ',')} m² · ${quantities.floor.packages} ${quantities.floor.packages === 1 ? 'Paket' : 'Pakete'} · inkl. MwSt.`}
+        onAction={setImWarenkorb ? openCartDrawer : handleAddToCart}
+        action={setImWarenkorb ? '✓ Warenkorb ansehen' : (
+          <>
+            <Image src="/images/Icons/warenkorb-weiss.png" alt="" width={20} height={20} className="h-5 w-5 max-[419px]:hidden" />
+            <span><span className="max-[359px]:hidden">In den </span>Warenkorb</span>
+          </>
+        )}
+      />
     </div>
   );
 }

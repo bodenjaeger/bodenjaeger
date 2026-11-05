@@ -10,6 +10,7 @@ interface QuantitySelectorProps {
   verpackungsartFull?: string;   // Ausgeschrieben, z.B. "Paket(e)", "Stück"
   initialPackages?: number;      // Startwert (Klebe-Vinyl: 5 für das Sparpaket)
   onQuantityChange?: (packages: number, sqm: number) => void;
+  showVerschnitt?: boolean;      // Hinweis nur bei Böden
 }
 
 export default function QuantitySelector({
@@ -18,7 +19,8 @@ export default function QuantitySelector({
   einheitFull,
   verpackungsartFull,
   initialPackages = 1,
-  onQuantityChange
+  onQuantityChange,
+  showVerschnitt = true
 }: QuantitySelectorProps) {
   // Ausgeschriebene Labels für über den +/- Feldern
   const packageLabel = verpackungsartFull || 'Paket(e)';
@@ -253,6 +255,7 @@ export default function QuantitySelector({
         )}
       </div>
 
+      {showVerschnitt && (
       <button
         type="button"
         onClick={() => setShowInfo(!showInfo)}
@@ -262,6 +265,7 @@ export default function QuantitySelector({
         <Info className="h-3.5 w-3.5" aria-hidden="true" />
         Wie viel Verschnitt einplanen?
       </button>
+      )}
 
       {/* Verschnitt Info Box */}
       {showInfo && (

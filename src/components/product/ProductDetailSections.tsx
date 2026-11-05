@@ -63,14 +63,16 @@ interface ProductDetailSectionsProps {
   product: StoreApiProduct;
   features: string[];
   media: ProductMedia;
+  isFloor?: boolean;
 }
 
-export default function ProductDetailSections({ product, features, media }: ProductDetailSectionsProps) {
+export default function ProductDetailSections({ product, features, media, isFloor = true }: ProductDetailSectionsProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const description = cleanDescription(product.artikelbeschreibung || '');
   const specs = product.description || '';
   const hasSpecs = specs.includes('<table') || specs.includes('bj-specs');
+  // Ohne eigenes Feld steht der Text bei Zubehör in der WooCommerce-Beschreibung
+  const description = cleanDescription(product.artikelbeschreibung || (hasSpecs ? '' : specs));
   const specRows = parseProductSpecs(specs);
   const highlightSpecs = pickHighlightSpecs(specRows);
   const hasDocs = !!(media.verlegeanleitung || media.pflegeanleitung || media.datenblatt || media.video);
@@ -171,17 +173,21 @@ export default function ProductDetailSections({ product, features, media }: Prod
   if (sections.length === 0) return null;
 
   const currentId = activeId ?? sections[0].id;
-  const benefits = [
+  const alleVorteile = [
     { icon: Package, title: 'Kostenlose Muster', text: `Bis zu ${FREE_SAMPLE_LIMIT} Muster gratis`, href: SERVICE_LINKS.musterBestellen },
     { icon: Truck, title: 'Lieferung', text: product.show_lieferzeit ? formatLieferzeit(product.lieferzeit) : 'Frei ab 999 €', href: SERVICE_LINKS.lieferung },
     { icon: HandHelping, title: 'Fachberatung', text: 'Persönlich & kompetent', href: SERVICE_LINKS.fachberatung },
     { icon: Warehouse, title: 'Einlagerung', text: 'Bis zu 12 Monate kostenfrei', href: SERVICE_LINKS.einlagerung },
     { icon: Wrench, title: 'Verlegeservice', text: 'Im Umkreis von ca. 50 km', href: SERVICE_LINKS.verlegeservice },
   ];
+  // Muster und Verlegung betreffen nur Böden
+  const benefits = isFloor
+    ? alleVorteile
+    : alleVorteile.filter((v) => v.title !== 'Kostenlose Muster' && v.title !== 'Verlegeservice');
 
   return (
     <div className="mt-8 lg:mt-10">
-      <ul className="mb-6 grid grid-cols-2 gap-1 rounded-xl border border-ash p-2 sm:grid-cols-3 lg:mb-8 lg:grid-cols-5 lg:gap-2 lg:p-3 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
+      <ul className={`mb-6 grid grid-cols-2 gap-1 rounded-xl border border-ash p-2 sm:grid-cols-3 lg:mb-8 ${isFloor ? 'lg:grid-cols-5' : 'lg:grid-cols-3'} lg:gap-2 lg:p-3 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1`}>
         {benefits.map(({ icon: Icon, title, text, href }) => (
           <li key={title}>
             <Link href={href} className="flex h-full items-center gap-3 rounded-lg p-2 transition-colors hover:bg-pale">

@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronRight, MinusIcon, Package, PackageCheck, Phone, PlusIcon, Truck } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import { calculateSetQuantities, calculateSparpaketQuantities } from '@/lib/setCalculations';
 import { KLEBEVINYL_SPARPAKET } from '@/content/klebevinyl-sparpaket';
@@ -19,7 +19,8 @@ import AlertModal from '@/components/AlertModal';
 import { track } from '@/lib/analytics/track';
 import { mapProductToItem } from '@/lib/analytics/mapItem';
 import ImageGallery from './ImageGallery';
-import ZahlungsIcons from './ZahlungsIcons';
+import AccessoryBuyBox from './AccessoryBuyBox';
+import BuyBoxServices from './BuyBoxServices';
 import ProductInfo from './ProductInfo';
 import QuantitySelector from './QuantitySelector';
 import TotalPrice from './TotalPrice';
@@ -27,7 +28,7 @@ import ZubehoerSlider from './ZubehoerSlider';
 import ProductSummary from './ProductSummary';
 import StickyColumn from './StickyColumn';
 import ProductDetailSections from './ProductDetailSections';
-import { extractProductFeatures, formatLieferzeit } from '@/lib/product-features';
+import { extractProductFeatures } from '@/lib/product-features';
 import type { ProductMedia } from '@/lib/product-media';
 import { getPrimaryCategory } from '@/lib/product-category';
 import type { TrustedShopsRating } from '@/lib/trusted-shops';
@@ -94,12 +95,14 @@ export default function ProductPageContent({
 
   // Check if product is an accessory (simple layout)
   const isAccessory = useMemo(() => {
-    if (!product.categories || !Array.isArray(product.categories)) return false;
+    if (product.slug.startsWith(SAMPLE_SLUG_PREFIX)) return false;
     const accessoryCategories = ['zubehoer', 'sockelleisten', 'daemmung'];
-    return product.categories.some(cat =>
+    const inAccessoryCategory = (product.categories ?? []).some(cat =>
       accessoryCategories.includes(cat.slug.toLowerCase())
     );
-  }, [product.categories]);
+    // Alles ohne Set und ohne Bodenkategorie gilt ebenfalls als Nicht-Bodenbelag
+    return inAccessoryCategory || (!isFloorProduct && !hasSparpaket && !daemmungProduct && !sockelleisteProduct);
+  }, [product.categories, product.slug, isFloorProduct, hasSparpaket, daemmungProduct, sockelleisteProduct]);
 
   // Calculate quantities ONLY (no prices - prices come from backend!)
   const quantities = useMemo(() => {
@@ -330,431 +333,6 @@ export default function ProductPageContent({
     setSelectedSockelleiste(sockelleiste);
   }, []);
 
-  // ========== SIMPLE PRODUCT LAYOUT COMPONENTS (for Accessories) ==========
-
-  // Service Icons for Simple Layout (matches Layout 1 styling)
-  const ServiceIcons = () => (
-    <div className="space-y-0 text-base sm:text-lg lg:text-2xl text-gray-700">
-      <div className="flex items-center gap-2 sm:gap-3 pb-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-        <Image
-          src="/images/Icons/telefon-schieferschwarz.png"
-          alt="Telefon"
-          width={24}
-          height={24}
-          className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-        />
-        <span className="break-words">Persönliche Beratung unter 02433938884</span>
-      </div>
-      <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-        <Image
-          src="/images/Icons/lager-schieferschwarz.png"
-          alt="Lager"
-          width={24}
-          height={24}
-          className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-        />
-        <span className="break-words">Kostenlose Einlagerung bis zu 12 Monate</span>
-      </div>
-      <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-        <Image
-          src="/images/Icons/termin-schieferschwarz.png"
-          alt="Termin"
-          width={24}
-          height={24}
-          className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-        />
-        <span className="break-words">Lieferung zum Wunschtermin</span>
-      </div>
-      <div className="flex items-center gap-2 sm:gap-3 pt-3">
-        <Image
-          src="/images/Icons/lieferung-schieferschwarz.png"
-          alt="Lieferung"
-          width={24}
-          height={24}
-          className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-        />
-        <span className="break-words">Kostenlose Lieferung ab 999€</span>
-      </div>
-    </div>
-  );
-
-  // Extract features from short_description (same logic as ProductInfo)
-  const getFeatures = (): string[] => {
-    if (product.short_description) {
-      // Strategy 1: Extract from <li> tags
-      const matches = product.short_description.match(/<li>(.*?)<\/li>/g);
-      if (matches) {
-        return matches.map(match => match.replace(/<\/?li>/g, '').trim()).slice(0, 3);
-      }
-      // Strategy 2: Bullet points as plain text (• or -)
-      const lines = product.short_description
-        .replace(/<[^>]*>/g, '')
-        .split(/\n|<br\s*\/?>/)
-        .map(line => line.replace(/^[\s•\-–]+/, '').trim())
-        .filter(line => line.length > 0);
-      if (lines.length > 0) {
-        return lines.slice(0, 3);
-      }
-    }
-    const features: string[] = [];
-    if (product.text_produktuebersicht && product.show_text_produktuebersicht) {
-      features.push(product.text_produktuebersicht);
-    }
-    if (product.lieferzeit && product.show_lieferzeit) {
-      features.push(product.lieferzeit);
-    }
-    if (product.paketinhalt) {
-      features.push(`Paketinhalt: ${product.paketinhalt} ${product.einheit_short || 'm²'}`);
-    }
-    return features;
-  };
-
-  // Product Info for Simple Layout
-  const SimpleProductInfo = () => {
-    const price = product.price || 0;
-    const regularPrice = product.regular_price || price;
-    const einheitShort = product.einheit_short || 'Stück';
-    const uvp = product.uvp || regularPrice;
-    const hasDiscount = uvp > price;
-    const features = getFeatures();
-
-    return (
-      <div className="bg-white rounded-lg p-6">
-        {/* Product Title */}
-        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">
-          {product.name}
-        </h1>
-
-        {/* Article Number */}
-        <div className="text-sm text-gray-600 mb-4">
-          Art.Nr.: {product.sku || 'N/A'}
-        </div>
-
-        {/* Features List with red checkmarks (same as ProductInfo) */}
-        {features.length > 0 && (
-          <div className="space-y-2 pt-2 mb-6">
-            {features.map((feature, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <Image
-                  src="/images/Icons/haken-rot.png"
-                  alt="Check"
-                  width={20}
-                  height={20}
-                  className="flex-shrink-0 mt-0.5"
-                />
-                <span className="text-gray-700 text-lg leading-relaxed">
-                  {feature}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-      </div>
-    );
-  };
-
-  // Quantity and Cart for Simple Layout (Design based on Unbenannt-1.png)
-  const SimpleQuantityAndCart = () => {
-    const [packages, setPackages] = useState(1);
-    const [units, setUnits] = useState(product.paketinhalt || 1);
-    const { addToCart, openCartDrawer } = useCart();
-    const [isAdding, setIsAdding] = useState(false);
-
-    const price = product.price || 0;
-    const paketinhalt = product.paketinhalt || 1;
-    const rawEinheit = product.einheit_short || 'Stück';
-    const showUnit = rawEinheit !== '-' && rawEinheit.trim() !== '';
-    const einheitShort = showUnit ? rawEinheit : 'Stück';
-    const verpackungsart = product.verpackungsart_short || 'Pak.';
-
-    // Ausgeschriebene Labels über den +/- Feldern
-    const packageLabel = product.verpackungsart || 'Paket(e)';
-    const unitLabel = product.einheit || 'Quadratmeter';
-    // Zweites Feld ausblenden wenn: kein Unit ODER (paketinhalt=1 UND Labels identisch)
-    const showBothFields = showUnit && !(paketinhalt === 1 && packageLabel === unitLabel);
-
-    // Calculate total content and price
-    const totalContent = packages * paketinhalt;
-    const totalPrice = totalContent * price;
-
-    // Update units when packages change
-    const handlePackagesChange = (newPackages: number) => {
-      const validPackages = Math.max(1, newPackages);
-      setPackages(validPackages);
-      setUnits(validPackages * paketinhalt);
-    };
-
-    // Update packages when units change
-    const handleUnitsChange = (newUnits: number) => {
-      const validUnits = Math.max(paketinhalt, newUnits);
-      setUnits(validUnits);
-      const calculatedPackages = Math.ceil(validUnits / paketinhalt);
-      setPackages(calculatedPackages);
-    };
-
-    const handleAddToCart = () => {
-      try {
-        console.log('🛒 Simple Product Add to Cart:', {
-          productName: product.name,
-          productId: product.id,
-          packages: packages,
-          units: totalContent,
-          price: price
-        });
-
-        setIsAdding(true);
-
-        // IMPORTANT: Use addToCart, NOT addSetToCart for simple products
-        addToCart(product, packages);
-
-        // GA4 add_to_cart — Standard-Produkt (kein Set)
-        const paketpreis = price * paketinhalt;
-        const ga4Item = mapProductToItem(product, packages, {
-          pricePerUnitOverride: paketpreis,
-        });
-        track.addToCart([ga4Item], paketpreis * packages);
-
-        // Open cart drawer to show success
-        openCartDrawer();
-
-        setTimeout(() => setIsAdding(false), 1000);
-      } catch (error) {
-        console.error('❌ Fehler beim Hinzufügen zum Warenkorb:', error);
-        showError(
-          'Fehler beim Hinzufügen zum Warenkorb. Bitte versuchen Sie es erneut.',
-          'Fehler'
-        );
-        setIsAdding(false);
-      }
-    };
-
-    const handleRequestQuote = () => {
-      window.location.href = '/kontakt';
-    };
-
-    return (
-      <div className="space-y-4">
-        {/* Top Section: Content and Price per Unit - eigener Hintergrund */}
-        <div className="bg-[#e8e8e8] rounded-2xl p-4 sm:p-6">
-          <div className="flex items-center justify-between gap-2 px-1 sm:px-2">
-            <div className="text-dark text-xs sm:text-sm md:text-base font-normal min-w-0">
-              {showUnit
-                ? <>Inhalt: {totalContent.toFixed(1).replace('.', ',')}{einheitShort} = {totalPrice.toFixed(2).replace('.', ',')} €</>
-                : <>{packages} {verpackungsart} = {totalPrice.toFixed(2).replace('.', ',')} €</>
-              }
-            </div>
-            <div className="text-dark text-2xl sm:text-3xl md:text-4xl font-bold flex-shrink-0">
-              {showUnit
-                ? <>{price.toFixed(2).replace('.', ',')} <span className="text-lg sm:text-xl md:text-2xl">€/{einheitShort}</span></>
-                : <>{totalPrice.toFixed(2).replace('.', ',')} <span className="text-lg sm:text-xl md:text-2xl">€</span></>
-              }
-            </div>
-          </div>
-        </div>
-
-        {/* Quantity, Total, Buttons - eigener Hintergrund */}
-        <div className="bg-[#e8e8e8] rounded-2xl p-6 space-y-4">
-        {/* Quantity Selectors: Packages and Units */}
-        <div className={`grid ${showBothFields ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
-          {/* Packages Selector */}
-          <div className="text-center">
-            <div className="text-dark text-base font-normal mb-3">{packageLabel}</div>
-            <div className="flex items-center justify-center gap-0">
-              <button
-                onClick={() => handlePackagesChange(packages - 1)}
-                className="w-12 h-12 bg-white border border-gray-300 rounded-l-lg
-                         hover:bg-gray-50 flex items-center justify-center transition-colors"
-              >
-                <MinusIcon className="w-5 h-5 text-dark" />
-              </button>
-              <input
-                type="number"
-                value={packages}
-                onChange={(e) => handlePackagesChange(parseInt(e.target.value) || 1)}
-                className="w-28 h-12 text-center border-t border-b border-gray-300 bg-white
-                         text-lg font-medium text-dark focus:outline-none"
-                min="1"
-              />
-              <button
-                onClick={() => handlePackagesChange(packages + 1)}
-                className="w-12 h-12 bg-white border border-gray-300 rounded-r-lg
-                         hover:bg-gray-50 flex items-center justify-center transition-colors"
-              >
-                <PlusIcon className="w-5 h-5 text-dark" />
-              </button>
-            </div>
-          </div>
-
-          {/* Units Selector - nur wenn sinnvoll (andere Einheit oder paketinhalt > 1) */}
-          {showBothFields && (
-          <div className="text-center">
-            <div className="text-dark text-base font-normal mb-3">
-              {unitLabel}
-            </div>
-            <div className="flex items-center justify-center gap-0">
-              <button
-                onClick={() => handleUnitsChange(units - paketinhalt)}
-                className="w-12 h-12 bg-white border border-gray-300 rounded-l-lg
-                         hover:bg-gray-50 flex items-center justify-center transition-colors"
-              >
-                <MinusIcon className="w-5 h-5 text-dark" />
-              </button>
-              <input
-                type="number"
-                value={units}
-                step={paketinhalt}
-                onChange={(e) => handleUnitsChange(parseFloat(e.target.value) || paketinhalt)}
-                className="w-28 h-12 text-center border-t border-b border-gray-300 bg-white
-                         text-lg font-medium text-dark focus:outline-none"
-                min={paketinhalt}
-              />
-              <button
-                onClick={() => handleUnitsChange(units + paketinhalt)}
-                className="w-12 h-12 bg-white border border-gray-300 rounded-r-lg
-                         hover:bg-gray-50 flex items-center justify-center transition-colors"
-              >
-                <PlusIcon className="w-5 h-5 text-dark" />
-              </button>
-            </div>
-          </div>
-          )}
-        </div>
-
-        {/* Total Price with Border Top */}
-        <div className="border-t-2 border-gray-400 pt-4">
-          <div className="flex items-center justify-between mb-6 px-1 sm:px-2 gap-2">
-            <div className="text-dark text-sm sm:text-xl md:text-2xl font-bold min-w-0">
-              Gesamtsumme <span className="text-[10px] sm:text-sm md:text-base font-normal">(inkl. MwSt.)</span>
-            </div>
-            <div className="text-dark text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold flex-shrink-0">
-              {totalPrice.toFixed(2).replace('.', ',')} €
-            </div>
-          </div>
-
-          {/* Action Buttons (gleich wie TotalPrice bei Böden) */}
-          <div className="grid grid-cols-2 gap-3 mt-5 mb-4">
-            <button
-              type="button"
-              onClick={handleRequestQuote}
-              className="w-full bg-transparent border border-dark hover:bg-[#f5f5f5] text-dark font-semibold text-[9px] sm:text-[10px] md:text-xs rounded-md transition-colors text-center leading-tight"
-              style={{ padding: '8px 5px' }}
-            >
-              Individuelles Angebot anfragen
-            </button>
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={isAdding}
-              className={`w-full font-semibold text-[9px] sm:text-[10px] md:text-xs rounded-lg transition-all text-center leading-tight ${
-                isAdding
-                  ? 'bg-[#155724] hover:bg-[#0f4419] text-white'
-                  : 'bg-dark hover:bg-[#1a1a1d] active:scale-[0.98] text-white'
-              }`}
-              style={{ padding: '8px 5px' }}
-            >
-              {isAdding ? (
-                <span className="flex items-center justify-center">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Hinzugefügt!
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <Image
-                    src="/images/Icons/warenkorb-weiss.png"
-                    alt=""
-                    width={20}
-                    height={20}
-                    className="w-5 h-5"
-                  />
-                  In den Warenkorb
-                </span>
-              )}
-            </button>
-          </div>
-
-          {/* Delivery Info (gleich wie TotalPrice bei Böden) — nur wenn show_lieferzeit aktiv */}
-          {product.show_lieferzeit && (
-          <div className="text-left text-[#666666] text-[13px] md:text-sm pt-3 mt-3 border-t border-ash">
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-                <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-              </svg>
-              <span><span className="font-bold">Lieferzeit:</span> {formatLieferzeit(product.lieferzeit)} oder im Markt abholen</span>
-            </div>
-          </div>
-          )}
-        </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Product Details for Simple Layout
-  const ProductDetails = () => (
-    <div className="bg-white rounded-lg shadow-md p-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">
-        Produktdetails
-      </h2>
-      {product.description && (
-        <div
-          className="prose prose-gray max-w-none"
-          dangerouslySetInnerHTML={{ __html: product.description }}
-        />
-      )}
-    </div>
-  );
-
-  // Simple Product Layout (for accessories)
-  const SimpleProductLayout = () => (
-    <>
-      {/* Two Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-8 mb-12 w-full">
-        {/* LEFT COLUMN */}
-        <div className="space-y-6">
-          {/* Image Gallery - reused */}
-          <ImageGallery product={product} />
-
-          {/* Service Icons - only on desktop (on mobile shown after right column) */}
-          <div className="hidden lg:block">
-            <ServiceIcons />
-          </div>
-
-          {/* Product Details - only on desktop (on mobile shown at bottom) */}
-          <div className="hidden lg:block">
-            <ProductDetails />
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN */}
-        <div className="space-y-6">
-          {/* Product Info */}
-          <SimpleProductInfo />
-
-          {/* Quantity & Add to Cart */}
-          <SimpleQuantityAndCart />
-
-          {/* Zahlungsarten – kleine Logo-Reihe wie im Footer */}
-          <ZahlungsIcons />
-
-          {/* Service Icons - mobile only */}
-          <div className="lg:hidden">
-            <ServiceIcons />
-          </div>
-        </div>
-      </div>
-
-      {/* Product Details - mobile only, after grid */}
-      <div className="lg:hidden mb-12">
-        <ProductDetails />
-      </div>
-    </>
-  );
-
-  // ========== END SIMPLE PRODUCT LAYOUT COMPONENTS ==========
 
   // Handle sample order - find and add MUSTER product to cart
   const handleOrderSample = async () => {
@@ -822,13 +400,9 @@ export default function ProductPageContent({
   };
 
   return (
-    <div className={`min-h-screen bg-white py-8 overflow-x-clip ${isAccessory ? '' : 'pb-28 lg:pb-8'}`}>
+    <div className={`min-h-screen bg-white py-8 pb-28 overflow-x-clip lg:pb-8`}>
       <div className="content-container">
-        {isAccessory ? (
-          // ========== SIMPLE PRODUCT LAYOUT for Accessories ==========
-          <SimpleProductLayout />
-        ) : (
-          // ========== SET-ANGEBOT LAYOUT for Main Products ==========
+        {/* Gemeinsame Optik für alle Produkte, nur die Kaufbox unterscheidet sich */}
           <>
             <nav aria-label="Brotkrumen" className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-mid">
               <Link href="/" className="hover:text-dark">Startseite</Link>
@@ -847,7 +421,7 @@ export default function ProductPageContent({
               <StickyColumn className="contents lg:sticky lg:block lg:min-w-0 lg:self-start">
                 <div className="order-1 grid min-w-0 grid-cols-1 gap-6 lg:mb-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
                   <StickyColumn className="min-w-0 xl:sticky xl:self-start">
-                    <ImageGallery product={product} hideDiscount videoUrl={media.video} />
+                    <ImageGallery product={product} hideDiscount={!isAccessory} videoUrl={media.video} />
                   </StickyColumn>
                   <ProductSummary
                     product={product}
@@ -865,8 +439,12 @@ export default function ProductPageContent({
                 </div>
               </StickyColumn>
 
-              <StickyColumn className="order-2 mt-7 min-w-0 lg:sticky lg:order-none lg:self-start">
+              <StickyColumn className={`order-2 min-w-0 lg:sticky lg:order-none lg:self-start ${isAccessory ? '' : 'mt-7'}`}>
               <aside className="space-y-4 rounded-xl border border-ash bg-white p-4 lg:p-5">
+                {isAccessory ? (
+                  <AccessoryBuyBox product={product} />
+                ) : (
+                  <>
                 <ProductInfo
                   product={product}
                   daemmungProduct={daemmungProduct}
@@ -905,35 +483,15 @@ export default function ProductPageContent({
                   sparpaket={sparpaket}
                 />
 
-                <ul className="space-y-2.5 text-sm text-mid">
-                  {product.show_lieferzeit && (
-                    <li className="flex items-center gap-3">
-                      <Truck className="h-5 w-5 flex-shrink-0 text-dark" aria-hidden="true" />
-                      Lieferzeit: {formatLieferzeit(product.lieferzeit)} oder im Markt abholen
-                    </li>
-                  )}
-                  <li className="flex items-center gap-3">
-                    <PackageCheck className="h-5 w-5 flex-shrink-0 text-dark" aria-hidden="true" />
-                    Lieferung frei ab 999 €
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Package className="h-5 w-5 flex-shrink-0 text-dark" aria-hidden="true" />
-                    Kostenlose Einlagerung bis zu 12 Monate
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 flex-shrink-0 text-dark" aria-hidden="true" />
-                    <a href="tel:+492433938884" className="hover:text-dark">Persönliche Beratung: 02433 938884</a>
-                  </li>
-                </ul>
-
-                <ZahlungsIcons />
+                <BuyBoxServices product={product} />
+                  </>
+                )}
               </aside>
               </StickyColumn>
             </div>
 
-            <ProductDetailSections product={product} features={features} media={media} />
+            <ProductDetailSections product={product} features={features} media={media} isFloor={!isAccessory} />
           </>
-        )}
       </div>
 
       {/* Alert Modal */}
