@@ -53,10 +53,9 @@ export default function ZubehoerSlider({
   const [error, setError] = useState<string | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-  const [addedProductId, setAddedProductId] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const { addToCart, cartItems, openCartDrawer } = useCart();
+  const { addToCart, cartItems, openCartDrawer, setSingleItemQuantity } = useCart();
 
   // Hilfsfunktion: Für "Zubehör für Sockelleisten" die ausgewählte Sockelleiste nutzen,
   // für alle anderen Kategorien das Hauptprodukt
@@ -207,15 +206,6 @@ export default function ZubehoerSlider({
       pricePerUnitOverride: paketpreis,
     });
     track.addToCart([ga4Item], paketpreis);
-
-    // Seitlicher Warenkorb: Menge kann dort direkt angepasst werden
-    openCartDrawer();
-
-    // Visuelles Feedback
-    setAddedProductId(product.id);
-    setTimeout(() => {
-      setAddedProductId(null);
-    }, 2000);
   };
 
   // Wenn keine Kategorien mit Produkten vorhanden sind, nichts anzeigen
@@ -246,7 +236,7 @@ export default function ZubehoerSlider({
           </h2>
 
           {/* Kategorie-Navigation */}
-          <div className="mb-4 flex gap-2 overflow-x-auto scrollbar-hide">
+          <div className="mb-4 flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-pale p-1 scrollbar-hide">
             {availableCategories.map((category) => (
               <button
                 key={category.metaKey}
@@ -254,8 +244,8 @@ export default function ZubehoerSlider({
                 aria-pressed={activeCategory === category.metaKey}
                 className={`flex-shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
                   activeCategory === category.metaKey
-                    ? 'bg-dark font-bold text-white'
-                    : 'bg-pale text-mid hover:bg-ash hover:text-dark'
+                    ? 'bg-white font-bold text-dark shadow-sm ring-1 ring-ash'
+                    : 'text-mid hover:text-dark'
                 }`}
               >
                 {category.name}
@@ -306,6 +296,7 @@ export default function ZubehoerSlider({
                         <article className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
                           <div className="flex flex-col h-full">
                             {/* Produktbild - Klickbar zum Produkt */}
+                            <div className="relative">
                             <Link href={`/products/${product.slug}`} className="relative aspect-square bg-gray-100 block overflow-hidden">
                               {product.images.length > 0 ? (
                                 <Image
@@ -325,6 +316,37 @@ export default function ZubehoerSlider({
                                 </div>
                               )}
                             </Link>
+
+                            {/* + auf dem Bild, klappt im Warenkorb zu − Menge + auf */}
+                            {(() => {
+                              const menge = cartItems.find((item) => item.id === product.id && !item.isSetItem && !item.isSample)?.quantity ?? 0;
+                              return (
+                                <div className={`absolute bottom-2 right-2 flex h-10 items-center justify-end overflow-hidden rounded-full bg-white shadow-md transition-[width] duration-200 ${menge > 0 ? 'w-[calc(100%-1rem)]' : 'w-10'}`}>
+                                  {menge > 0 && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSingleItemQuantity(product.id, menge - 1)}
+                                        aria-label={`${product.name}: eins weniger`}
+                                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-xl font-bold text-dark"
+                                      >
+                                        −
+                                      </button>
+                                      <span aria-live="polite" className="min-w-0 flex-1 text-center text-sm font-bold text-dark">{menge}</span>
+                                    </>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleAddToCart(product, e)}
+                                    aria-label={`${product.name}: in den Warenkorb`}
+                                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-xl font-bold text-dark"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              );
+                            })()}
+                            </div>
 
                             {/* Produktinfo */}
                             <div className="p-3 flex-1 flex flex-col">
@@ -354,25 +376,11 @@ export default function ZubehoerSlider({
                               )}
 
                               {/* Preis */}
-                              <div className="mt-auto flex items-end justify-between gap-2">
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleAddToCart(product, e)}
-                                  aria-label={`${product.name} in den Warenkorb`}
-                                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-white transition-colors ${
-                                    addedProductId === product.id ? 'bg-cta' : 'bg-dark hover:bg-black'
-                                  }`}
-                                >
-                                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                  </svg>
-                                </button>
-                                <div className="min-w-0 text-right">
-                                  <div className="whitespace-nowrap text-lg font-bold leading-tight text-dark sm:text-xl">
-                                    {price.toFixed(2).replace('.', ',')} €
-                                  </div>
-                                  <div className="truncate text-xs text-mid">pro {unit}</div>
+                              <div className="mt-auto text-right">
+                                <div className="whitespace-nowrap text-lg font-bold leading-tight text-dark sm:text-xl">
+                                  {price.toFixed(2).replace('.', ',')} €
                                 </div>
+                                <div className="truncate text-xs text-mid">pro {unit}</div>
                               </div>
                             </div>
                           </div>

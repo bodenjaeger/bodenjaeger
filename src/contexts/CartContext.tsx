@@ -76,6 +76,8 @@ export interface CartContextType {
   removeFromCart: (productId: number) => void;
   removeSet: (setId: string) => void;
   updateQuantity: (productId: number, quantity: number, newActualM2?: number, setId?: string) => void;
+  /** Nur das Einzelprodukt ändern, gleiche Produkte in einem Set bleiben unberührt. 0 entfernt es. */
+  setSingleItemQuantity: (productId: number, quantity: number) => void;
   clearCart: () => void;
   isInCart: (productId: number) => boolean;
   getItemQuantity: (productId: number) => number;
@@ -307,6 +309,16 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     );
   };
 
+  const setSingleItemQuantity = (productId: number, quantity: number) => {
+    setCartItems(prevItems =>
+      prevItems
+        .map(item =>
+          item.id === productId && !item.isSetItem && !item.isSample ? { ...item, quantity } : item
+        )
+        .filter(item => item.isSetItem || item.isSample || item.id !== productId || item.quantity > 0)
+    );
+  };
+
   // Update item quantity and optionally actualM2 for set items
   // When setId is provided, only update the item within that specific set
   const updateQuantity = (productId: number, quantity: number, newActualM2?: number, setId?: string) => {
@@ -426,6 +438,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     removeFromCart,
     removeSet,
     updateQuantity,
+    setSingleItemQuantity,
     clearCart,
     isInCart,
     getItemQuantity,

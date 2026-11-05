@@ -181,7 +181,7 @@ export default function ProductDetailSections({ product, features, media }: Prod
 
   return (
     <div className="mt-8 lg:mt-10">
-      <div role="tablist" aria-label="Produktinformationen" className="mb-6 hidden gap-2 lg:flex">
+      <div role="tablist" aria-label="Produktinformationen" className="mb-6 hidden w-fit gap-1 rounded-xl bg-pale p-1 lg:flex">
         {sections.map((section) => (
           <button
             key={section.id}
@@ -190,7 +190,7 @@ export default function ProductDetailSections({ product, features, media }: Prod
             aria-selected={currentId === section.id}
             onClick={() => setActiveId(section.id)}
             className={`rounded-lg px-5 py-2.5 text-sm transition-colors ${
-              currentId === section.id ? 'bg-dark font-bold text-white' : 'bg-pale text-mid hover:bg-ash hover:text-dark'
+              currentId === section.id ? 'bg-white font-bold text-dark shadow-sm ring-1 ring-ash' : 'text-mid hover:text-dark'
             }`}
           >
             {section.label}
