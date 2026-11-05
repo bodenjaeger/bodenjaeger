@@ -25,6 +25,7 @@ import AccessoryBuyBox from './AccessoryBuyBox';
 import BuyBoxServices from './BuyBoxServices';
 import ProductInfo from './ProductInfo';
 import QuantitySelector from './QuantitySelector';
+import { writeSetAuswahl } from '@/lib/set-auswahl';
 import TotalPrice from './TotalPrice';
 import ZubehoerSlider from './ZubehoerSlider';
 import ProductSummary from './ProductSummary';
@@ -344,6 +345,7 @@ export default function ProductPageContent({
   const quantityRef = useRef<HTMLDivElement>(null);
   const quantityTopBefore = useRef<number | null>(null);
   const handleQuantityChange = (newPackages: number, newSqm: number) => {
+    writeSetAuswahl(product.id, { m2: newSqm });
     quantityTopBefore.current = quantityRef.current?.getBoundingClientRect().top ?? null;
     setWantedM2(newSqm);
   };
@@ -461,6 +463,7 @@ export default function ProductPageContent({
                     einheitFull={product.einheit || undefined}
                     verpackungsartFull={product.verpackungsart || undefined}
                     initialPackages={initialPackages}
+                    auswahlProductId={product.id}
                     onQuantityChange={handleQuantityChange}
                   />
                 </div>

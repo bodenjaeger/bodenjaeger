@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { createPortal } from 'react-dom';
+import { readSetAuswahl, writeSetAuswahl } from '@/lib/set-auswahl';
 import { ChevronRight, X } from 'lucide-react';
 import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
@@ -45,6 +46,8 @@ interface SetAngebotProps {
   daemmungStandardPrice?: number;
   sockelleisteStandardPrice?: number;
   onProductSelection?: (daemmung: StoreApiProduct | null, sockelleiste: StoreApiProduct | null) => void;
+  /** Produkt, zu dem die Auswahl beim Neuladen wiederhergestellt wird */
+  auswahlProductId?: number;
   // PREISE DIREKT VOM PARENT (ProductPageContent) - KEINE BERECHNUNG HIER!
   savingsPercent?: number;
   sparpaket?: SparpaketAnzeige | null;
@@ -108,6 +111,7 @@ export default function SetAngebot({
   daemmungStandardPrice = 0,
   sockelleisteStandardPrice = 0,
   onProductSelection,
+  auswahlProductId,
   sparpaket = null
 }: SetAngebotProps) {
   // Modal state
@@ -138,6 +142,27 @@ export default function SetAngebot({
   const [selectedSockelleiste, setSelectedSockelleiste] = useState<StoreApiProduct | null>(
     sockelleisteOptions.find(opt => opt.name === sockelleisteName) || null
   );
+
+  // Gespeicherte Auswahl nach dem Laden übernehmen, sofern das Produkt noch angeboten wird
+  const [auswahlGeladen, setAuswahlGeladen] = useState(false);
+  useEffect(() => {
+    if (auswahlProductId) {
+      const saved = readSetAuswahl(auswahlProductId);
+      const daemmung = daemmungOptions.find((o) => o.id === saved.daemmungId);
+      const sockelleiste = sockelleisteOptions.find((o) => o.id === saved.sockelleisteId);
+      if (daemmung) setSelectedDaemmung(daemmung);
+      if (sockelleiste) setSelectedSockelleiste(sockelleiste);
+    }
+    setAuswahlGeladen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auswahlProductId]);
+  useEffect(() => {
+    if (!auswahlProductId || !auswahlGeladen) return;
+    writeSetAuswahl(auswahlProductId, {
+      daemmungId: selectedDaemmung?.id,
+      sockelleisteId: selectedSockelleiste?.id,
+    });
+  }, [auswahlProductId, auswahlGeladen, selectedDaemmung, selectedSockelleiste]);
 
   // Check if we have at least one addition product (not a placeholder)
   const hasDaemmung = daemmungName !== 'Trittschalldämmung';
