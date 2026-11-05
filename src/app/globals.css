@@ -103,6 +103,9 @@ input[type="number"] {
   --color-navy: #1e40af;     /* Dunkelblau       → text-navy,  bg-navy    */
   --color-ocean: #5095cb;    /* Mittelblau       → text-ocean, bg-ocean   */
   --color-success: #28a745;  /* Grün             → text-success, bg-success */
+  --color-panel: #f0f0f2;    /* Fläche der Karteireiter → bg-panel */
+  --color-cta: #15803d;      /* Grüner Button    → bg-cta (Weiß lesbar, Kontrast ≥ 4,5:1) */
+  --color-cta-dark: #116631; /* Hover             → bg-cta-dark */
 
   /* Shop-Header → bg-hdr-bg, text-hdr-link, border-hdr-line usw. */
   --color-hdr-bg: var(--hdr-bg);
@@ -622,3 +625,14 @@ body.nav-menu-open [id^='trustbadge-container-'] {
   /* Aufgeklappter Zustand (Sterne / Reviews-Panel). */
 }
 
+
+/* Mobile Produktseite: Kontakt sitzt in der Kaufleiste, Warenkorb im Kopfbereich */
+@media (max-width: 1023px) {
+  body.kaufbereich [data-floating-actions] {
+    display: none;
+  }
+
+  body.kaufleiste-sichtbar [id^="trustbadge-container-"] {
+    bottom: calc(88px + var(--kaufleiste-abstand, 0px)) !important;
+  }
+}

@@ -92,8 +92,11 @@ All prices calculated once in `ProductPageContent.tsx` (Single Source of Truth) 
 - State: `wantedM2`, `selectedDaemmung`, `selectedSockelleiste`
 - `quantities` (useMemo) → calls `calculateSetQuantities()`
 - `prices` (useMemo) → all price derivation from backend fields
-- `handleProductSelection` wrapped in `useCallback` — prevents race condition between `SetAngebot` (desktop) and `SetAngebotMobile` (mobile) both trying to update state
-- Product type detection by category slug (`vinylboden`, `laminat`, `parkett` → shows SetAngebot; `zubehoer` → simpler layout)
+- `handleProductSelection` wrapped in `useCallback`; `SetAngebot` ist eine responsive Komponente für Desktop und Mobil
+- Optionale PDFs, Video und Visualisierung: WooCommerce-Felder `bj_*_url` (`src/lib/product-media.ts`); leer = ausgeblendet
+- Trusted-Shops-Note kommt live aus `src/lib/trusted-shops.ts` (stündlich), ohne Antwort wird keine Note gezeigt
+- Rabatt in Prozent: Summe der Einzelpreise gegenüber Verkaufspreis, nicht `setangebot_ersparnis_prozent`
+- Alle Produkte teilen dieselbe Seitenoptik; Böden nutzen SetAngebot/TotalPrice, Nicht-Bodenbeläge `AccessoryBuyBox` (Zubehörkategorie oder ohne Bodenkategorie und Set)
 
 ### Provider Hierarchy (`layout.tsx`)
 
@@ -171,6 +174,10 @@ Vom Kunden festgelegt: `src/components/KarrierePage.tsx` ist die Vorlage, damit 
 - Rotes Laufband (`.karriere-laufband`), Abschnitte im Wechsel Weiß und `bg-pale`
 - Kicker in Versalien und `text-brand`, Bilder mit großen Radien, rote Häkchen-Kreise, Buttons `rounded-xl bg-brand`
 - Nur Shop-Farben; Gelb nicht als Akzent verwenden
+
+### Ebenen (Overlays)
+
+Die mitlaufenden Spalten der Produktseite sind `sticky` und bilden eigene Ebenen. Alles, was über der Seite liegt (Großansicht, Auswahlfenster, Kaufleiste), wird deshalb per `createPortal` in `document.body` gerendert: Fenster mit `z-[100]`, Kaufleiste mit `z-30`. Nie ein Overlay nur per `z-index` innerhalb einer Spalte lösen.
 
 ### Price Type Gotcha
 

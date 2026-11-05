@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import BrandLoader from '@/components/BrandLoader';
+import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import { useCart } from '@/contexts/CartContext';
 import { track } from '@/lib/analytics/track';
@@ -53,9 +56,12 @@ export default function ZubehoerSlider({
   const [error, setError] = useState<string | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-  const [addedProductId, setAddedProductId] = useState<number | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(true);
+  // Warenkorb liegt im Browser: erst nach dem Laden auswerten, sonst weicht er vom Server-HTML ab
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  const { addToCart, openCartDrawer } = useCart();
+  const { addToCart, cartItems, openCartDrawer, setSingleItemQuantity } = useCart();
 
   // Hilfsfunktion: Für "Zubehör für Sockelleisten" die ausgewählte Sockelleiste nutzen,
   // für alle anderen Kategorien das Hauptprodukt
@@ -67,8 +73,10 @@ export default function ZubehoerSlider({
   };
 
   // Filtere Kategorien: Nur die anzeigen, die Produkt-IDs haben
+  const [leereKategorien, setLeereKategorien] = useState<string[]>([]);
   const availableCategories = categories.filter((category) => {
     const source = getSourceProduct(category.metaKey);
+    if (leereKategorien.includes(`${source?.id}:${category.metaKey}`)) return false;
     const productIdsString = source?.[category.metaKey as keyof typeof source];
     return productIdsString && typeof productIdsString === 'string' && productIdsString.trim().length > 0;
   });
@@ -76,11 +84,12 @@ export default function ZubehoerSlider({
   const [activeCategory, setActiveCategory] = useState<string>('');
 
   // Setze die erste verfügbare Kategorie als aktiv, wenn noch keine ausgewählt ist
+  // und auf den nächsten springen, wenn der aktive Reiter wegfällt (z. B. andere Sockelleiste)
+  const availableKeys = availableCategories.map((category) => category.metaKey).join(',');
   useEffect(() => {
-    if (!activeCategory && availableCategories.length > 0) {
-      setActiveCategory(availableCategories[0].metaKey);
-    }
-  }, [availableCategories, activeCategory]);
+    const keys = availableKeys ? availableKeys.split(',') : [];
+    if (!keys.includes(activeCategory)) setActiveCategory(keys[0] ?? '');
+  }, [availableKeys, activeCategory]);
 
   // Produkte für aktive Kategorie laden (aus Meta-Keys)
   useEffect(() => {
@@ -139,6 +148,11 @@ export default function ZubehoerSlider({
 
         console.log(`✅ Loaded ${loadedProducts.length} products via API`);
         setProducts(loadedProducts);
+        scrollContainerRef.current?.scrollTo({ left: 0 });
+        // Hinterlegte IDs ohne lieferbares Produkt: Reiter ausblenden
+        if (loadedProducts.length === 0) {
+          setLeereKategorien((prev) => [...prev, `${source.id}:${activeCategory}`]);
+        }
       } catch (err) {
         console.error('❌ Error loading accessory products:', err);
         setError('Fehler beim Laden der Produkte');
@@ -206,12 +220,6 @@ export default function ZubehoerSlider({
       pricePerUnitOverride: paketpreis,
     });
     track.addToCart([ga4Item], paketpreis);
-
-    // Visuelles Feedback
-    setAddedProductId(product.id);
-    setTimeout(() => {
-      setAddedProductId(null);
-    }, 2000);
   };
 
   // Wenn keine Kategorien mit Produkten vorhanden sind, nichts anzeigen
@@ -220,68 +228,68 @@ export default function ZubehoerSlider({
   }
 
   return (
-    <section className="bg-white rounded-lg shadow-md">
-      <div className="flex flex-col lg:flex-row">
-        {/* LINKE SEITE - Info Box (Fixed) */}
-        <div className="lg:w-[280px] flex-shrink-0 bg-ash p-6 lg:sticky lg:top-0 lg:self-start">
-          <h2 className="text-2xl font-bold text-dark mb-4">
-            Passendes Zubehör:
-          </h2>
+    <section className="rounded-xl border border-ash bg-white px-4 lg:p-5">
+      {/* Mobil: Akkordeon wie die übrigen Abschnitte */}
+      <button
+        type="button"
+        onClick={() => setMobileOpen(!mobileOpen)}
+        aria-expanded={mobileOpen}
+        className="flex min-h-14 w-full items-center justify-between text-left text-base font-bold text-dark lg:hidden"
+      >
+        Passendes Zubehör
+        <svg className={`h-5 w-5 transition-transform ${mobileOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
 
-          <p className="text-base text-gray-700 mb-4">
-            Hier findest du unsere Vorauswahl der passenden Zubehörprodukte zu deiner obigen Produktauswahl.
-          </p>
-
-          <p className="text-sm text-gray-600 mb-6">
-            Die Anzahl der Produkte kannst du ganz einfach im Warenkorb anpassen.
-          </p>
-
-          <button
-            onClick={openCartDrawer}
-            className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg text-white font-bold hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: 'var(--color-bg-darkest)' }}
-          >
-            Weiter zum Warenkorb
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-
-        {/* RECHTE SEITE - Kategorien + Slider */}
-        <div className="flex-1 p-6 lg:p-8">
-          {/* Kategorie-Navigation */}
-          {availableCategories.length > 0 && (
-            <div className="mb-6 overflow-x-auto scrollbar-hide">
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 min-w-min">
-                {availableCategories.map((category) => (
-                  <button
-                    key={category.metaKey}
-                    onClick={() => setActiveCategory(category.metaKey)}
-                    className={`px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center justify-between gap-1.5 ${
-                      activeCategory === category.metaKey
-                        ? 'bg-gray-200 font-semibold text-gray-900'
-                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="flex-1 text-left">
-                      {category.name}
-                    </span>
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                ))}
+      <div className={`${mobileOpen ? 'block' : 'hidden'} pb-6 lg:block lg:pb-0`}>
+        <div>
+          <div className="mb-3 hidden items-center justify-between gap-4 lg:flex">
+            <h2 className="text-lg">
+              <span className="font-bold text-dark">Passendes Zubehör</span>
+              <span className="font-normal text-mid"> – Für ein perfektes Ergebnis</span>
+            </h2>
+            {/* Pfeile im Kopf, damit sie nie auf den Produkten liegen */}
+            {(canScrollLeft || canScrollRight) && (
+              <div className="flex flex-shrink-0 gap-2">
+                <button type="button" onClick={scrollLeft} disabled={!canScrollLeft} aria-label="Zurück" className="flex h-10 w-10 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash disabled:text-gray-300 disabled:hover:bg-white">
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button type="button" onClick={scrollRight} disabled={!canScrollRight} aria-label="Weitere Produkte" className="flex h-10 w-10 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash disabled:text-gray-300 disabled:hover:bg-white">
+                  <ChevronRight className="h-5 w-5" />
+                </button>
               </div>
-            </div>
+            )}
+          </div>
+
+          {mounted && cartItems.some((item) => item.setItemType === 'floor' && item.id === product?.id) && (
+            <p role="status" className="mb-3 text-sm font-bold text-cta">✓ Dein Set liegt im Warenkorb. Das passt dazu:</p>
           )}
 
-          {/* Produkt-Slider */}
-          <div className="relative px-0 md:px-6">
-            {/* Loading State */}
+          {/* Kategorie-Navigation */}
+          <div className="flex items-end gap-1 overflow-x-auto scrollbar-hide">
+            {availableCategories.map((category) => (
+              <button
+                key={category.metaKey}
+                onClick={() => setActiveCategory(category.metaKey)}
+                aria-pressed={activeCategory === category.metaKey}
+                className={`flex-shrink-0 whitespace-nowrap rounded-t-lg border border-b-0 px-3 py-2 text-sm transition-colors ${
+                  activeCategory === category.metaKey
+                    ? 'border-panel bg-panel font-bold text-dark'
+                    : 'border-ash bg-white text-mid hover:bg-panel hover:text-dark'
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Produkt-Slider auf der Karteikarte */}
+          <div className="relative min-h-72 rounded-b-xl rounded-tr-xl bg-panel p-3">
+            {/* Beim Reiterwechsel bleibt die Höhe erhalten, damit die Seite nicht springt */}
             {loading && (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+              <div className="absolute inset-0 z-10 flex items-center justify-center">
+                <BrandLoader label="Zubehör wird geladen" />
               </div>
             )}
 
@@ -293,11 +301,11 @@ export default function ZubehoerSlider({
             )}
 
             {/* Products */}
-            {!loading && !error && products.length > 0 && (
+            {!error && products.length > 0 && (
               <>
                 <div
                   ref={scrollContainerRef}
-                  className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4 snap-x snap-mandatory"
+                  className={`${loading ? 'pointer-events-none opacity-30' : ''} flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory`}
                   style={{
                     scrollbarWidth: 'none',
                     msOverflowStyle: 'none',
@@ -314,11 +322,12 @@ export default function ZubehoerSlider({
                     return (
                       <div
                         key={product.id}
-                        className="flex-shrink-0 w-[calc(25%-12px)] min-w-[160px] snap-start"
+                        className="flex-shrink-0 w-[calc(25%-12px)] min-w-[150px] snap-start"
                       >
                         <article className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
                           <div className="flex flex-col h-full">
                             {/* Produktbild - Klickbar zum Produkt */}
+                            <div className="relative">
                             <Link href={`/products/${product.slug}`} className="relative aspect-square bg-gray-100 block overflow-hidden">
                               {product.images.length > 0 ? (
                                 <Image
@@ -338,6 +347,37 @@ export default function ZubehoerSlider({
                                 </div>
                               )}
                             </Link>
+
+                            {/* + auf dem Bild, klappt im Warenkorb zu − Menge + auf */}
+                            {(() => {
+                              const menge = cartItems.find((item) => item.id === product.id && !item.isSetItem && !item.isSample)?.quantity ?? 0;
+                              return (
+                                <div className={`absolute bottom-2 right-2 flex h-10 items-center justify-end overflow-hidden rounded-lg border border-ash bg-white shadow-sm transition-[width] duration-200 ${menge > 0 ? 'w-[calc(100%-1rem)]' : 'w-10'}`}>
+                                  {menge > 0 && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSingleItemQuantity(product.id, menge - 1)}
+                                        aria-label={`${product.name}: eins weniger`}
+                                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-xl font-bold text-dark transition-colors hover:bg-gray-100 active:bg-ash"
+                                      >
+                                        −
+                                      </button>
+                                      <span aria-live="polite" className="min-w-0 flex-1 text-center text-sm font-bold text-dark">{menge}</span>
+                                    </>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleAddToCart(product, e)}
+                                    aria-label={`${product.name}: in den Warenkorb`}
+                                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-xl font-bold text-dark transition-colors hover:bg-gray-100 active:bg-ash"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              );
+                            })()}
+                            </div>
 
                             {/* Produktinfo */}
                             <div className="p-3 flex-1 flex flex-col">
@@ -367,74 +407,20 @@ export default function ZubehoerSlider({
                               )}
 
                               {/* Preis */}
-                              <div className="text-right">
-                                <div className="text-2xl font-bold text-gray-900">
-                                  {price.toFixed(2).replace('.', ',')}€
+                              <div className="mt-auto text-right">
+                                <div className="whitespace-nowrap text-lg font-bold leading-tight text-dark sm:text-xl">
+                                  {formatPrice(price)} €
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  pro {unit}
-                                </div>
+                                <div className="truncate text-xs text-mid">pro {unit}</div>
                               </div>
                             </div>
                           </div>
-
-                          {/* Warenkorb Button (absolute) */}
-                          <button
-                            onClick={(e) => handleAddToCart(product, e)}
-                            className={`absolute bottom-3 left-3 w-10 h-10 rounded-full text-white flex items-center justify-center transition-all shadow-lg z-10 ${
-                              addedProductId === product.id
-                                ? 'bg-green-600 scale-110'
-                                : 'bg-black hover:bg-gray-800'
-                            }`}
-                            aria-label="In den Warenkorb"
-                          >
-                            {addedProductId === product.id ? (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                            ) : (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                              </svg>
-                            )}
-                          </button>
                         </article>
                       </div>
                     );
                   })}
                 </div>
 
-                {/* Scroll Left Button */}
-                <button
-                  onClick={scrollLeft}
-                  className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full shadow-lg hover:shadow-xl items-center justify-center transition-all z-10 ${
-                    canScrollLeft
-                      ? 'bg-dark text-brand cursor-pointer'
-                      : 'bg-dark/50 text-brand/40 cursor-not-allowed'
-                  }`}
-                  disabled={!canScrollLeft}
-                  aria-label="Zurück"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-
-                {/* Scroll Right Button */}
-                <button
-                  onClick={scrollRight}
-                  className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full shadow-lg hover:shadow-xl items-center justify-center transition-all z-10 ${
-                    canScrollRight
-                      ? 'bg-dark text-brand cursor-pointer'
-                      : 'bg-dark/50 text-brand/40 cursor-not-allowed'
-                  }`}
-                  disabled={!canScrollRight}
-                  aria-label="Weitere Produkte"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
               </>
             )}
 
@@ -445,6 +431,21 @@ export default function ZubehoerSlider({
               </div>
             )}
           </div>
+
+          {mounted && cartItems.length > 0 && (
+            <div className="mt-3 flex justify-start pb-4 lg:justify-end lg:pb-0">
+              <button
+                type="button"
+                onClick={openCartDrawer}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-dark px-5 text-sm font-bold text-white transition-colors hover:bg-[#1a1a1d]"
+              >
+                Weiter zum Warenkorb
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

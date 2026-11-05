@@ -1,3 +1,4 @@
+import { parseProductMedia, type ProductMedia } from './product-media';
 // WooCommerce Store API Client
 // Using the Jaeger API endpoints: /wp-json/jaeger/v1/ (includes jaeger_meta fields)
 
@@ -629,7 +630,7 @@ class WooCommerceClient {
    * individuell gepflegte SEO-Description aus Rank Math.
    * 5 Minuten im Next-Data-Cache; Seite und generateMetadata teilen sich den Request.
    */
-  async getProductDetails(id: number): Promise<{ description: string | null; seoDescription: string | null }> {
+  async getProductDetails(id: number): Promise<{ description: string | null; seoDescription: string | null; media: ProductMedia }> {
     const wcProduct = await this.makeRestRequest<{
       description?: string;
       meta_data?: Array<{ key: string; value: unknown }>;
@@ -641,6 +642,7 @@ class WooCommerceClient {
     return {
       description: wcProduct.description || null,
       seoDescription: typeof seo === 'string' && seo.trim() ? seo : null,
+      media: parseProductMedia(wcProduct.meta_data),
     };
   }
 

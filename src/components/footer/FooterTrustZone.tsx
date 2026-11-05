@@ -6,8 +6,8 @@ import {
   PAYMENT_BADGES,
   SHIPPING_BADGES,
   TRUST_ZONE_TEXTE,
-  TRUSTED_SHOPS_BEWERTUNG,
 } from '@/lib/footer-nav'
+import { getTrustedShopsRating } from '@/lib/trusted-shops'
 
 const BLOCK_TITLE =
   'mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-white'
@@ -33,15 +33,15 @@ function BlockTitle({ icon: Icon, children }: { icon: LucideIcon; children: stri
  * eine dezente Trennlinie, wie sie auch die Bottom-Bar nutzt.
  *
  * Der Trusted-Shops-Block zeigt Note und Sterne (Designvorlage
- * „Footer_2026", Stand 23.09.2026). Die Zahl kommt statisch aus
- * TRUSTED_SHOPS_BEWERTUNG — siehe Warnhinweis dort. Das Floating-Widget
+ * „Footer_2026", Stand 23.09.2026). Die Note kommt live aus dem
+ * Trusted-Shops-Profil (lib/trusted-shops.ts). Das Floating-Widget
  * (components/TrustedShops.tsx) bleibt davon unberührt.
  */
-export default function FooterTrustZone() {
-  const { note, maximum } = TRUSTED_SHOPS_BEWERTUNG
+export default async function FooterTrustZone() {
+  const bewertung = await getTrustedShopsRating()
   // de-DE: Komma als Dezimaltrennzeichen, immer eine Nachkommastelle
   // (4,0 statt 4 — sonst wirkt eine glatte Note wie ein abgeschnittener Wert).
-  const noteFormatiert = note.toLocaleString('de-DE', {
+  const noteFormatiert = bewertung?.note.toLocaleString('de-DE', {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   })
@@ -56,7 +56,7 @@ export default function FooterTrustZone() {
             <div
               className="flex items-start gap-3"
               role="img"
-              aria-label={`Trusted Shops Käuferschutz — Bewertung ${noteFormatiert} von ${maximum}`}
+              aria-label={bewertung ? `Trusted Shops Käuferschutz — Bewertung ${noteFormatiert} von ${bewertung.maximum}` : 'Trusted Shops Käuferschutz'}
             >
               {/* Das Trustmark ist ein dunkel umringtes Rundsiegel und würde auf
                   `bg-dark` seine Außenkante verlieren. Es sitzt deshalb — wie die
@@ -71,8 +71,12 @@ export default function FooterTrustZone() {
                 />
               </span>
               <div>
-                <p className="text-2xl font-bold leading-none text-white">{noteFormatiert}</p>
-                <StarRating note={note} maximum={maximum} className="mt-1.5" />
+                {bewertung && (
+                  <>
+                    <p className="text-2xl font-bold leading-none text-white">{noteFormatiert}</p>
+                    <StarRating note={bewertung.note} maximum={bewertung.maximum} className="mt-1.5" />
+                  </>
+                )}
                 <p className="mt-1.5 text-[13px] leading-5 text-ash">
                   {TRUST_ZONE_TEXTE.trustedShops.titel}
                   <br />

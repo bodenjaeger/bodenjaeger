@@ -26,7 +26,7 @@ export default function HeaderLogo() {
     >
       <svg
         viewBox="0 0 311.85 60.96"
-        className="h-8 w-auto lg:h-11"
+        className="h-6 w-auto min-[400px]:h-8 lg:h-11"
         aria-hidden="true"
         focusable="false"
       >

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Info } from 'lucide-react';
 
 interface QuantitySelectorProps {
   paketinhalt: number;
@@ -9,6 +10,7 @@ interface QuantitySelectorProps {
   verpackungsartFull?: string;   // Ausgeschrieben, z.B. "Paket(e)", "Stück"
   initialPackages?: number;      // Startwert (Klebe-Vinyl: 5 für das Sparpaket)
   onQuantityChange?: (packages: number, sqm: number) => void;
+  showVerschnitt?: boolean;      // Hinweis nur bei Böden
 }
 
 export default function QuantitySelector({
@@ -17,7 +19,8 @@ export default function QuantitySelector({
   einheitFull,
   verpackungsartFull,
   initialPackages = 1,
-  onQuantityChange
+  onQuantityChange,
+  showVerschnitt = true
 }: QuantitySelectorProps) {
   // Ausgeschriebene Labels für über den +/- Feldern
   const packageLabel = verpackungsartFull || 'Paket(e)';
@@ -156,32 +159,12 @@ export default function QuantitySelector({
   };
 
   return (
-    <div className="mb-6">
+    <div className="mb-4">
 
       {/* Counters Grid */}
-      <div className={`grid ${showBothFields ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+      <div className={`grid ${showBothFields ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
         {/* Paket Counter */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowInfo(!showInfo)}
-            className="absolute -top-1 -left-1 z-10"
-            aria-label="Verschnitt-Info anzeigen"
-          >
-            <div className="w-6 h-6 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors">
-              <svg
-                className="w-4 h-4 text-black"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-          </button>
+        <div className="relative order-2">
           <div className="flex items-center justify-center mb-2">
             <label className="text-sm font-medium text-gray-700">
               {packageLabel}
@@ -189,15 +172,16 @@ export default function QuantitySelector({
           </div>
 
           {/* Counter Container with Dividers */}
-          <div className="bg-white rounded-xl shadow-sm border-2 border-gray-200 overflow-hidden flex items-stretch h-12 w-[90%] mx-auto">
+          <div className="bg-white rounded-lg border border-ash overflow-hidden flex items-stretch h-12 w-full">
             {/* Minus Button */}
             <button
               type="button"
+              aria-label="Ein Paket weniger"
               onClick={decrementPackages}
-              className="w-[16%] flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-extrabold text-2xl disabled:cursor-not-allowed border-r-2 border-gray-300"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 active:bg-ash transition-colors text-gray-700 font-bold text-xl disabled:cursor-not-allowed disabled:text-gray-300"
               disabled={packages <= 1}
             >
-              -
+              −
             </button>
 
             {/* Value Display/Input */}
@@ -207,15 +191,17 @@ export default function QuantitySelector({
               onChange={handlePackagesInputChange}
               onBlur={handlePackagesBlur}
               min="1"
-              className="w-[68%] text-center bg-white border-0 outline-none text-gray-900 font-semibold text-lg [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              inputMode="numeric"
+              className="min-w-0 flex-1 text-center bg-white border-0 outline-none text-gray-900 font-semibold text-base [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               style={{ MozAppearance: 'textfield' }}
             />
 
             {/* Plus Button */}
             <button
               type="button"
+              aria-label="Ein Paket mehr"
               onClick={incrementPackages}
-              className="w-[16%] flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-extrabold text-2xl border-l-2 border-gray-300"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 active:bg-ash transition-colors text-gray-700 font-bold text-xl"
             >
               +
             </button>
@@ -230,15 +216,16 @@ export default function QuantitySelector({
           </label>
 
           {/* Counter Container with Dividers */}
-          <div className="bg-white rounded-xl shadow-sm border-2 border-gray-200 overflow-hidden flex items-stretch h-12 w-[90%] mx-auto">
+          <div className="bg-white rounded-lg border border-ash overflow-hidden flex items-stretch h-12 w-full">
             {/* Minus Button */}
             <button
               type="button"
+              aria-label="Ein Paket weniger"
               onClick={decrementSqm}
-              className="w-[16%] flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-extrabold text-2xl disabled:cursor-not-allowed border-r-2 border-gray-300"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 active:bg-ash transition-colors text-gray-700 font-bold text-xl disabled:cursor-not-allowed disabled:text-gray-300"
               disabled={sqm <= paketinhalt}
             >
-              -
+              −
             </button>
 
             {/* Value Display/Input */}
@@ -249,15 +236,17 @@ export default function QuantitySelector({
               onBlur={handleSqmBlur}
               min={paketinhalt}
               step="0.01"
-              className="w-[68%] text-center bg-white border-0 outline-none text-gray-900 font-semibold text-lg [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              inputMode="decimal"
+              className="min-w-0 flex-1 text-center bg-white border-0 outline-none text-gray-900 font-semibold text-base [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               style={{ MozAppearance: 'textfield' }}
             />
 
             {/* Plus Button */}
             <button
               type="button"
+              aria-label="Ein Paket mehr"
               onClick={incrementSqm}
-              className="w-[16%] flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-extrabold text-2xl border-l-2 border-gray-300"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 active:bg-ash transition-colors text-gray-700 font-bold text-xl"
             >
               +
             </button>
@@ -266,9 +255,21 @@ export default function QuantitySelector({
         )}
       </div>
 
+      {showVerschnitt && (
+      <button
+        type="button"
+        onClick={() => setShowInfo(!showInfo)}
+        aria-expanded={showInfo}
+        className="mt-2 inline-flex items-center gap-1.5 py-1 text-xs text-mid hover:text-dark"
+      >
+        <Info className="h-3.5 w-3.5" aria-hidden="true" />
+        Wie viel Verschnitt einplanen?
+      </button>
+      )}
+
       {/* Verschnitt Info Box */}
       {showInfo && (
-        <div className="mt-4 p-4 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 shadow-sm relative">
+        <div className="mt-2 p-4 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 shadow-sm relative">
           <button
             type="button"
             onClick={() => setShowInfo(false)}

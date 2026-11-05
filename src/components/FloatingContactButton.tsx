@@ -15,6 +15,13 @@ export default function FloatingContactButton() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  // Kontakt aus der mobilen Kaufleiste der Produktseite
+  useEffect(() => {
+    const open = () => setIsContactDrawerOpen(true);
+    window.addEventListener('kontakt-oeffnen', open);
+    return () => window.removeEventListener('kontakt-oeffnen', open);
+  }, []);
+
   // Auf allen Fachmarkt-Seiten (Landing + Unterseiten) keine Floating-Buttons.
   if (isFachmarktRoute(pathname)) return null;
 

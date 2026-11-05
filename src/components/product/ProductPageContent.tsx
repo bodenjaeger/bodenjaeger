@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import Image from 'next/image';
-import { MinusIcon, PlusIcon } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import { calculateSetQuantities, calculateSparpaketQuantities } from '@/lib/setCalculations';
 import { KLEBEVINYL_SPARPAKET } from '@/content/klebevinyl-sparpaket';
@@ -18,11 +19,19 @@ import AlertModal from '@/components/AlertModal';
 import { track } from '@/lib/analytics/track';
 import { mapProductToItem } from '@/lib/analytics/mapItem';
 import ImageGallery from './ImageGallery';
-import ZahlungsIcons from './ZahlungsIcons';
+import AccessoryBuyBox from './AccessoryBuyBox';
+import BuyBoxServices from './BuyBoxServices';
 import ProductInfo from './ProductInfo';
 import QuantitySelector from './QuantitySelector';
 import TotalPrice from './TotalPrice';
 import ZubehoerSlider from './ZubehoerSlider';
+import ProductSummary from './ProductSummary';
+import StickyColumn from './StickyColumn';
+import ProductDetailSections from './ProductDetailSections';
+import { extractProductFeatures } from '@/lib/product-features';
+import type { ProductMedia } from '@/lib/product-media';
+import { getPrimaryCategory } from '@/lib/product-category';
+import type { TrustedShopsRating } from '@/lib/trusted-shops';
 
 interface ProductPageContentProps {
   product: StoreApiProduct;
@@ -31,6 +40,8 @@ interface ProductPageContentProps {
   daemmungOptions: StoreApiProduct[];
   sockelleisteOptions: StoreApiProduct[];
   sparpaketProducts?: StoreApiProduct[];  // nur Klebe-Vinyl, sonst leer
+  media?: ProductMedia;  // optionale PDFs, Video, Visualisierung
+  trustedShopsRating?: TrustedShopsRating | null;
 }
 
 export default function ProductPageContent({
@@ -39,7 +50,9 @@ export default function ProductPageContent({
   sockelleisteProduct,
   daemmungOptions,
   sockelleisteOptions,
-  sparpaketProducts = []
+  sparpaketProducts = [],
+  media = {},
+  trustedShopsRating = null
 }: ProductPageContentProps) {
   // ✅ USE ROOT-LEVEL FIELDS (backend/ROOT_LEVEL_FIELDS.md)
   const paketinhalt = product.paketinhalt || 1;
@@ -82,12 +95,14 @@ export default function ProductPageContent({
 
   // Check if product is an accessory (simple layout)
   const isAccessory = useMemo(() => {
-    if (!product.categories || !Array.isArray(product.categories)) return false;
+    if (product.slug.startsWith(SAMPLE_SLUG_PREFIX)) return false;
     const accessoryCategories = ['zubehoer', 'sockelleisten', 'daemmung'];
-    return product.categories.some(cat =>
+    const inAccessoryCategory = (product.categories ?? []).some(cat =>
       accessoryCategories.includes(cat.slug.toLowerCase())
     );
-  }, [product.categories]);
+    // Alles ohne Set und ohne Bodenkategorie gilt ebenfalls als Nicht-Bodenbelag
+    return inAccessoryCategory || (!isFloorProduct && !hasSparpaket && !daemmungProduct && !sockelleisteProduct);
+  }, [product.categories, product.slug, isFloorProduct, hasSparpaket, daemmungProduct, sockelleisteProduct]);
 
   // Calculate quantities ONLY (no prices - prices come from backend!)
   const quantities = useMemo(() => {
@@ -116,7 +131,12 @@ export default function ProductPageContent({
     if (!sparpaket) return null;
     // Unter Mindestmenge komplett ausblenden (Kundenvorgabe) – Titel "Sparpaket" bleibt
     if (!sparpaket.aktiv) {
-      return { aktiv: false, mindestPakete: KLEBEVINYL_SPARPAKET.mindestPakete, zeilen: [] };
+      return {
+        aktiv: false,
+        mindestPakete: KLEBEVINYL_SPARPAKET.mindestPakete,
+        fehlendePakete: Math.max(0, KLEBEVINYL_SPARPAKET.mindestPakete - (quantities?.floor.packages ?? 0)),
+        zeilen: [],
+      };
     }
     const zeilen = KLEBEVINYL_SPARPAKET.bestandteile
       .filter(b => b.imSetAnzeigen)
@@ -135,8 +155,8 @@ export default function ProductPageContent({
         };
       })
       .filter((z): z is NonNullable<typeof z> => z !== null);
-    return { aktiv: sparpaket.aktiv, mindestPakete: KLEBEVINYL_SPARPAKET.mindestPakete, zeilen };
-  }, [sparpaket]);
+    return { aktiv: sparpaket.aktiv, mindestPakete: KLEBEVINYL_SPARPAKET.mindestPakete, fehlendePakete: 0, zeilen };
+  }, [sparpaket, quantities?.floor.packages]);
 
   // ✅ VOLLSTÄNDIGE SET-ANGEBOT BERECHNUNG
   // Basierend auf: SETANGEBOT_BERECHNUNG_KOMPLETT.md
@@ -268,11 +288,8 @@ export default function ProductPageContent({
     // totalDisplayPrice = Set-Preis (was der Kunde MIT Set bezahlt)
     const totalDisplayPrice = bodenPriceTotal + daemmungSetPrice + sockelleisteSetPrice;
     const savings = comparisonPriceTotal - totalDisplayPrice;
-    // ✅ Backend-Wert verwenden (setangebot_ersparnis_prozent) — konsistent mit Produktkarten
-    // Klebe-Vinyl Sparpaket (Kundenvorgabe): höherer Wert aus Backend und berechneter Ersparnis
-    const backendPercent = product.setangebot_ersparnis_prozent || 0;
-    const berechnetPercent = comparisonPriceTotal > 0 ? (savings / comparisonPriceTotal) * 100 : 0;
-    const savingsPercent = hasSparpaket ? Math.max(backendPercent, berechnetPercent) : backendPercent;
+    // Rabatt (Kundenvorgabe): Summe der Einzelpreise gegenüber unserem Verkaufspreis
+    const savingsPercent = comparisonPriceTotal > 0 && savings > 0 ? (savings / comparisonPriceTotal) * 100 : 0;
 
     return {
       totalDisplayPrice,
@@ -285,10 +302,26 @@ export default function ProductPageContent({
       sockelleisteSetPricePerUnit,
       sockelleisteRegularPricePerUnit,
     };
-  }, [product, quantities, selectedDaemmung, selectedSockelleiste, daemmungProduct, sockelleisteProduct, sparpaketAnzeige, hasSparpaket]);
+  }, [product, quantities, selectedDaemmung, selectedSockelleiste, daemmungProduct, sockelleisteProduct, sparpaketAnzeige]);
+
+  const primaryCategory = getPrimaryCategory(product.categories);
+  // Mobil: Fallen Sparpaket-Zeilen weg oder kommen dazu, bleibt +/- an derselben Bildschirmstelle
+  const sparpaketZeilen = sparpaketAnzeige?.zeilen.length ?? 0;
+  useLayoutEffect(() => {
+    const before = quantityTopBefore.current;
+    quantityTopBefore.current = null;
+    if (before === null || !quantityRef.current || window.innerWidth >= 1024) return;
+    const verschoben = quantityRef.current.getBoundingClientRect().top - before;
+    if (Math.abs(verschoben) > 1) window.scrollBy({ top: verschoben, behavior: 'instant' });
+  }, [sparpaketZeilen]);
+
+  const features = useMemo(() => extractProductFeatures(product.short_description), [product.short_description]);
 
   // Handle quantity changes from QuantitySelector
+  const quantityRef = useRef<HTMLDivElement>(null);
+  const quantityTopBefore = useRef<number | null>(null);
   const handleQuantityChange = (newPackages: number, newSqm: number) => {
+    quantityTopBefore.current = quantityRef.current?.getBoundingClientRect().top ?? null;
     setWantedM2(newSqm);
   };
 
@@ -300,523 +333,6 @@ export default function ProductPageContent({
     setSelectedSockelleiste(sockelleiste);
   }, []);
 
-  // ========== PRODUCT TABS (Beschreibung / Eigenschaften) ==========
-
-  const ProductTabs = ({ product }: { product: StoreApiProduct }) => {
-    const [activeTab, setActiveTab] = useState<'beschreibung' | 'eigenschaften' | null>('beschreibung');
-
-    const rawBeschreibung = product.artikelbeschreibung || '';
-    // ChatGPT-UI-HTML bereinigen: Nur <p>, <strong>, <em>, <br>, <ul>, <li>, <ol> behalten
-    const cleanHtml = (html: string): string => {
-      // Entferne alle div-Wrapper (ChatGPT kopiert UI-Container mit)
-      let cleaned = html.replace(/<div[^>]*>/gi, '').replace(/<\/div>/gi, '');
-      // Entferne class/style/data-Attribute von allen Tags
-      cleaned = cleaned.replace(/<(\w+)\s+[^>]*?>/gi, '<$1>');
-      return cleaned.trim();
-    };
-    const cleanedBeschreibung = cleanHtml(rawBeschreibung);
-    const beschreibung = cleanedBeschreibung.includes('<p')
-      ? cleanedBeschreibung
-      : cleanedBeschreibung.replace(/\r?\n\r?\n/g, '<br/><br/>').replace(/\r?\n/g, '<br/>');
-    const descriptionHtml = product.description || '';
-    const hasBeschreibung = !!beschreibung;
-    const hasEigenschaften = descriptionHtml.includes('<table') || descriptionHtml.includes('bj-specs');
-
-    if (!hasBeschreibung && !hasEigenschaften) return null;
-
-    const toggleTab = (tab: 'beschreibung' | 'eigenschaften') => {
-      setActiveTab(activeTab === tab ? null : tab);
-    };
-
-    return (
-      <div style={{ width: '100%' }}>
-        {/* Tab Buttons */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '0' }}>
-          {hasBeschreibung && (
-            <button
-              onClick={() => toggleTab('beschreibung')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '10px 32px', borderRadius: '9999px',
-                fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: 'none',
-                backgroundColor: activeTab === 'beschreibung' ? '#e5e5e5' : '#fff',
-                color: '#2e2d32',
-                outline: activeTab === 'beschreibung' ? 'none' : '1px solid #d1d5db',
-              }}
-            >
-              Artikelbeschreibung
-              <svg style={{ width: '16px', height: '16px', transform: activeTab === 'beschreibung' ? 'rotate(0)' : 'rotate(-90deg)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          )}
-          {hasEigenschaften && (
-            <button
-              onClick={() => toggleTab('eigenschaften')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '10px 32px', borderRadius: '9999px',
-                fontSize: '14px', fontWeight: 600, cursor: 'pointer', border: 'none',
-                backgroundColor: activeTab === 'eigenschaften' ? '#e5e5e5' : '#fff',
-                color: '#2e2d32',
-                outline: activeTab === 'eigenschaften' ? 'none' : '1px solid #d1d5db',
-              }}
-            >
-              Weitere Artikeldetails
-              <svg style={{ width: '16px', height: '16px', transform: activeTab === 'eigenschaften' ? 'rotate(0)' : 'rotate(-90deg)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        {/* Tab Content */}
-        {activeTab && (
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', padding: 'clamp(16px, 4vw, 32px)', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-            {activeTab === 'beschreibung' && hasBeschreibung && (
-              <div
-                style={{ color: '#2e2d32', fontSize: '14px', lineHeight: '1.75' }}
-                dangerouslySetInnerHTML={{ __html: beschreibung }}
-              />
-            )}
-
-            {activeTab === 'eigenschaften' && hasEigenschaften && (
-              <div
-                className="bj-specs-table"
-                dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-              />
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // ========== SIMPLE PRODUCT LAYOUT COMPONENTS (for Accessories) ==========
-
-  // Service Icons for Simple Layout (matches Layout 1 styling)
-  const ServiceIcons = () => (
-    <div className="space-y-0 text-base sm:text-lg lg:text-2xl text-gray-700">
-      <div className="flex items-center gap-2 sm:gap-3 pb-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-        <Image
-          src="/images/Icons/telefon-schieferschwarz.png"
-          alt="Telefon"
-          width={24}
-          height={24}
-          className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-        />
-        <span className="break-words">Persönliche Beratung unter 02433938884</span>
-      </div>
-      <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-        <Image
-          src="/images/Icons/lager-schieferschwarz.png"
-          alt="Lager"
-          width={24}
-          height={24}
-          className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-        />
-        <span className="break-words">Kostenlose Einlagerung bis zu 12 Monate</span>
-      </div>
-      <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-        <Image
-          src="/images/Icons/termin-schieferschwarz.png"
-          alt="Termin"
-          width={24}
-          height={24}
-          className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-        />
-        <span className="break-words">Lieferung zum Wunschtermin</span>
-      </div>
-      <div className="flex items-center gap-2 sm:gap-3 pt-3">
-        <Image
-          src="/images/Icons/lieferung-schieferschwarz.png"
-          alt="Lieferung"
-          width={24}
-          height={24}
-          className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-        />
-        <span className="break-words">Kostenlose Lieferung ab 999€</span>
-      </div>
-    </div>
-  );
-
-  // Extract features from short_description (same logic as ProductInfo)
-  const getFeatures = (): string[] => {
-    if (product.short_description) {
-      // Strategy 1: Extract from <li> tags
-      const matches = product.short_description.match(/<li>(.*?)<\/li>/g);
-      if (matches) {
-        return matches.map(match => match.replace(/<\/?li>/g, '').trim()).slice(0, 3);
-      }
-      // Strategy 2: Bullet points as plain text (• or -)
-      const lines = product.short_description
-        .replace(/<[^>]*>/g, '')
-        .split(/\n|<br\s*\/?>/)
-        .map(line => line.replace(/^[\s•\-–]+/, '').trim())
-        .filter(line => line.length > 0);
-      if (lines.length > 0) {
-        return lines.slice(0, 3);
-      }
-    }
-    const features: string[] = [];
-    if (product.text_produktuebersicht && product.show_text_produktuebersicht) {
-      features.push(product.text_produktuebersicht);
-    }
-    if (product.lieferzeit && product.show_lieferzeit) {
-      features.push(product.lieferzeit);
-    }
-    if (product.paketinhalt) {
-      features.push(`Paketinhalt: ${product.paketinhalt} ${product.einheit_short || 'm²'}`);
-    }
-    return features;
-  };
-
-  // Product Info for Simple Layout
-  const SimpleProductInfo = () => {
-    const price = product.price || 0;
-    const regularPrice = product.regular_price || price;
-    const einheitShort = product.einheit_short || 'Stück';
-    const uvp = product.uvp || regularPrice;
-    const hasDiscount = uvp > price;
-    const features = getFeatures();
-
-    return (
-      <div className="bg-white rounded-lg p-6">
-        {/* Product Title */}
-        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">
-          {product.name}
-        </h1>
-
-        {/* Article Number */}
-        <div className="text-sm text-gray-600 mb-4">
-          Art.Nr.: {product.sku || 'N/A'}
-        </div>
-
-        {/* Features List with red checkmarks (same as ProductInfo) */}
-        {features.length > 0 && (
-          <div className="space-y-2 pt-2 mb-6">
-            {features.map((feature, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <Image
-                  src="/images/Icons/haken-rot.png"
-                  alt="Check"
-                  width={20}
-                  height={20}
-                  className="flex-shrink-0 mt-0.5"
-                />
-                <span className="text-gray-700 text-lg leading-relaxed">
-                  {feature}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-      </div>
-    );
-  };
-
-  // Quantity and Cart for Simple Layout (Design based on Unbenannt-1.png)
-  const SimpleQuantityAndCart = () => {
-    const [packages, setPackages] = useState(1);
-    const [units, setUnits] = useState(product.paketinhalt || 1);
-    const { addToCart, openCartDrawer } = useCart();
-    const [isAdding, setIsAdding] = useState(false);
-
-    const price = product.price || 0;
-    const paketinhalt = product.paketinhalt || 1;
-    const rawEinheit = product.einheit_short || 'Stück';
-    const showUnit = rawEinheit !== '-' && rawEinheit.trim() !== '';
-    const einheitShort = showUnit ? rawEinheit : 'Stück';
-    const verpackungsart = product.verpackungsart_short || 'Pak.';
-
-    // Ausgeschriebene Labels über den +/- Feldern
-    const packageLabel = product.verpackungsart || 'Paket(e)';
-    const unitLabel = product.einheit || 'Quadratmeter';
-    // Zweites Feld ausblenden wenn: kein Unit ODER (paketinhalt=1 UND Labels identisch)
-    const showBothFields = showUnit && !(paketinhalt === 1 && packageLabel === unitLabel);
-
-    // Calculate total content and price
-    const totalContent = packages * paketinhalt;
-    const totalPrice = totalContent * price;
-
-    // Update units when packages change
-    const handlePackagesChange = (newPackages: number) => {
-      const validPackages = Math.max(1, newPackages);
-      setPackages(validPackages);
-      setUnits(validPackages * paketinhalt);
-    };
-
-    // Update packages when units change
-    const handleUnitsChange = (newUnits: number) => {
-      const validUnits = Math.max(paketinhalt, newUnits);
-      setUnits(validUnits);
-      const calculatedPackages = Math.ceil(validUnits / paketinhalt);
-      setPackages(calculatedPackages);
-    };
-
-    const handleAddToCart = () => {
-      try {
-        console.log('🛒 Simple Product Add to Cart:', {
-          productName: product.name,
-          productId: product.id,
-          packages: packages,
-          units: totalContent,
-          price: price
-        });
-
-        setIsAdding(true);
-
-        // IMPORTANT: Use addToCart, NOT addSetToCart for simple products
-        addToCart(product, packages);
-
-        // GA4 add_to_cart — Standard-Produkt (kein Set)
-        const paketpreis = price * paketinhalt;
-        const ga4Item = mapProductToItem(product, packages, {
-          pricePerUnitOverride: paketpreis,
-        });
-        track.addToCart([ga4Item], paketpreis * packages);
-
-        // Open cart drawer to show success
-        openCartDrawer();
-
-        setTimeout(() => setIsAdding(false), 1000);
-      } catch (error) {
-        console.error('❌ Fehler beim Hinzufügen zum Warenkorb:', error);
-        showError(
-          'Fehler beim Hinzufügen zum Warenkorb. Bitte versuchen Sie es erneut.',
-          'Fehler'
-        );
-        setIsAdding(false);
-      }
-    };
-
-    const handleRequestQuote = () => {
-      window.location.href = '/kontakt';
-    };
-
-    return (
-      <div className="space-y-4">
-        {/* Top Section: Content and Price per Unit - eigener Hintergrund */}
-        <div className="bg-[#e8e8e8] rounded-2xl p-4 sm:p-6">
-          <div className="flex items-center justify-between gap-2 px-1 sm:px-2">
-            <div className="text-dark text-xs sm:text-sm md:text-base font-normal min-w-0">
-              {showUnit
-                ? <>Inhalt: {totalContent.toFixed(1).replace('.', ',')}{einheitShort} = {totalPrice.toFixed(2).replace('.', ',')} €</>
-                : <>{packages} {verpackungsart} = {totalPrice.toFixed(2).replace('.', ',')} €</>
-              }
-            </div>
-            <div className="text-dark text-2xl sm:text-3xl md:text-4xl font-bold flex-shrink-0">
-              {showUnit
-                ? <>{price.toFixed(2).replace('.', ',')} <span className="text-lg sm:text-xl md:text-2xl">€/{einheitShort}</span></>
-                : <>{totalPrice.toFixed(2).replace('.', ',')} <span className="text-lg sm:text-xl md:text-2xl">€</span></>
-              }
-            </div>
-          </div>
-        </div>
-
-        {/* Quantity, Total, Buttons - eigener Hintergrund */}
-        <div className="bg-[#e8e8e8] rounded-2xl p-6 space-y-4">
-        {/* Quantity Selectors: Packages and Units */}
-        <div className={`grid ${showBothFields ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
-          {/* Packages Selector */}
-          <div className="text-center">
-            <div className="text-dark text-base font-normal mb-3">{packageLabel}</div>
-            <div className="flex items-center justify-center gap-0">
-              <button
-                onClick={() => handlePackagesChange(packages - 1)}
-                className="w-12 h-12 bg-white border border-gray-300 rounded-l-lg
-                         hover:bg-gray-50 flex items-center justify-center transition-colors"
-              >
-                <MinusIcon className="w-5 h-5 text-dark" />
-              </button>
-              <input
-                type="number"
-                value={packages}
-                onChange={(e) => handlePackagesChange(parseInt(e.target.value) || 1)}
-                className="w-28 h-12 text-center border-t border-b border-gray-300 bg-white
-                         text-lg font-medium text-dark focus:outline-none"
-                min="1"
-              />
-              <button
-                onClick={() => handlePackagesChange(packages + 1)}
-                className="w-12 h-12 bg-white border border-gray-300 rounded-r-lg
-                         hover:bg-gray-50 flex items-center justify-center transition-colors"
-              >
-                <PlusIcon className="w-5 h-5 text-dark" />
-              </button>
-            </div>
-          </div>
-
-          {/* Units Selector - nur wenn sinnvoll (andere Einheit oder paketinhalt > 1) */}
-          {showBothFields && (
-          <div className="text-center">
-            <div className="text-dark text-base font-normal mb-3">
-              {unitLabel}
-            </div>
-            <div className="flex items-center justify-center gap-0">
-              <button
-                onClick={() => handleUnitsChange(units - paketinhalt)}
-                className="w-12 h-12 bg-white border border-gray-300 rounded-l-lg
-                         hover:bg-gray-50 flex items-center justify-center transition-colors"
-              >
-                <MinusIcon className="w-5 h-5 text-dark" />
-              </button>
-              <input
-                type="number"
-                value={units}
-                step={paketinhalt}
-                onChange={(e) => handleUnitsChange(parseFloat(e.target.value) || paketinhalt)}
-                className="w-28 h-12 text-center border-t border-b border-gray-300 bg-white
-                         text-lg font-medium text-dark focus:outline-none"
-                min={paketinhalt}
-              />
-              <button
-                onClick={() => handleUnitsChange(units + paketinhalt)}
-                className="w-12 h-12 bg-white border border-gray-300 rounded-r-lg
-                         hover:bg-gray-50 flex items-center justify-center transition-colors"
-              >
-                <PlusIcon className="w-5 h-5 text-dark" />
-              </button>
-            </div>
-          </div>
-          )}
-        </div>
-
-        {/* Total Price with Border Top */}
-        <div className="border-t-2 border-gray-400 pt-4">
-          <div className="flex items-center justify-between mb-6 px-1 sm:px-2 gap-2">
-            <div className="text-dark text-sm sm:text-xl md:text-2xl font-bold min-w-0">
-              Gesamtsumme <span className="text-[10px] sm:text-sm md:text-base font-normal">(inkl. MwSt.)</span>
-            </div>
-            <div className="text-dark text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold flex-shrink-0">
-              {totalPrice.toFixed(2).replace('.', ',')} €
-            </div>
-          </div>
-
-          {/* Action Buttons (gleich wie TotalPrice bei Böden) */}
-          <div className="grid grid-cols-2 gap-3 mt-5 mb-4">
-            <button
-              type="button"
-              onClick={handleRequestQuote}
-              className="w-full bg-transparent border border-dark hover:bg-[#f5f5f5] text-dark font-semibold text-[9px] sm:text-[10px] md:text-xs rounded-md transition-colors text-center leading-tight"
-              style={{ padding: '8px 5px' }}
-            >
-              Individuelles Angebot anfragen
-            </button>
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={isAdding}
-              className={`w-full font-semibold text-[9px] sm:text-[10px] md:text-xs rounded-lg transition-all text-center leading-tight ${
-                isAdding
-                  ? 'bg-[#155724] hover:bg-[#0f4419] text-white'
-                  : 'bg-dark hover:bg-[#1a1a1d] active:scale-[0.98] text-white'
-              }`}
-              style={{ padding: '8px 5px' }}
-            >
-              {isAdding ? (
-                <span className="flex items-center justify-center">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Hinzugefügt!
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <Image
-                    src="/images/Icons/warenkorb-weiss.png"
-                    alt=""
-                    width={20}
-                    height={20}
-                    className="w-5 h-5"
-                  />
-                  In den Warenkorb
-                </span>
-              )}
-            </button>
-          </div>
-
-          {/* Delivery Info (gleich wie TotalPrice bei Böden) — nur wenn show_lieferzeit aktiv */}
-          {product.show_lieferzeit && (
-          <div className="text-left text-[#666666] text-[13px] md:text-sm pt-3 mt-3 border-t border-ash">
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-                <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-              </svg>
-              <span><span className="font-bold">Lieferzeit:</span> {product.lieferzeit || '3-7 Arbeitstage'} oder im Markt abholen</span>
-            </div>
-          </div>
-          )}
-        </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Product Details for Simple Layout
-  const ProductDetails = () => (
-    <div className="bg-white rounded-lg shadow-md p-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">
-        Produktdetails
-      </h2>
-      {product.description && (
-        <div
-          className="prose prose-gray max-w-none"
-          dangerouslySetInnerHTML={{ __html: product.description }}
-        />
-      )}
-    </div>
-  );
-
-  // Simple Product Layout (for accessories)
-  const SimpleProductLayout = () => (
-    <>
-      {/* Two Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-8 mb-12 w-full">
-        {/* LEFT COLUMN */}
-        <div className="space-y-6">
-          {/* Image Gallery - reused */}
-          <ImageGallery product={product} />
-
-          {/* Service Icons - only on desktop (on mobile shown after right column) */}
-          <div className="hidden lg:block">
-            <ServiceIcons />
-          </div>
-
-          {/* Product Details - only on desktop (on mobile shown at bottom) */}
-          <div className="hidden lg:block">
-            <ProductDetails />
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN */}
-        <div className="space-y-6">
-          {/* Product Info */}
-          <SimpleProductInfo />
-
-          {/* Quantity & Add to Cart */}
-          <SimpleQuantityAndCart />
-
-          {/* Zahlungsarten – kleine Logo-Reihe wie im Footer */}
-          <ZahlungsIcons />
-
-          {/* Service Icons - mobile only */}
-          <div className="lg:hidden">
-            <ServiceIcons />
-          </div>
-        </div>
-      </div>
-
-      {/* Product Details - mobile only, after grid */}
-      <div className="lg:hidden mb-12">
-        <ProductDetails />
-      </div>
-    </>
-  );
-
-  // ========== END SIMPLE PRODUCT LAYOUT COMPONENTS ==========
 
   // Handle sample order - find and add MUSTER product to cart
   const handleOrderSample = async () => {
@@ -884,203 +400,98 @@ export default function ProductPageContent({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 overflow-x-hidden">
+    <div className={`min-h-screen bg-white py-8 pb-28 overflow-x-clip lg:pb-8`}>
       <div className="content-container">
-        {isAccessory ? (
-          // ========== SIMPLE PRODUCT LAYOUT for Accessories ==========
-          <SimpleProductLayout />
-        ) : (
-          // ========== SET-ANGEBOT LAYOUT for Main Products (100% UNCHANGED) ==========
+        {/* Gemeinsame Optik für alle Produkte, nur die Kaufbox unterscheidet sich */}
           <>
-        {/* Main Product Section - 2 Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-8 mb-12 w-full">
-          {/* LEFT COLUMN - Image Gallery */}
-          <div className="space-y-6">
-            <ImageGallery product={product} rabattProzent={hasSparpaket ? prices?.savingsPercent : undefined} />
+            <nav aria-label="Brotkrumen" className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-mid">
+              <Link href="/" className="hover:text-dark">Startseite</Link>
+              {primaryCategory && (
+                <>
+                  <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Link href={`/category/${primaryCategory.slug}`} className="hover:text-dark">{primaryCategory.name}</Link>
+                </>
+              )}
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="font-bold text-dark" aria-current="page">{product.name}</span>
+            </nav>
 
-            {/* Action Buttons - Only for floor products */}
-            {isFloorProduct && (
-              <div className="w-full">
-                <button
-                  onClick={handleOrderSample}
-                  disabled={isOrderingSample}
-                  className="w-full px-3 sm:px-4 py-3 rounded-lg text-white text-sm sm:text-base font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: 'var(--color-bg-darkest)' }}
-                >
-                  {isOrderingSample ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      <span className="truncate">Lädt...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Image
-                        src="/images/Icons/musterbox-weiss.png"
-                        alt="Musterbox"
-                        width={20}
-                        height={20}
-                        className="w-5 h-5 object-contain flex-shrink-0"
-                      />
-                      <span className="truncate">Kostenloses Muster bestellen</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+            {/* Mobil: Galerie/Infos, Kaufbox, Zubehör. Desktop: Spalten laufen mit und enden bündig */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+              <StickyColumn className="contents lg:sticky lg:block lg:min-w-0 lg:self-start">
+                <div className="order-1 grid min-w-0 grid-cols-1 gap-6 lg:mb-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+                  <StickyColumn className="min-w-0 xl:sticky xl:self-start">
+                    <ImageGallery product={product} hideDiscount={!isAccessory} videoUrl={media.video} />
+                  </StickyColumn>
+                  <ProductSummary
+                    product={product}
+                    features={features}
+                    media={media}
+                    rating={trustedShopsRating}
+                    showSampleButton={isFloorProduct}
+                    isOrderingSample={isOrderingSample}
+                    onOrderSample={handleOrderSample}
+                  />
+                </div>
 
-            {/* Service Icons - only on desktop (on mobile shown after Zahlungsarten) */}
-            <div className="hidden lg:block space-y-0 text-base sm:text-lg lg:text-2xl text-gray-700">
-              <div className="flex items-center gap-2 sm:gap-3 pb-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/telefon-schieferschwarz.png"
-                  alt="Telefon"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
+                <div id="zubehoer-section" className="order-3 min-w-0 scroll-mt-24">
+                  <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
+                </div>
+              </StickyColumn>
+
+              <StickyColumn className={`order-2 min-w-0 lg:sticky lg:order-none lg:self-start ${isAccessory ? '' : 'mt-7'}`}>
+              <aside className="space-y-4 rounded-xl border border-ash bg-white p-4 lg:p-5">
+                {isAccessory ? (
+                  <AccessoryBuyBox product={product} />
+                ) : (
+                  <>
+                <ProductInfo
+                  product={product}
+                  daemmungProduct={daemmungProduct}
+                  sockelleisteProduct={sockelleisteProduct}
+                  daemmungOptions={daemmungOptions}
+                  sockelleisteOptions={sockelleisteOptions}
+                  onProductSelection={handleProductSelection}
+                  savingsPercent={prices?.savingsPercent}
+                  daemmungSetPricePerUnit={prices?.daemmungSetPricePerUnit || 0}
+                  daemmungRegularPricePerUnit={prices?.daemmungRegularPricePerUnit || 0}
+                  sockelleisteSetPricePerUnit={prices?.sockelleisteSetPricePerUnit || 0}
+                  sockelleisteRegularPricePerUnit={prices?.sockelleisteRegularPricePerUnit || 0}
+                  sparpaket={sparpaketAnzeige}
                 />
-                <span className="break-words">Persönliche Beratung unter 02433938884</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/lager-schieferschwarz.png"
-                  alt="Lager"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Kostenlose Einlagerung bis zu 12 Monate</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/termin-schieferschwarz.png"
-                  alt="Termin"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Lieferung zum Wunschtermin</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 pt-3">
-                <Image
-                  src="/images/Icons/lieferung-schieferschwarz.png"
-                  alt="Lieferung"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Kostenlose Lieferung ab 999€</span>
-              </div>
-            </div>
-          </div>
 
-          {/* RIGHT COLUMN - Product Info & Cart */}
-          <div className="space-y-6">
-            <ProductInfo
-              product={product}
-              daemmungProduct={daemmungProduct}
-              sockelleisteProduct={sockelleisteProduct}
-              daemmungOptions={daemmungOptions}
-              sockelleisteOptions={sockelleisteOptions}
-              onProductSelection={handleProductSelection}
-              comparisonPriceTotal={prices?.comparisonPriceTotal || undefined}
-              totalDisplayPrice={prices?.totalDisplayPrice}
-              savingsAmount={prices?.savings || undefined}
-              savingsPercent={prices?.savingsPercent}
-              daemmungSetPricePerUnit={prices?.daemmungSetPricePerUnit || 0}
-              daemmungRegularPricePerUnit={prices?.daemmungRegularPricePerUnit || 0}
-              sockelleisteSetPricePerUnit={prices?.sockelleisteSetPricePerUnit || 0}
-              sockelleisteRegularPricePerUnit={prices?.sockelleisteRegularPricePerUnit || 0}
-              sparpaket={sparpaketAnzeige}
-            />
+                <div ref={quantityRef}>
+                  <QuantitySelector
+                    paketinhalt={paketinhalt}
+                    einheit={einheit}
+                    einheitFull={product.einheit || undefined}
+                    verpackungsartFull={product.verpackungsart || undefined}
+                    initialPackages={initialPackages}
+                    onQuantityChange={handleQuantityChange}
+                  />
+                </div>
 
-            {/* Quantity + Price Container with Gray Background */}
-            <div className="bg-ash rounded-md p-4">
-              {/* Quantity Selector */}
-              <QuantitySelector
-                paketinhalt={paketinhalt}
-                einheit={einheit}
-                einheitFull={product.einheit || undefined}
-                verpackungsartFull={product.verpackungsart || undefined}
-                initialPackages={initialPackages}
-                onQuantityChange={handleQuantityChange}
-              />
+                <TotalPrice
+                  quantities={quantities}
+                  prices={prices}
+                  einheit={einheit}
+                  product={product}
+                  selectedDaemmung={selectedDaemmung}
+                  selectedSockelleiste={selectedSockelleiste}
+                  daemmungProduct={daemmungProduct}
+                  sockelleisteProduct={sockelleisteProduct}
+                  sparpaket={sparpaket}
+                />
 
-              {/* Total Price with integrated buttons */}
-              <TotalPrice
-                quantities={quantities}
-                prices={prices}
-                einheit={einheit}
-                product={product}
-                selectedDaemmung={selectedDaemmung}
-                selectedSockelleiste={selectedSockelleiste}
-                daemmungProduct={daemmungProduct}
-                sockelleisteProduct={sockelleisteProduct}
-                sparpaket={sparpaket}
-                lieferzeit={product.lieferzeit || '3-7 Arbeitstage'}
-                showLieferzeit={!!product.show_lieferzeit}
-              />
+                <BuyBoxServices product={product} />
+                  </>
+                )}
+              </aside>
+              </StickyColumn>
             </div>
 
-            {/* Zahlungsarten – kleine Logo-Reihe wie im Footer */}
-            <ZahlungsIcons />
-
-            {/* Service Icons - mobile only (on desktop shown in left column) */}
-            <div className="lg:hidden space-y-0 text-base sm:text-lg text-gray-700">
-              <div className="flex items-center gap-2 sm:gap-3 pb-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/telefon-schieferschwarz.png"
-                  alt="Telefon"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Persönliche Beratung unter 02433938884</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/lager-schieferschwarz.png"
-                  alt="Lager"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Kostenlose Einlagerung bis zu 12 Monate</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 py-3 border-b-2" style={{ borderBottomColor: 'var(--color-bg-gray)' }}>
-                <Image
-                  src="/images/Icons/termin-schieferschwarz.png"
-                  alt="Termin"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Lieferung zum Wunschtermin</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 pt-3">
-                <Image
-                  src="/images/Icons/lieferung-schieferschwarz.png"
-                  alt="Lieferung"
-                  width={24}
-                  height={24}
-                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0"
-                />
-                <span className="break-words">Kostenlose Lieferung ab 999€</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Zubehör Slider Section */}
-        <div id="zubehoer-section" className="mb-8">
-          <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
-        </div>
-
-        <ProductTabs product={product} />
+            <ProductDetailSections product={product} features={features} media={media} isFloor={!isAccessory} />
           </>
-        )}
       </div>
 
       {/* Alert Modal */}

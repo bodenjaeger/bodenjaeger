@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { CartItemBase } from '@/types/cart-drawer';
 import { formatPrice, formatUnitValue } from '@/lib/cart-utils';
@@ -9,6 +9,32 @@ interface CartSingleItemProps {
   product: CartItemBase;
   onQuantityChange: (newQuantity: number) => void;
   onRemove: () => void;
+}
+
+// Menge direkt eintippen; übernommen wird beim Verlassen des Feldes oder mit Enter
+function QuantityInput({ value, onCommit }: { value: number; onCommit: (quantity: number) => void }) {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
+
+  const commit = () => {
+    const quantity = parseInt(draft, 10);
+    if (quantity >= 1 && quantity !== value) onCommit(quantity);
+    else setDraft(String(value));
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      aria-label="Menge"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value.replace(/\D/g, ''))}
+      onFocus={(e) => e.target.select()}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+      className="h-9 w-11 bg-white text-center text-base text-dark outline-none focus:bg-pale"
+    />
+  );
 }
 
 export default function CartSingleItem({
@@ -62,20 +88,20 @@ export default function CartSingleItem({
             ) : (
               // Regular products: Quantity controls
               <>
-                <div className="flex items-center border border-ash rounded">
+                <div className="flex items-center overflow-hidden rounded-lg border border-ash bg-white">
                   <button
                     onClick={() => onQuantityChange(product.quantity - 1)}
                     disabled={product.quantity <= 1}
-                    className="px-2 py-0.5 text-mid hover:bg-gray-50 disabled:opacity-50 text-sm"
+                    aria-label="Ein Stück weniger"
+                    className="h-9 w-9 text-mid hover:bg-gray-50 disabled:opacity-50 text-base"
                   >
                     −
                   </button>
-                  <span className="px-2 py-0.5 text-sm text-dark min-w-[2rem] text-center">
-                    {product.quantity}
-                  </span>
+                  <QuantityInput value={product.quantity} onCommit={onQuantityChange} />
                   <button
                     onClick={() => onQuantityChange(product.quantity + 1)}
-                    className="px-2 py-0.5 text-mid hover:bg-gray-50 text-sm"
+                    aria-label="Ein Stück mehr"
+                    className="h-9 w-9 text-mid hover:bg-gray-50 text-base"
                   >
                     +
                   </button>
