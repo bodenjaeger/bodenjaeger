@@ -7,7 +7,7 @@ const antwort = (overallMark: unknown, activeReviewCount: unknown) => ({
 
 describe('parseTrustedShopsRating', () => {
   it('liest Note und Anzahl', () => {
-    expect(parseTrustedShopsRating(antwort(5, 10))).toEqual({ note: 5, maximum: 5, anzahl: 10 });
+    expect(parseTrustedShopsRating(antwort(5, 10))).toEqual({ note: 5, maximum: 5 });
   });
 
   it('liefert ohne gültige Bewertung nichts', () => {

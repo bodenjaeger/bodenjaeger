@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import type { SetQuantityCalculation, SparpaketQuantityCalculation } from '@/lib/setCalculations';
@@ -45,6 +45,24 @@ export default function TotalPrice({
 }: TotalPriceProps) {
   const [addedToCart, setAddedToCart] = useState(false);
   const { addSetToCart, openCartDrawer } = useCart();
+  const cartButtonRef = useRef<HTMLButtonElement>(null);
+  const [cartButtonVisible, setCartButtonVisible] = useState(true);
+  const hasData = !!quantities && !!prices;
+
+  // Kaufleiste (nur mobil): sichtbar, solange der große Button außerhalb des Bildes ist
+  useEffect(() => {
+    const button = cartButtonRef.current;
+    if (!button) return;
+    const observer = new IntersectionObserver(([entry]) => setCartButtonVisible(entry.isIntersecting));
+    observer.observe(button);
+    return () => observer.disconnect();
+  }, [hasData]);
+
+  // Schwebende Elemente rutschen über die Leiste (globals.css)
+  useEffect(() => {
+    document.body.classList.toggle('kaufleiste-sichtbar', hasData && !cartButtonVisible);
+    return () => document.body.classList.remove('kaufleiste-sichtbar');
+  }, [hasData, cartButtonVisible]);
 
   // Show loading state if data not yet available
   if (!quantities || !prices) {
@@ -268,6 +286,7 @@ export default function TotalPrice({
 
       {/* 2. CTA */}
       <button
+        ref={cartButtonRef}
         type="button"
         onClick={handleAddToCart}
         disabled={addedToCart}
@@ -293,6 +312,35 @@ export default function TotalPrice({
         >
           Individuelles Angebot anfragen
         </button>
+      )}
+
+      {/* Kaufleiste mobil */}
+      {!cartButtonVisible && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ash bg-white px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] lg:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="whitespace-nowrap text-xl font-bold leading-tight text-dark">{endpreis.toFixed(2).replace('.', ',')} €</p>
+              <p className="truncate text-xs text-mid">
+                {quantities.floor.actualM2.toFixed(2).replace('.', ',')} m² · {quantities.floor.packages} {quantities.floor.packages === 1 ? 'Paket' : 'Pakete'} · inkl. MwSt.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={addedToCart}
+              className={`flex min-h-12 flex-shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-bold text-white ${addedToCart ? 'bg-[#155724]' : 'bg-dark'}`}
+            >
+              {addedToCart ? (
+                'Hinzugefügt!'
+              ) : (
+                <>
+                  <Image src="/images/Icons/warenkorb-weiss.png" alt="" width={20} height={20} className="h-5 w-5" />
+                  In den Warenkorb
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

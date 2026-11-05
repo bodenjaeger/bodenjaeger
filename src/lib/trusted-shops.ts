@@ -9,7 +9,6 @@ const URL = `https://api.trustedshops.com/rest/public/v2/shops/${TS_ID}/quality/
 export interface TrustedShopsRating {
   note: number;
   maximum: 5;
-  anzahl: number;
 }
 
 export function parseTrustedShopsRating(json: unknown): TrustedShopsRating | null {
@@ -19,7 +18,7 @@ export function parseTrustedShopsRating(json: unknown): TrustedShopsRating | nul
   const note = Number(indicator?.overallMark);
   const anzahl = Number(indicator?.activeReviewCount);
   if (!(note > 0 && note <= 5) || !(anzahl > 0)) return null;
-  return { note, maximum: 5, anzahl };
+  return { note, maximum: 5 };
 }
 
 export async function getTrustedShopsRating(): Promise<TrustedShopsRating | null> {

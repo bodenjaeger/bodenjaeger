@@ -8,6 +8,7 @@ import type { StoreApiProduct } from '@/lib/woocommerce';
 export interface SparpaketAnzeige {
   aktiv: boolean;           // false = unter Mindestmenge, Zeilen nur als Hinweis
   mindestPakete: number;
+  fehlendePakete: number;    // bis zum Sparpaket, 0 wenn aktiv
   zeilen: {
     typ: string;
     label: string;
@@ -168,12 +169,9 @@ export default function SetAngebot({
       {/* Kopf */}
       <div className="flex items-start justify-between gap-3">
         {sparpaket ? (
-          <div className="-rotate-1">
-            <span className="block pl-2 text-base font-bold italic leading-none text-brand">KlebeVinyl</span>
-            <span className="inline-block rounded bg-brand px-3 py-1 text-2xl font-bold leading-tight text-white">Sparpaket</span>
-          </div>
+          <Image src="/images/labels/klebevinyl-sparpaket.png" alt="KlebeVinyl Sparpaket" width={722} height={265} className="h-14 w-auto" />
         ) : (
-          <span className="inline-block rounded bg-brand px-3 py-1.5 text-base font-bold text-white">{setangebotTitel}</span>
+          <Image src="/images/labels/dein-set-angebot.png" alt="Dein Set-Angebot" width={686} height={125} className="h-8 w-auto" />
         )}
         {ersparnisProzent > 0 && (
           <span className="rounded-full bg-dark px-3 py-1.5 text-sm font-bold text-white">-{Math.round(ersparnisProzent)}%</span>
@@ -181,6 +179,13 @@ export default function SetAngebot({
       </div>
       {sparpaket?.aktiv && (
         <p className="mt-2 text-xs text-mid">Alles, was du für die Verlegung brauchst – im Set unschlagbar günstig</p>
+      )}
+
+      {sparpaket && !sparpaket.aktiv && (
+        <p className="mt-3 rounded-lg bg-pale px-3 py-2 text-sm text-dark">
+          <span className="font-bold">Noch {sparpaket.fehlendePakete} {sparpaket.fehlendePakete === 1 ? 'Paket' : 'Pakete'} bis zum Sparpaket:</span>{' '}
+          Grundierung, Spachtelmasse und Kleber gratis dazu.
+        </p>
       )}
 
       {/* Produktliste */}

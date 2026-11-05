@@ -127,7 +127,12 @@ export default function ProductPageContent({
     if (!sparpaket) return null;
     // Unter Mindestmenge komplett ausblenden (Kundenvorgabe) – Titel "Sparpaket" bleibt
     if (!sparpaket.aktiv) {
-      return { aktiv: false, mindestPakete: KLEBEVINYL_SPARPAKET.mindestPakete, zeilen: [] };
+      return {
+        aktiv: false,
+        mindestPakete: KLEBEVINYL_SPARPAKET.mindestPakete,
+        fehlendePakete: Math.max(0, KLEBEVINYL_SPARPAKET.mindestPakete - (quantities?.floor.packages ?? 0)),
+        zeilen: [],
+      };
     }
     const zeilen = KLEBEVINYL_SPARPAKET.bestandteile
       .filter(b => b.imSetAnzeigen)
@@ -146,8 +151,8 @@ export default function ProductPageContent({
         };
       })
       .filter((z): z is NonNullable<typeof z> => z !== null);
-    return { aktiv: sparpaket.aktiv, mindestPakete: KLEBEVINYL_SPARPAKET.mindestPakete, zeilen };
-  }, [sparpaket]);
+    return { aktiv: sparpaket.aktiv, mindestPakete: KLEBEVINYL_SPARPAKET.mindestPakete, fehlendePakete: 0, zeilen };
+  }, [sparpaket, quantities?.floor.packages]);
 
   // ✅ VOLLSTÄNDIGE SET-ANGEBOT BERECHNUNG
   // Basierend auf: SETANGEBOT_BERECHNUNG_KOMPLETT.md

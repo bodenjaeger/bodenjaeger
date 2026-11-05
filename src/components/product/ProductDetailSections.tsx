@@ -7,6 +7,7 @@ import { SERVICE_LINKS } from '@/content/service';
 import { ChevronRight, CirclePlay, FileText, HandHelping, Package, Truck, Warehouse, Wrench } from 'lucide-react';
 import { FREE_SAMPLE_LIMIT } from '@/lib/sampleUtils';
 import type { ProductMedia } from '@/lib/product-media';
+import { parseProductSpecs, pickHighlightSpecs } from '@/lib/product-specs';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 
 // Aus dem Backend kommt teils kopiertes UI-HTML: Wrapper und Attribute entfernen
@@ -69,6 +70,8 @@ export default function ProductDetailSections({ product, features, media }: Prod
   const description = cleanDescription(product.artikelbeschreibung || '');
   const specs = product.description || '';
   const hasSpecs = specs.includes('<table') || specs.includes('bj-specs');
+  const specRows = parseProductSpecs(specs);
+  const highlightSpecs = pickHighlightSpecs(specRows);
   const hasDocs = !!(media.verlegeanleitung || media.pflegeanleitung || media.datenblatt || media.video);
 
   const sections: Section[] = [];
@@ -78,15 +81,15 @@ export default function ProductDetailSections({ product, features, media }: Prod
       id: 'produktbeschreibung',
       label: 'Produktbeschreibung',
       content: (
-        <div className={`grid gap-8 ${description && features.length > 0 ? 'lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]' : ''}`}>
+        <div className={`grid gap-8 lg:gap-12 ${description && features.length > 0 ? 'lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]' : ''}`}>
           {description && (
             <div
-              className="text-sm leading-relaxed text-mid [&_p]:mb-3 [&_strong]:text-dark"
+              className="max-w-[68ch] text-[15px] leading-7 text-mid [&>p:first-child]:mb-5 [&>p:first-child]:text-lg [&>p:first-child]:leading-8 [&>p:first-child]:text-dark [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-dark [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-dark [&_li]:mb-1 [&_p]:mb-4 [&_strong]:font-bold [&_strong]:text-dark [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5"
               dangerouslySetInnerHTML={{ __html: description }}
             />
           )}
           {features.length > 0 && (
-            <div className="self-start rounded-xl bg-pale p-5">
+            <div className="self-start rounded-xl bg-pale p-5 lg:sticky lg:top-24">
               <h2 className="mb-4 text-lg font-bold text-dark">Vorteile auf einen Blick</h2>
               <ul className="space-y-3">
                 {features.map((feature) => (
@@ -109,7 +112,30 @@ export default function ProductDetailSections({ product, features, media }: Prod
       label: 'Technische Daten',
       content: (
         <>
-          <div className="bj-specs-table" dangerouslySetInnerHTML={{ __html: specs }} />
+          {specRows.length > 0 ? (
+            <>
+              {highlightSpecs.length > 0 && (
+                <dl className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  {highlightSpecs.map((spec) => (
+                    <div key={spec.label} className="rounded-xl bg-pale p-4">
+                      <dt className="text-xs text-mid">{spec.label}</dt>
+                      <dd className="mt-1 text-base font-bold leading-snug text-dark">{spec.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              <dl className="grid gap-x-12 md:grid-cols-2">
+                {specRows.map((spec) => (
+                  <div key={spec.label} className="flex items-baseline justify-between gap-6 border-b border-ash py-3 text-sm">
+                    <dt className="text-mid">{spec.label}</dt>
+                    <dd className="text-right font-bold text-dark">{spec.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          ) : (
+            <div className="bj-specs-table" dangerouslySetInnerHTML={{ __html: specs }} />
+          )}
         </>
       ),
     });

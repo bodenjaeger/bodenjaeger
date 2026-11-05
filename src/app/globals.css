@@ -624,3 +624,11 @@ body.nav-menu-open [id^='trustbadge-container-'] {
   /* Aufgeklappter Zustand (Sterne / Reviews-Panel). */
 }
 
+
+/* Mobile Kaufleiste der Produktseite: schwebende Elemente darüber schieben */
+@media (max-width: 1023px) {
+  body.kaufleiste-sichtbar [data-floating-actions],
+  body.kaufleiste-sichtbar [id^="trustbadge-container-"] {
+    bottom: 88px !important;
+  }
+}

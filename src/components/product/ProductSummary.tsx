@@ -39,10 +39,10 @@ export default function ProductSummary({
         <div
           className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mid"
           role="img"
-          aria-label={`Trusted Shops Shopbewertung ${noteText} von ${rating.maximum}, ${rating.anzahl} Bewertungen`}
+          aria-label={`Trusted Shops Shopbewertung ${noteText} von ${rating.maximum}`}
         >
           <StarRating note={rating.note} maximum={rating.maximum} />
-          <span><span className="font-bold text-dark">{noteText}</span> Shopbewertung bei Trusted Shops ({rating.anzahl})</span>
+          <span><span className="font-bold text-dark">{noteText}</span> Shopbewertung bei Trusted Shops</span>
         </div>
       )}
 
