@@ -8,7 +8,7 @@ import Image from 'next/image';
 import UnifiedProductCard from '@/components/UnifiedProductCard';
 import { SORT_OPTIONS, listingHref } from '@/lib/category-listing';
 import { filtersToQuery, hasActiveFilters, type FilterState } from '@/lib/category-filters';
-import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar } from '@/components/category/CategoryFilters';
+import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar, CategoryFilterToggle, useFilterCollapse, useFilterNavigation } from '@/components/category/CategoryFilters';
 import PromoTile from '@/components/black-weeks/PromoTile';
 import { PROMO_TILE_EVERY, PROMO_TILE_POSITION } from '@/lib/black-weeks';
 
@@ -96,6 +96,9 @@ export default function CategoryPageClient({
   const reload = () => router.refresh();
   const filterQuery = filterState ? filtersToQuery(filterState.active) : '';
   const isFiltered = filterState ? hasActiveFilters(filterState.active) : false;
+  const { apply, pending } = useFilterNavigation(sortBy);
+  const { collapsed, toggle } = useFilterCollapse();
+  const showSidebar = Boolean(filterState) && !collapsed;
 
   // Für den Rückweg von der Produktseite (Brotkrume)
   useEffect(() => {
@@ -213,7 +216,8 @@ export default function CategoryPageClient({
 
             {/* Sorting Options */}
             <div className="flex items-center space-x-3">
-              {filterState && <CategoryFilterButton state={filterState} sort={sortBy} />}
+              {filterState && <CategoryFilterButton state={filterState} apply={apply} pending={pending} />}
+              {filterState && <CategoryFilterToggle collapsed={collapsed} onToggle={toggle} />}
               <select
                 value={sortBy}
                 onChange={(e) => {
@@ -233,14 +237,14 @@ export default function CategoryPageClient({
           </div>
         </div>
 
-        <div className={filterState ? 'lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-7' : ''}>
-        {filterState && <CategoryFilterSidebar state={filterState} sort={sortBy} />}
+        <div className={showSidebar ? 'lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-7' : ''}>
+        {filterState && showSidebar && <CategoryFilterSidebar state={filterState} apply={apply} pending={pending} />}
         <div className="min-w-0">
-        {filterState && <CategoryFilterChips state={filterState} sort={sortBy} />}
+        {filterState && <CategoryFilterChips state={filterState} apply={apply} />}
 
         {/* Products Grid */}
         {products.length > 0 ? (
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 ${filterState ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}>
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 ${showSidebar ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}>
             {products.map((product, index) => (
               <Fragment key={product.id}>
                 {showPromoTile && promoTileBefore(index) && <PromoTile />}

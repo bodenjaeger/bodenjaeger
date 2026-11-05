@@ -23,7 +23,14 @@ function Chevron({ open }: { open: boolean }) {
   );
 }
 
-function useFilterNavigation(sort: string) {
+interface FilterProps {
+  state: FilterState;
+  apply: (next: ActiveFilters) => void;
+  pending?: boolean;
+}
+
+/** Filterwahl über die Adresse, für die serverseitig gefilterten Kategorieseiten. */
+export function useFilterNavigation(sort: string) {
   const router = useRouter();
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
@@ -34,8 +41,7 @@ function useFilterNavigation(sort: string) {
   return { apply, pending };
 }
 
-function FilterPanel({ state, sort, onClose }: { state: FilterState; sort: string; onClose?: () => void }) {
-  const { apply, pending } = useFilterNavigation(sort);
+function FilterPanel({ state, apply, pending, onClose }: FilterProps & { onClose?: () => void }) {
   const { active } = state;
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [from, setFrom] = useState(active.priceFrom === null ? '' : formatPrice(active.priceFrom));
@@ -152,18 +158,19 @@ function FilterPanel({ state, sort, onClose }: { state: FilterState; sort: strin
 }
 
 /** Mitlaufende Spalte ab Desktop-Breite. */
-export function CategoryFilterSidebar({ state, sort }: { state: FilterState; sort: string }) {
+export function CategoryFilterSidebar(props: FilterProps) {
   return (
     <StickyColumn className="hidden lg:sticky lg:block lg:self-start">
       <aside aria-label="Filter" className="rounded-2xl bg-white px-[18px] pb-3 shadow-[0_2px_14px_rgba(46,45,50,0.06)]">
-        <FilterPanel state={state} sort={sort} />
+        <FilterPanel {...props} />
       </aside>
     </StickyColumn>
   );
 }
 
 /** Button und Fenster von unten auf kleinen Bildschirmen. Fenster liegt per Portal über allen Ebenen. */
-export function CategoryFilterButton({ state, sort }: { state: FilterState; sort: string }) {
+export function CategoryFilterButton(props: FilterProps) {
+  const { state } = props;
   const [sheetOpen, setSheetOpen] = useState(false);
   const count = Object.values(state.active.values).reduce((sum, v) => sum + v.length, 0) + (state.active.priceFrom !== null ? 1 : 0) + (state.active.priceTo !== null ? 1 : 0);
 
@@ -185,7 +192,7 @@ export function CategoryFilterButton({ state, sort }: { state: FilterState; sort
         <div className="fixed inset-0 z-[100] lg:hidden" role="dialog" aria-modal="true" aria-label="Filter">
           <button type="button" aria-label="Filter schließen" onClick={() => setSheetOpen(false)} className="absolute inset-0 cursor-pointer bg-dark/50" />
           <div className="absolute inset-x-0 bottom-0 max-h-[86%] overflow-y-auto rounded-t-[18px] bg-white px-[18px] shadow-[0_-6px_30px_rgba(0,0,0,0.2)]">
-            <FilterPanel state={state} sort={sort} onClose={() => setSheetOpen(false)} />
+            <FilterPanel {...props} onClose={() => setSheetOpen(false)} />
           </div>
         </div>,
         document.body
@@ -195,8 +202,7 @@ export function CategoryFilterButton({ state, sort }: { state: FilterState; sort
 }
 
 /** Aktive Auswahl über den Produkten, einzeln entfernbar. */
-export function CategoryFilterChips({ state, sort }: { state: FilterState; sort: string }) {
-  const { apply } = useFilterNavigation(sort);
+export function CategoryFilterChips({ state, apply }: FilterProps) {
   const { active } = state;
   if (!hasActiveFilters(active)) return null;
 
@@ -233,5 +239,39 @@ export function CategoryFilterChips({ state, sort }: { state: FilterState; sort:
         Alle löschen
       </button>
     </div>
+  );
+}
+
+const COLLAPSE_KEY = 'filter-eingeklappt';
+
+/** Merkt sich, ob die Filterspalte am Desktop eingeklappt ist. */
+export function useFilterCollapse() {
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(COLLAPSE_KEY) === '1') setCollapsed(true);
+    } catch {
+      // Speicher nicht verfügbar: Spalte bleibt offen
+    }
+  }, []);
+  const toggle = () => {
+    setCollapsed((current) => {
+      try {
+        window.localStorage.setItem(COLLAPSE_KEY, current ? '0' : '1');
+      } catch {
+        // Speicher nicht verfügbar: gilt nur für diesen Besuch
+      }
+      return !current;
+    });
+  };
+  return { collapsed, toggle };
+}
+
+/** Ein- und Ausblenden der Filterspalte, nur ab Desktop-Breite. */
+export function CategoryFilterToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" aria-expanded={!collapsed} onClick={onToggle} className="hidden cursor-pointer whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-dark hover:bg-gray-100 lg:inline-block">
+      {collapsed ? 'Filter einblenden' : 'Filter ausblenden'}
+    </button>
   );
 }

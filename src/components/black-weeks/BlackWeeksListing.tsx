@@ -5,6 +5,19 @@ import UnifiedProductCard from '@/components/UnifiedProductCard';
 import { type StoreApiProduct } from '@/lib/woocommerce';
 import { PRODUCTS_PER_PAGE, SORT_OPTIONS } from '@/lib/category-listing';
 import {
+  NO_FILTERS,
+  PROMO_FILTER_ATTRIBUTES,
+  buildFilterState,
+  filterSlug,
+  filtersToQuery,
+  hasActiveFilters,
+  matchesFilters,
+  parseActiveFilters,
+  type ActiveFilters,
+  type FilterIndexProduct,
+} from '@/lib/category-filters';
+import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar, CategoryFilterToggle, useFilterCollapse } from '@/components/category/CategoryFilters';
+import {
   PROMO_BODENART_TABS,
   getPromoBodenart,
   getPromoDiscount,
@@ -47,6 +60,7 @@ function sortProducts(products: StoreApiProduct[], sort: string): StoreApiProduc
 
 interface BlackWeeksListingProps {
   products: StoreApiProduct[];
+  filterIndex?: FilterIndexProduct[];
 }
 
 /**
@@ -54,10 +68,12 @@ interface BlackWeeksListingProps {
  * Browser. Grid, Karte und Paginierungs-Optik wie CategoryPageClient —
  * ohne Aktionskachel, die gehört nicht auf die Aktionsseite selbst.
  */
-export default function BlackWeeksListing({ products }: BlackWeeksListingProps) {
+export default function BlackWeeksListing({ products, filterIndex = [] }: BlackWeeksListingProps) {
   const [art, setArt] = useState<PromoBodenart | 'alle'>('alle');
   const [sort, setSort] = useState(DISCOUNT_SORT);
   const [page, setPage] = useState(1);
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>(NO_FILTERS);
+  const { collapsed, toggle } = useFilterCollapse();
 
   // Seite, Reiter und Sortierung stehen in der URL, damit „Zurück“ vom Produkt hierher führt
   const [urlGelesen, setUrlGelesen] = useState(false);
@@ -69,6 +85,7 @@ export default function BlackWeeksListing({ products }: BlackWeeksListingProps) 
     if (urlArt) setArt(urlArt as PromoBodenart);
     if (urlSort) setSort(urlSort);
     if (urlPage > 1) setPage(urlPage);
+    setActiveFilters(parseActiveFilters(Object.fromEntries(params.entries()), PROMO_FILTER_ATTRIBUTES));
     setUrlGelesen(true);
   }, []);
   useEffect(() => {
@@ -78,9 +95,11 @@ export default function BlackWeeksListing({ products }: BlackWeeksListingProps) 
     setzen('art', art === 'alle' ? null : art);
     setzen('sort', sort === DISCOUNT_SORT ? null : sort);
     setzen('page', page > 1 ? String(page) : null);
+    for (const attribute of [...PROMO_FILTER_ATTRIBUTES.map(filterSlug), 'preis-von', 'preis-bis']) params.delete(attribute);
+    new URLSearchParams(filtersToQuery(activeFilters)).forEach((value, key) => params.set(key, value));
     const query = params.toString();
     window.history.replaceState(window.history.state, '', query ? `?${query}` : window.location.pathname);
-  }, [art, sort, page, urlGelesen]);
+  }, [art, sort, page, urlGelesen, activeFilters]);
   const [addonProductsMap, setAddonProductsMap] = useState<Map<number, StoreApiProduct>>(new Map());
   const gridTopRef = useRef<HTMLDivElement>(null);
 
@@ -118,10 +137,31 @@ export default function BlackWeeksListing({ products }: BlackWeeksListingProps) 
     return result;
   }, [products]);
 
+  const byArt = useMemo(
+    () => (art === 'alle' ? products : products.filter((p) => getPromoBodenart(p) === art)),
+    [products, art]
+  );
+  const indexById = useMemo(() => new Map(filterIndex.map((entry) => [entry.id, entry])), [filterIndex]);
+  const filterState = useMemo(() => {
+    const entries = byArt.map((p) => indexById.get(p.id)).filter((e): e is FilterIndexProduct => Boolean(e));
+    const state = buildFilterState(entries, PROMO_FILTER_ATTRIBUTES, activeFilters, 'm²');
+    return state.facets.length > 0 ? state : null;
+  }, [byArt, indexById, activeFilters]);
+  const applyFilters = (next: ActiveFilters) => {
+    setActiveFilters(next);
+    setPage(1);
+  };
+  const showSidebar = Boolean(filterState) && !collapsed;
+
   const filtered = useMemo(() => {
-    const byArt = art === 'alle' ? products : products.filter((p) => getPromoBodenart(p) === art);
-    return sortProducts(byArt, sort);
-  }, [products, art, sort]);
+    const matching = hasActiveFilters(activeFilters)
+      ? byArt.filter((p) => {
+          const entry = indexById.get(p.id);
+          return entry ? matchesFilters(entry, activeFilters) : false;
+        })
+      : byArt;
+    return sortProducts(matching, sort);
+  }, [byArt, indexById, activeFilters, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PRODUCTS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
@@ -175,6 +215,12 @@ export default function BlackWeeksListing({ products }: BlackWeeksListingProps) 
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
+          {filterState && (
+            <div className="flex items-center gap-3">
+              <CategoryFilterButton state={filterState} apply={applyFilters} />
+              <CategoryFilterToggle collapsed={collapsed} onToggle={toggle} />
+            </div>
+          )}
           <p className="text-gray-600">
             {filtered.length} {filtered.length === 1 ? 'Produkt' : 'Produkte'} gefunden
             {totalPages > 1 && ` (Seite ${currentPage} von ${totalPages})`}
@@ -195,7 +241,14 @@ export default function BlackWeeksListing({ products }: BlackWeeksListingProps) 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+      <div className={showSidebar ? 'lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-7' : ''}>
+      {filterState && showSidebar && <CategoryFilterSidebar state={filterState} apply={applyFilters} />}
+      <div className="min-w-0">
+      {filterState && <CategoryFilterChips state={filterState} apply={applyFilters} />}
+      {filtered.length === 0 && (
+        <p className="mb-12 rounded-2xl bg-white p-8 text-center text-gray-600">Für diese Auswahl gibt es keine Aktionsprodukte. Entferne einen Filter oder lösche alle.</p>
+      )}
+      <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 ${showSidebar ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}>
         {visible.map((product) => (
           <UnifiedProductCard
             key={product.id}
@@ -254,6 +307,8 @@ export default function BlackWeeksListing({ products }: BlackWeeksListingProps) 
           </button>
         </nav>
       )}
+      </div>
+      </div>
     </div>
   );
 }

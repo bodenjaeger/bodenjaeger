@@ -9,6 +9,10 @@ const LAMINAT = ['Farbgebung', 'Optik', 'Nutzungsklasse', 'Abriebklasse', 'Stär
 const PARKETT = ['Farbgebung', 'Optik', 'Oberfläche', 'Sortierung', 'Verlegeart'];
 const SOCKELLEISTEN = ['Höhe', 'Material', 'Überstreichbar'];
 
+const MUSTERBOX = ['Art des Vinylbodens', 'Farbgebung', 'Optik', 'Kollektion', 'Marke'];
+/** Aktionsseite: Bodenarten gemischt, nur Filter, die überall passen. */
+export const PROMO_FILTER_ATTRIBUTES = ['Farbgebung', 'Optik', 'Kollektion', 'Verlegeart', 'Nutzungsklasse', 'Stärke', 'Marke'];
+
 const FILTERS_BY_CATEGORY: Record<string, string[]> = {
   vinylboden: VINYL,
   'rigid-vinyl': VINYL,
@@ -18,6 +22,9 @@ const FILTERS_BY_CATEGORY: Record<string, string[]> = {
   laminat: LAMINAT,
   parkett: PARKETT,
   sockelleisten: SOCKELLEISTEN,
+  // Musterbox: hier stehen die Böden selbst, deshalb die wichtigsten Bodenfilter
+  'kostenlose-bodenmuster-bestellen': MUSTERBOX,
+  musterbox: MUSTERBOX,
 };
 
 export function filterAttributesFor(slug: string): string[] | null {
@@ -113,4 +120,79 @@ export function filtersToQuery(active: ActiveFilters): string {
   if (active.priceFrom !== null) params.set('preis-von', String(active.priceFrom));
   if (active.priceTo !== null) params.set('preis-bis', String(active.priceTo));
   return params.toString();
+}
+
+export const NO_FILTERS: ActiveFilters = { values: {}, priceFrom: null, priceTo: null };
+
+export interface FilterIndexProduct {
+  id: number;
+  price: number;
+  /** URL-Name des Attributs → Werte */
+  attributes: Record<string, string[]>;
+}
+
+export function matchesFilters(product: FilterIndexProduct, active: ActiveFilters, skipKey?: string): boolean {
+  for (const [key, slugs] of Object.entries(active.values)) {
+    if (key === skipKey) continue;
+    const options = product.attributes[key] ?? [];
+    if (!options.some((option) => slugs.includes(filterSlug(option)))) return false;
+  }
+  if (active.priceFrom !== null && product.price < active.priceFrom) return false;
+  if (active.priceTo !== null && product.price > active.priceTo) return false;
+  return true;
+}
+
+const FARB_REIHENFOLGE = ['hell', 'mittel', 'dunkel'];
+
+function sortValues(key: string, labels: string[]): string[] {
+  if (key === 'farbgebung') {
+    return [...labels].sort((a, b) => FARB_REIHENFOLGE.indexOf(a) - FARB_REIHENFOLGE.indexOf(b));
+  }
+  if (key === 'staerke' || key === 'hoehe') {
+    return [...labels].sort((a, b) => parseFloat(a.replace(',', '.')) - parseFloat(b.replace(',', '.')));
+  }
+  return [...labels].sort((a, b) => a.localeCompare(b, 'de'));
+}
+
+/** Trefferzahlen je Wert: Die eigene Filtergruppe zählt nicht mit, damit weitere Werte wählbar bleiben. */
+export function buildFilterState(
+  index: FilterIndexProduct[],
+  attributeNames: string[],
+  active: ActiveFilters,
+  unit: string
+): FilterState {
+  const facets: FilterFacet[] = [];
+  for (const label of attributeNames) {
+    const key = filterSlug(label);
+    const allLabels = new Set<string>();
+    const counts = new Map<string, number>();
+    for (const product of index) {
+      const options = product.attributes[key] ?? [];
+      options.forEach((option) => allLabels.add(option));
+      if (matchesFilters(product, active, key)) {
+        options.forEach((option) => counts.set(option, (counts.get(option) ?? 0) + 1));
+      }
+    }
+    // Filter mit nur einem Wert helfen niemandem
+    if (allLabels.size < 2) continue;
+    facets.push({
+      key,
+      label,
+      values: sortValues(key, [...allLabels]).map((option) => ({
+        label: shortFilterValue(option),
+        slug: filterSlug(option),
+        count: counts.get(option) ?? 0,
+        selected: active.values[key]?.includes(filterSlug(option)) ?? false,
+      })),
+    });
+  }
+  const prices = index.map((product) => product.price);
+  return {
+    facets,
+    priceMin: prices.length ? Math.floor(Math.min(...prices)) : 0,
+    priceMax: prices.length ? Math.ceil(Math.max(...prices)) : 0,
+    unit,
+    active,
+    total: index.filter((product) => matchesFilters(product, active)).length,
+  };
 }

@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { connection } from 'next/server';
+import { PROMO_FILTER_ATTRIBUTES, type FilterIndexProduct } from '@/lib/category-filters';
+import { loadFilterIndex } from '@/lib/category-filters-server';
 import BlackWeeksListing from '@/components/black-weeks/BlackWeeksListing';
 import { JsonLd } from '@/components/JsonLd';
 import { wooCommerceClient, type StoreApiProduct } from '@/lib/woocommerce';
@@ -64,6 +66,15 @@ export default async function BlackWeeksPage() {
     loadPromoProducts(),
     wooCommerceClient.getCategoryBySlug(PROMO_CATEGORY_SLUG).catch(() => null),
   ]);
+  // Ohne Filterdaten bleibt die Seite wie bisher, nur ohne Filter
+  let filterIndex: FilterIndexProduct[] = [];
+  if (category) {
+    try {
+      filterIndex = await loadFilterIndex(category.id, 'popularity-desc', PROMO_FILTER_ATTRIBUTES);
+    } catch (filterError) {
+      console.error('[black-weeks] Filter nicht verfügbar:', filterError);
+    }
+  }
   const titleImage = category?.image?.src ? category.image : null;
 
   // Mehr Produkte in der Kategorie, als in einem Request geladen werden
@@ -130,7 +141,7 @@ export default async function BlackWeeksPage() {
         )}
 
         {products.length > 0 ? (
-          <BlackWeeksListing products={products} />
+          <BlackWeeksListing products={products} filterIndex={filterIndex} />
         ) : (
           <div className="py-12 text-center">
             <h2 className="mb-2 text-xl font-medium text-gray-900">
