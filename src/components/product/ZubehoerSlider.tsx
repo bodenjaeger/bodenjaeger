@@ -322,7 +322,7 @@ export default function ZubehoerSlider({
                     return (
                       <div
                         key={product.id}
-                        className="flex-shrink-0 w-[calc(25%-12px)] min-w-[150px] snap-start"
+                        className="w-[150px] flex-shrink-0 snap-start sm:w-[190px]"
                       >
                         <article className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 h-full flex flex-col relative">
                           <div className="flex flex-col h-full">

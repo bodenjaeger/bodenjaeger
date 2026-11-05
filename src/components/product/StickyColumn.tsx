@@ -9,7 +9,16 @@ const ABSTAND_UNTEN = 16;
  * Spalte, die am Desktop mitläuft und bündig mit den Nachbarspalten endet.
  * Ist sie höher als das Fenster, scrollt sie erst bis zu ihrem unteren Rand.
  */
-export default function StickyColumn({ className = '', children }: { className?: string; children: ReactNode }) {
+export default function StickyColumn({
+  className = '',
+  fixedTop,
+  children,
+}: {
+  className?: string;
+  /** Fester Abstand: Spalte bleibt stehen, auch wenn sie höher als das Fenster ist */
+  fixedTop?: number;
+  children: ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(ABSTAND_OBEN);
 
@@ -30,7 +39,7 @@ export default function StickyColumn({ className = '', children }: { className?:
   }, []);
 
   return (
-    <div ref={ref} style={{ top }} className={className}>
+    <div ref={ref} style={{ top: fixedTop ?? top }} className={className}>
       {children}
     </div>
   );

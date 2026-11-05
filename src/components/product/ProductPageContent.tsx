@@ -416,11 +416,9 @@ export default function ProductPageContent({
 
             {/* Desktop: Spalten laufen mit und enden bündig, danach folgt das Zubehör */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
-              <StickyColumn className="min-w-0 lg:sticky lg:self-start">
+              <StickyColumn fixedTop={16} className="min-w-0 lg:sticky lg:self-start">
                 <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-                  <StickyColumn className="min-w-0 xl:sticky xl:self-start">
-                    <ImageGallery product={product} hideDiscount={!isAccessory} videoUrl={media.video} />
-                  </StickyColumn>
+                  <ImageGallery product={product} hideDiscount={!isAccessory} videoUrl={media.video} />
                   <ProductSummary
                     product={product}
                     features={features}
