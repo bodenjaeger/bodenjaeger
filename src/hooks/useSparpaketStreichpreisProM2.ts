@@ -65,9 +65,9 @@ function ladeProdukt(id: number): Promise<StoreApiProduct | null> {
 }
 
 /**
- * Rabatt-Badge für Klebe-Vinyl (Kundenvorgabe): der höhere Wert aus Backend-Prozent
- * und der Ersparnis gegenüber dem Sparpaket-Streichpreis. Ohne Streichpreis (kein
- * Klebe-Vinyl / noch nicht geladen) bleibt der Backend-Wert.
+ * Rabatt-Badge wie auf der Produktseite: Summe der Einzelpreise gegenüber dem
+ * Verkaufspreis (Kundenvorgabe). Solange der Streichpreis fehlt (wird geladen,
+ * kein Set), bleibt der Backend-Wert.
  */
 export function sparpaketRabattProzent(
   streichpreisProM2: number | null,
@@ -75,14 +75,14 @@ export function sparpaketRabattProzent(
   backendProzent: number
 ): number {
   if (!streichpreisProM2 || streichpreisProM2 <= 0) return backendProzent;
-  const berechnet = ((streichpreisProM2 - preisProM2) / streichpreisProM2) * 100;
-  return Math.max(backendProzent, berechnet);
+  return Math.max(0, ((streichpreisProM2 - preisProM2) / streichpreisProM2) * 100);
 }
 
 /**
- * Liefert den Streichpreis pro m² oder null – null bei Nicht-Klebe-Vinyl,
- * solange geladen wird oder wenn Preise fehlen. Die Karte zeigt dann ihren
- * bisherigen Streichpreis.
+ * Liefert den Streichpreis pro m² für alle Set-Böden, gleich gerechnet wie die
+ * Produktseite: Boden + Standard-Dämmung + Standard-Sockelleiste, bei Klebe-Vinyl
+ * zusätzlich die Bauchemie. Null ohne Set, beim Laden oder wenn Preise fehlen;
+ * die Karte zeigt dann ihren bisherigen Streichpreis.
  *
  * @param sockelleisteProduct Standard-Sockelleiste, falls die Seite sie schon
  *   geladen hat (Kategorieseite); sonst wird sie über `sockelleisten_id` geholt.
@@ -92,36 +92,39 @@ export function useSparpaketStreichpreisProM2(
   sockelleisteProduct?: StoreApiProduct | null
 ): number | null {
   const isKlebeVinyl = product.categories?.some((c) => c.slug === KLEBEVINYL_SPARPAKET.kategorie) ?? false;
+  const daemmungId = product.daemmung_id || 0;
+  const hatSet = isKlebeVinyl || !!product.show_setangebot;
   const [wert, setWert] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isKlebeVinyl) return;
+    if (!hatSet) return;
     let abgebrochen = false;
     const sockelleisteId = product.sockelleisten_id || 0;
 
     Promise.all([
-      Promise.all(SPARPAKET_PRODUKT_IDS.map(ladeProdukt)),
+      isKlebeVinyl ? Promise.all(SPARPAKET_PRODUKT_IDS.map(ladeProdukt)) : Promise.resolve([]),
       sockelleisteProduct
         ? Promise.resolve(sockelleisteProduct)
         : sockelleisteId
           ? ladeProdukt(sockelleisteId)
           : Promise.resolve(null),
-    ]).then(([bauchemie, sockelleiste]) => {
+      daemmungId ? ladeProdukt(daemmungId) : Promise.resolve(null),
+    ]).then(([bauchemie, sockelleiste, daemmung]) => {
       if (abgebrochen) return;
       const geladen = bauchemie.filter((p): p is StoreApiProduct => p !== null);
       // Unvollständig → kein Wert, damit kein zu niedriger Streichpreis erscheint
-      if (geladen.length === 0 || (sockelleisteId && !sockelleiste)) {
+      if ((isKlebeVinyl && geladen.length === 0) || (sockelleisteId && !sockelleiste) || (daemmungId && !daemmung)) {
         setWert(null);
         return;
       }
       const boden = product.uvp || product.regular_price || product.price || 0;
-      setWert(boden + (sockelleiste?.price || 0) + berechneBauchemieProM2(geladen));
+      setWert(boden + (daemmung?.price || 0) + (sockelleiste?.price || 0) + berechneBauchemieProM2(geladen));
     });
 
     return () => {
       abgebrochen = true;
     };
-  }, [isKlebeVinyl, product, sockelleisteProduct]);
+  }, [hatSet, isKlebeVinyl, daemmungId, product, sockelleisteProduct]);
 
-  return isKlebeVinyl ? wert : null;
+  return hatSet ? wert : null;
 }
