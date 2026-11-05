@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import { MessageCircle } from 'lucide-react';
 import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import type { SetQuantityCalculation, SparpaketQuantityCalculation } from '@/lib/setCalculations';
@@ -47,7 +46,7 @@ export default function TotalPrice({
   sparpaket = null
 }: TotalPriceProps) {
   const [addedToCart, setAddedToCart] = useState(false);
-  const { addSetToCart, openCartDrawer } = useCart();
+  const { addSetToCart, openCartDrawer, cartItems } = useCart();
   const cartButtonRef = useRef<HTMLButtonElement>(null);
   const [cartButtonVisible, setCartButtonVisible] = useState(true);
   const hasData = !!quantities && !!prices;
@@ -119,6 +118,14 @@ export default function TotalPrice({
     quantities.floor.packages +
     (quantities.insulation?.packages || 0) +
     (quantities.baseboard?.packages || 0);
+
+  // Genau dieses Set liegt schon im Warenkorb: nicht versehentlich ein zweites Mal hinzufügen
+  const setImWarenkorb = cartItems.some((item) => {
+    if (item.setItemType !== 'floor' || item.id !== product.id || item.quantity !== quantities.floor.packages) return false;
+    const bestandteil = (typ: string) => cartItems.find((i) => i.setId === item.setId && i.setItemType === typ)?.id;
+    return bestandteil('insulation') === (quantities.insulation ? selectedDaemmung?.id : undefined)
+      && bestandteil('baseboard') === (quantities.baseboard ? selectedSockelleiste?.id : undefined);
+  });
 
   // Handle add to cart - prepare with correct pricing
   const handleAddToCart = () => {
@@ -260,18 +267,16 @@ export default function TotalPrice({
       });
     track.addToCart(ga4Items, totalDisplayPrice);
 
-    openCartDrawer();
     setAddedToCart(true);
-
-    // Scroll to Zubehör section
-    setTimeout(() => {
-      const zubehoerSection = document.getElementById('zubehoer-section');
-      if (zubehoerSection) {
-        zubehoerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 300);
-
     setTimeout(() => setAddedToCart(false), 3000);
+
+    // Gibt es passendes Zubehör, dorthin leiten; sonst den Warenkorb öffnen
+    const zubehoer = document.getElementById('zubehoer-section');
+    if (zubehoer && zubehoer.childElementCount > 0) {
+      setTimeout(() => zubehoer.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+    } else {
+      openCartDrawer();
+    }
   };
 
   // Handle request quote
@@ -312,14 +317,11 @@ export default function TotalPrice({
       <button
         ref={cartButtonRef}
         type="button"
-        onClick={handleAddToCart}
-        disabled={addedToCart}
-        className={`mt-4 flex min-h-14 w-full items-center justify-center gap-3 rounded-lg text-base font-bold text-white transition-all ${
-          addedToCart ? 'bg-[#155724]' : 'bg-dark hover:bg-[#1a1a1d] active:scale-[0.98]'
-        }`}
+        onClick={setImWarenkorb ? openCartDrawer : handleAddToCart}
+        className="mt-4 flex min-h-14 w-full items-center justify-center gap-3 rounded-lg bg-dark text-base font-bold text-white transition-all hover:bg-[#1a1a1d] active:scale-[0.98]"
       >
-        {addedToCart ? (
-          'Set hinzugefügt!'
+        {setImWarenkorb ? (
+          '✓ Im Warenkorb – ansehen'
         ) : (
           <>
             <Image src="/images/Icons/warenkorb-weiss.png" alt="" width={22} height={22} className="h-[22px] w-[22px]" />
@@ -348,9 +350,9 @@ export default function TotalPrice({
               type="button"
               onClick={() => window.dispatchEvent(new Event('kontakt-oeffnen'))}
               aria-label="Kontakt öffnen"
-              className="flex h-12 w-11 flex-shrink-0 items-center justify-center rounded-lg border border-ash text-dark active:bg-ash"
+              className="flex h-12 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-brand active:opacity-80"
             >
-              <MessageCircle className="h-5 w-5" aria-hidden="true" />
+              <Image src="/images/Icons/kontakt-weiss.png" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
             </button>
             <div className="min-w-0 flex-1">
               <p className="whitespace-nowrap text-lg font-bold leading-tight text-dark">{formatPrice(endpreis)} €</p>
@@ -360,12 +362,11 @@ export default function TotalPrice({
             </div>
             <button
               type="button"
-              onClick={handleAddToCart}
-              disabled={addedToCart}
-              className={`flex min-h-12 flex-shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-bold text-white sm:px-4 ${addedToCart ? 'bg-[#155724]' : 'bg-dark'}`}
+              onClick={setImWarenkorb ? openCartDrawer : handleAddToCart}
+              className="flex min-h-12 flex-shrink-0 items-center gap-2 rounded-lg bg-dark px-3 text-sm font-bold text-white sm:px-4"
             >
-              {addedToCart ? (
-                'Hinzugefügt!'
+              {setImWarenkorb ? (
+                '✓ Warenkorb ansehen'
               ) : (
                 <>
                   <Image src="/images/Icons/warenkorb-weiss.png" alt="" width={20} height={20} className="h-5 w-5 max-[419px]:hidden" />

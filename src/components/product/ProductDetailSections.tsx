@@ -85,12 +85,12 @@ export default function ProductDetailSections({ product, features, media }: Prod
         <div className={`grid gap-8 lg:gap-12 ${description && features.length > 0 ? 'lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]' : ''}`}>
           {description && (
             <div
-              className="max-w-[68ch] text-[15px] leading-7 text-mid [&>p:first-child]:mb-5 [&>p:first-child]:text-lg [&>p:first-child]:leading-8 [&>p:first-child]:text-dark [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-dark [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-dark [&_li]:mb-1 [&_p]:mb-4 [&_strong]:font-bold [&_strong]:text-dark [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5"
+              className="min-w-0 max-w-[68ch] [overflow-wrap:anywhere] [&_img]:h-auto [&_img]:max-w-full text-[15px] leading-7 text-mid [&>p:first-child]:mb-5 [&>p:first-child]:text-lg [&>p:first-child]:leading-8 [&>p:first-child]:text-dark [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-dark [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-dark [&_li]:mb-1 [&_p]:mb-4 [&_strong]:font-bold [&_strong]:text-dark [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-5"
               dangerouslySetInnerHTML={{ __html: description }}
             />
           )}
           {features.length > 0 && (
-            <div className="self-start rounded-xl bg-pale p-5 lg:sticky lg:top-24">
+            <div className="self-start rounded-xl bg-pale p-5 lg:sticky lg:top-24 lg:bg-white">
               <h2 className="mb-4 text-lg font-bold text-dark">Vorteile auf einen Blick</h2>
               <ul className="space-y-3">
                 {features.map((feature) => (
@@ -118,7 +118,7 @@ export default function ProductDetailSections({ product, features, media }: Prod
               {highlightSpecs.length > 0 && (
                 <dl className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
                   {highlightSpecs.map((spec) => (
-                    <div key={spec.label} className="rounded-xl bg-pale p-4">
+                    <div key={spec.label} className="rounded-xl bg-pale p-4 lg:bg-white">
                       <dt className="text-xs text-mid">{spec.label}</dt>
                       <dd className="mt-1 text-base font-bold leading-snug text-dark">{spec.value}</dd>
                     </div>
@@ -155,7 +155,7 @@ export default function ProductDetailSections({ product, features, media }: Prod
               {media.datenblatt && <DocumentLink href={media.datenblatt} label="Hersteller-Datenblatt (PDF)" action="Download" icon={<FileText className="h-7 w-7" aria-hidden="true" />} />}
               {media.video && <DocumentLink href={media.video} label="Verlegevideo" action="Video ansehen" icon={<CirclePlay className="h-7 w-7" aria-hidden="true" />} />}
             </div>
-            <div className="self-start rounded-xl bg-pale p-5">
+            <div className="self-start rounded-xl bg-pale p-5 lg:bg-white">
               <h3 className="mb-2 font-bold text-dark">Wichtige Hinweise</h3>
               <p className="text-sm leading-relaxed text-mid">
                 Der Untergrund muss eben, trocken, sauber und fest sein. Bitte beachte die vollständige
@@ -195,7 +195,7 @@ export default function ProductDetailSections({ product, features, media }: Prod
         ))}
       </ul>
 
-      <div role="tablist" aria-label="Produktinformationen" className="mb-6 hidden w-fit gap-1 rounded-xl bg-pale p-1 lg:flex">
+      <div role="tablist" aria-label="Produktinformationen" className="hidden items-end gap-1 lg:flex">
         {sections.map((section) => (
           <button
             key={section.id}
@@ -203,8 +203,8 @@ export default function ProductDetailSections({ product, features, media }: Prod
             role="tab"
             aria-selected={currentId === section.id}
             onClick={() => setActiveId(section.id)}
-            className={`rounded-lg px-5 py-2.5 text-sm transition-colors ${
-              currentId === section.id ? 'bg-white font-bold text-dark shadow-sm ring-1 ring-ash' : 'text-mid hover:text-dark'
+            className={`rounded-t-lg border border-b-0 px-5 py-2.5 text-sm transition-colors ${
+              currentId === section.id ? 'border-pale bg-pale font-bold text-dark' : 'border-ash bg-white text-mid hover:bg-pale hover:text-dark'
             }`}
           >
             {section.label}
@@ -212,9 +212,12 @@ export default function ProductDetailSections({ product, features, media }: Prod
         ))}
       </div>
 
-      {sections.map((section) => (
-        <DetailSection key={section.id} section={section} desktopActive={currentId === section.id} />
-      ))}
+      {/* Karteikarte: aktiver Reiter und Fläche gehen ineinander über */}
+      <div className="lg:rounded-b-xl lg:rounded-tr-xl lg:bg-pale lg:p-6">
+        {sections.map((section) => (
+          <DetailSection key={section.id} section={section} desktopActive={currentId === section.id} />
+        ))}
+      </div>
     </div>
   );
 }

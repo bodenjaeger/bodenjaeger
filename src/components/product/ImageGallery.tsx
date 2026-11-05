@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, Expand, Play, X } from 'lucide-react';
 import type { StoreApiProduct } from '@/lib/woocommerce';
@@ -278,12 +279,13 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
         </div>
       )}
 
-      {isZoomed && (
+      {/* Über allen Ebenen der Seite, auch den mitlaufenden Spalten */}
+      {isZoomed && createPortal(
         <div
           role="dialog"
           aria-modal="true"
           aria-label={product.name}
-          className="fixed inset-0 z-50 bg-black/90"
+          className="fixed inset-0 z-[100] bg-black/90"
           onClick={() => setIsZoomed(false)}
           onWheel={images.length > 1 ? handleWheel : undefined}
           onTouchStart={(event) => { touchStartX.current = event.touches[0].clientX; }}
@@ -294,7 +296,7 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
             alt={currentImage.alt || product.name}
             fill
             sizes="100vw"
-            className="object-contain p-4 sm:px-20"
+            className="object-contain sm:px-20 sm:py-4"
           />
           <button
             onClick={() => setIsZoomed(false)}
@@ -325,7 +327,8 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
               </p>
             </>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

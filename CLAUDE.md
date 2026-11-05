@@ -175,6 +175,10 @@ Vom Kunden festgelegt: `src/components/KarrierePage.tsx` ist die Vorlage, damit 
 - Kicker in Versalien und `text-brand`, Bilder mit großen Radien, rote Häkchen-Kreise, Buttons `rounded-xl bg-brand`
 - Nur Shop-Farben; Gelb nicht als Akzent verwenden
 
+### Ebenen (Overlays)
+
+Die mitlaufenden Spalten der Produktseite sind `sticky` und bilden eigene Ebenen. Alles, was über der Seite liegt (Großansicht, Auswahlfenster, Kaufleiste), wird deshalb per `createPortal` in `document.body` gerendert: Fenster mit `z-[100]`, Kaufleiste mit `z-30`. Nie ein Overlay nur per `z-index` innerhalb einer Spalte lösen.
+
 ### Price Type Gotcha
 
 `StoreApiProduct` (in `woocommerce.ts`) has `price` as a **number** (e.g., `29.99`) from the Jaeger API. There is also an optional `prices?: { price: string }` field where price is in **cents as a string** (e.g., `"2999"`) from the legacy Store API shape. Always use `product.price` (number) for Jaeger API data.

@@ -54,7 +54,7 @@ export default function ZubehoerSlider({
   const [error, setError] = useState<string | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(true);
 
   const { addToCart, cartItems, openCartDrawer, setSingleItemQuantity } = useCart();
 
@@ -243,17 +243,21 @@ export default function ZubehoerSlider({
             <span className="font-normal text-mid"> – Für ein perfektes Ergebnis</span>
           </h2>
 
+          {cartItems.some((item) => item.setItemType === 'floor' && item.id === product?.id) && (
+            <p role="status" className="mb-3 text-sm font-bold text-cta">✓ Dein Set liegt im Warenkorb. Das passt dazu:</p>
+          )}
+
           {/* Kategorie-Navigation */}
-          <div className="mb-4 flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-pale p-1 scrollbar-hide">
+          <div className="flex items-end gap-1 overflow-x-auto scrollbar-hide">
             {availableCategories.map((category) => (
               <button
                 key={category.metaKey}
                 onClick={() => setActiveCategory(category.metaKey)}
                 aria-pressed={activeCategory === category.metaKey}
-                className={`flex-shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${
+                className={`flex-shrink-0 whitespace-nowrap rounded-t-lg border border-b-0 px-3 py-2 text-sm transition-colors ${
                   activeCategory === category.metaKey
-                    ? 'bg-white font-bold text-dark shadow-sm ring-1 ring-ash'
-                    : 'text-mid hover:text-dark'
+                    ? 'border-pale bg-pale font-bold text-dark'
+                    : 'border-ash bg-white text-mid hover:bg-pale hover:text-dark'
                 }`}
               >
                 {category.name}
@@ -261,8 +265,8 @@ export default function ZubehoerSlider({
             ))}
           </div>
 
-          {/* Produkt-Slider */}
-          <div className="relative px-0 md:px-6">
+          {/* Produkt-Slider auf der Karteikarte */}
+          <div className="relative rounded-b-xl bg-pale p-3 md:px-8">
             {/* Loading State */}
             {loading && (
               <div className="flex items-center justify-center py-12">
