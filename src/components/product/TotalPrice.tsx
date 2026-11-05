@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
+import { MessageCircle } from 'lucide-react';
 import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import type { SetQuantityCalculation, SparpaketQuantityCalculation } from '@/lib/setCalculations';
@@ -60,11 +61,11 @@ export default function TotalPrice({
     return () => observer.disconnect();
   }, [hasData]);
 
-  // Schwebende Elemente: über die Leiste schieben bzw. vom großen Button wegnehmen (globals.css)
+  // Mobil keine schwebenden Buttons im Kaufbereich, das Trustbadge rutscht über die Leiste (globals.css)
   useEffect(() => {
     document.body.classList.toggle('kaufleiste-sichtbar', hasData && !cartButtonVisible);
-    document.body.classList.toggle('kaufbutton-sichtbar', hasData && cartButtonVisible);
-    return () => document.body.classList.remove('kaufleiste-sichtbar', 'kaufbutton-sichtbar');
+    document.body.classList.add('kaufbereich');
+    return () => document.body.classList.remove('kaufleiste-sichtbar', 'kaufbereich');
   }, [hasData, cartButtonVisible]);
 
   // Mobile Browserleisten fahren beim Scrollen ein und aus: Leiste am sichtbaren Rand halten
@@ -342,9 +343,17 @@ export default function TotalPrice({
         <div
           style={{ bottom: 'var(--kaufleiste-abstand, 0px)' }}
           className="fixed inset-x-0 z-30 border-t border-ash bg-white px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] lg:hidden">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="whitespace-nowrap text-xl font-bold leading-tight text-dark">{formatPrice(endpreis)} €</p>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('kontakt-oeffnen'))}
+              aria-label="Kontakt öffnen"
+              className="flex h-12 w-11 flex-shrink-0 items-center justify-center rounded-lg border border-ash text-dark active:bg-ash"
+            >
+              <MessageCircle className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="whitespace-nowrap text-lg font-bold leading-tight text-dark">{formatPrice(endpreis)} €</p>
               <p className="truncate text-xs text-mid">
                 {quantities.floor.actualM2.toFixed(2).replace('.', ',')} m² · {quantities.floor.packages} {quantities.floor.packages === 1 ? 'Paket' : 'Pakete'} · inkl. MwSt.
               </p>
@@ -353,14 +362,14 @@ export default function TotalPrice({
               type="button"
               onClick={handleAddToCart}
               disabled={addedToCart}
-              className={`flex min-h-12 flex-shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-bold text-white ${addedToCart ? 'bg-[#155724]' : 'bg-dark'}`}
+              className={`flex min-h-12 flex-shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-bold text-white sm:px-4 ${addedToCart ? 'bg-[#155724]' : 'bg-dark'}`}
             >
               {addedToCart ? (
                 'Hinzugefügt!'
               ) : (
                 <>
-                  <Image src="/images/Icons/warenkorb-weiss.png" alt="" width={20} height={20} className="h-5 w-5" />
-                  In den Warenkorb
+                  <Image src="/images/Icons/warenkorb-weiss.png" alt="" width={20} height={20} className="h-5 w-5 max-[419px]:hidden" />
+                  <span><span className="max-[359px]:hidden">In den </span>Warenkorb</span>
                 </>
               )}
             </button>

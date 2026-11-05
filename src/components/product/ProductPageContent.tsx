@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronRight, MinusIcon, Package, PackageCheck, Phone, PlusIcon, Truck } from 'lucide-react';
@@ -302,10 +302,23 @@ export default function ProductPageContent({
   }, [product, quantities, selectedDaemmung, selectedSockelleiste, daemmungProduct, sockelleisteProduct, sparpaketAnzeige]);
 
   const primaryCategory = getPrimaryCategory(product.categories);
+  // Mobil: Fallen Sparpaket-Zeilen weg oder kommen dazu, bleibt +/- an derselben Bildschirmstelle
+  const sparpaketZeilen = sparpaketAnzeige?.zeilen.length ?? 0;
+  useLayoutEffect(() => {
+    const before = quantityTopBefore.current;
+    quantityTopBefore.current = null;
+    if (before === null || !quantityRef.current || window.innerWidth >= 1024) return;
+    const verschoben = quantityRef.current.getBoundingClientRect().top - before;
+    if (Math.abs(verschoben) > 1) window.scrollBy({ top: verschoben, behavior: 'instant' });
+  }, [sparpaketZeilen]);
+
   const features = useMemo(() => extractProductFeatures(product.short_description), [product.short_description]);
 
   // Handle quantity changes from QuantitySelector
+  const quantityRef = useRef<HTMLDivElement>(null);
+  const quantityTopBefore = useRef<number | null>(null);
   const handleQuantityChange = (newPackages: number, newSqm: number) => {
+    quantityTopBefore.current = quantityRef.current?.getBoundingClientRect().top ?? null;
     setWantedM2(newSqm);
   };
 
@@ -869,14 +882,16 @@ export default function ProductPageContent({
                   sparpaket={sparpaketAnzeige}
                 />
 
-                <QuantitySelector
-                  paketinhalt={paketinhalt}
-                  einheit={einheit}
-                  einheitFull={product.einheit || undefined}
-                  verpackungsartFull={product.verpackungsart || undefined}
-                  initialPackages={initialPackages}
-                  onQuantityChange={handleQuantityChange}
-                />
+                <div ref={quantityRef}>
+                  <QuantitySelector
+                    paketinhalt={paketinhalt}
+                    einheit={einheit}
+                    einheitFull={product.einheit || undefined}
+                    verpackungsartFull={product.verpackungsart || undefined}
+                    initialPackages={initialPackages}
+                    onQuantityChange={handleQuantityChange}
+                  />
+                </div>
 
                 <TotalPrice
                   quantities={quantities}

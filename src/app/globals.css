@@ -625,16 +625,13 @@ body.nav-menu-open [id^='trustbadge-container-'] {
 }
 
 
-/* Mobile Kaufleiste der Produktseite: schwebende Elemente darüber schieben */
+/* Mobile Produktseite: Kontakt sitzt in der Kaufleiste, Warenkorb im Kopfbereich */
 @media (max-width: 1023px) {
-  body.kaufleiste-sichtbar [data-floating-actions],
-  body.kaufleiste-sichtbar [id^="trustbadge-container-"] {
-    bottom: calc(88px + var(--kaufleiste-abstand, 0px)) !important;
+  body.kaufbereich [data-floating-actions] {
+    display: none;
   }
 
-  /* Nichts über dem großen Warenkorb-Button */
-  body.kaufbutton-sichtbar [data-floating-actions] {
-    opacity: 0;
-    pointer-events: none;
+  body.kaufleiste-sichtbar [id^="trustbadge-container-"] {
+    bottom: calc(88px + var(--kaufleiste-abstand, 0px)) !important;
   }
 }

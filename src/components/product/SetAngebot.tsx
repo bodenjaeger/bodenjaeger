@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ChevronRight } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ChevronRight, X } from 'lucide-react';
 import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 
@@ -40,6 +41,8 @@ interface SetAngebotProps {
   sockelleisteVE?: string;
   sockelleisteEinheit?: string;
   sockelleisteOptions?: StoreApiProduct[];
+  daemmungStandardPrice?: number;
+  sockelleisteStandardPrice?: number;
   onProductSelection?: (daemmung: StoreApiProduct | null, sockelleiste: StoreApiProduct | null) => void;
   // PREISE DIREKT VOM PARENT (ProductPageContent) - KEINE BERECHNUNG HIER!
   savingsPercent?: number;
@@ -101,6 +104,8 @@ export default function SetAngebot({
   sockelleisteVE,
   sockelleisteEinheit = 'lfm',
   sockelleisteOptions = [],
+  daemmungStandardPrice = 0,
+  sockelleisteStandardPrice = 0,
   onProductSelection,
   savingsPercent,
   sparpaket = null
@@ -108,6 +113,24 @@ export default function SetAngebot({
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'daemmung' | 'sockelleiste' | null>(null);
+  const [modalAuswahl, setModalAuswahl] = useState<StoreApiProduct | null>(null);
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsModalOpen(false);
+        setModalType(null);
+      }
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isModalOpen]);
 
   // Selected products state (starts with standard products)
   const [selectedDaemmung, setSelectedDaemmung] = useState<StoreApiProduct | null>(
@@ -158,6 +181,7 @@ export default function SetAngebot({
 
   // Handle button clicks
   const openModal = (type: 'daemmung' | 'sockelleiste') => {
+    setModalAuswahl(type === 'daemmung' ? selectedDaemmung : selectedSockelleiste);
     setModalType(type);
     setIsModalOpen(true);
   };
@@ -165,6 +189,13 @@ export default function SetAngebot({
   const closeModal = () => {
     setIsModalOpen(false);
     setModalType(null);
+  };
+
+  // Auswahl gilt erst nach „Auswählen“, „Abbrechen“ lässt alles unverändert
+  const confirmModal = () => {
+    if (modalType === 'daemmung') setSelectedDaemmung(modalAuswahl);
+    if (modalType === 'sockelleiste') setSelectedSockelleiste(modalAuswahl);
+    closeModal();
   };
 
   return (
@@ -181,13 +212,6 @@ export default function SetAngebot({
       </div>
       {sparpaket?.aktiv && (
         <p className="mt-2 text-xs text-mid">Alles, was du für die Verlegung brauchst – im Set unschlagbar günstig</p>
-      )}
-
-      {sparpaket && !sparpaket.aktiv && (
-        <p className="mt-3 rounded-lg bg-pale px-3 py-2 text-sm text-dark">
-          <span className="font-bold">Noch {sparpaket.fehlendePakete} {sparpaket.fehlendePakete === 1 ? 'Paket' : 'Pakete'} bis zum Sparpaket:</span>{' '}
-          Grundierung, Spachtelmasse und Kleber gratis dazu.
-        </p>
       )}
 
       {/* Produktliste */}
@@ -250,191 +274,99 @@ export default function SetAngebot({
         </p>
       </div>
 
-      {/* Modal für Produktauswahl */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-gradient-to-r from-red-600 to-red-700 p-6 flex justify-between items-center">
-              <h3 className="text-2xl font-bold text-white">
+      {sparpaket && !sparpaket.aktiv && (
+        <p className="mt-3 rounded-lg bg-pale px-3 py-2 text-sm text-dark">
+          <span className="font-bold">Noch {sparpaket.fehlendePakete} {sparpaket.fehlendePakete === 1 ? 'Paket' : 'Pakete'} bis zum Sparpaket:</span>{' '}
+          Grundierung, Spachtelmasse und Kleber gratis dazu.
+        </p>
+      )}
+
+      {/* Auswahlfenster über der ganzen Seite, auch über dem Kopfbereich */}
+      {isModalOpen && modalType && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
+          onClick={closeModal}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="set-auswahl-titel"
+            onClick={(event) => event.stopPropagation()}
+            className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-ash px-4 py-3 sm:px-6 sm:py-4">
+              <h3 id="set-auswahl-titel" className="text-lg font-bold text-dark sm:text-xl">
                 {modalType === 'daemmung' ? 'Dämmung wählen' : 'Sockelleiste wählen'}
               </h3>
-              <button
-                onClick={closeModal}
-                className="text-white hover:text-red-100 text-3xl font-bold leading-none transition-colors"
-              >
-                ×
+              <button type="button" onClick={closeModal} aria-label="Schließen" className="flex h-10 w-10 items-center justify-center rounded-lg text-dark hover:bg-gray-100">
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-3 overflow-y-auto max-h-[calc(90vh-200px)]">
-              {modalType === 'daemmung' && daemmungOptions.map((option) => {
-                const optionPrice = option.prices?.price
-                  ? parseFloat(option.prices.price) / 100
-                  : (option.price || 0);
-                const standardPrice = daemmungRegularPricePerUnit;
-                const priceDifference = optionPrice - standardPrice;
-                const isSelected = selectedDaemmung?.id === option.id;
-                const isStandard = option.name === daemmungName;
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 sm:space-y-3 sm:p-6">
+              {(modalType === 'daemmung' ? daemmungOptions : sockelleisteOptions).map((option) => {
+                const isDaemmung = modalType === 'daemmung';
+                const standardName = isDaemmung ? daemmungName : sockelleisteName;
+                const standardPrice = isDaemmung ? daemmungStandardPrice : sockelleisteStandardPrice;
+                const unit = option.einheit_short || (isDaemmung ? einheit : sockelleisteEinheit);
+                const optionPrice = option.price || 0;
+                // Gleiche Rechnung wie in ProductPageContent, immer gegenüber dem Standardprodukt
+                const aufpreis = option.verrechnung ?? Math.max(0, optionPrice - standardPrice);
+                const isSelected = modalAuswahl?.id === option.id;
+                const isStandard = option.name === standardName;
 
                 return (
-                  <div
+                  <label
                     key={option.id}
-                    onClick={() => setSelectedDaemmung(option)}
-                    className={`border-2 rounded-xl p-5 hover:border-red-600 hover:shadow-lg cursor-pointer transition-all duration-200 ${
-                      isSelected ? 'border-red-600 bg-red-50 shadow-md' : 'border-gray-200'
+                    className={`grid cursor-pointer grid-cols-[20px_56px_minmax(0,1fr)] items-center gap-x-3 rounded-xl border p-3 transition-colors sm:grid-cols-[20px_80px_minmax(0,1fr)_auto] sm:gap-x-4 sm:p-4 ${
+                      isSelected ? 'border-brand bg-brand/5' : 'border-ash hover:border-mid'
                     }`}
                   >
-                    <div className="flex items-center gap-5">
-                      {/* Radio Button */}
-                      <input
-                        type="radio"
-                        name="daemmung-option"
-                        checked={isSelected}
-                        onChange={() => setSelectedDaemmung(option)}
-                        className="w-5 h-5 accent-red-600"
-                      />
-
-                      {/* Product Image */}
-                      <Image
-                        src={option.images?.[0]?.src || '/images/placeholder.jpg'}
-                        alt={option.name}
-                        width={90}
-                        height={90}
-                        className="rounded-lg object-contain"
-                      />
-
-                      {/* Product Info */}
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-1">{option.name}</h4>
-                        {option.paketinhalt && (
-                          <p className="text-sm text-gray-500 mb-0.5">
-                            VE: {option.paketinhalt}
-                            {option.einheit_short || 'm²'}
-                          </p>
-                        )}
-                        <p className="text-base font-medium text-gray-700">
-                          {formatPrice(optionPrice)} €/{option.einheit_short || einheit}
-                        </p>
-                      </div>
-
-                      {/* Price Difference */}
-                      <div className="text-right flex flex-col items-end gap-2">
-                        {priceDifference <= 0 ? (
-                          <div className="text-green-600 font-bold text-lg">
-                            <div>0,00 €</div>
-                            <div className="text-xs font-normal">(kostenlos)</div>
-                          </div>
-                        ) : (
-                          <div className="text-red-600 font-bold text-lg">
-                            <div>+{formatPrice(priceDifference)} €</div>
-                            <div className="text-xs font-normal">(Aufpreis)</div>
-                          </div>
-                        )}
-                        {isStandard && (
-                          <span className="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold">
-                            ✓ Standard
-                          </span>
-                        )}
-                      </div>
+                    <input
+                      type="radio"
+                      name={`set-auswahl-${modalType}`}
+                      checked={isSelected}
+                      onChange={() => setModalAuswahl(option)}
+                      className="h-5 w-5 accent-[#ed1b24]"
+                    />
+                    <Image
+                      src={option.images?.[0]?.src || '/images/placeholder.jpg'}
+                      alt=""
+                      width={80}
+                      height={80}
+                      className="h-14 w-14 rounded-lg object-cover sm:h-20 sm:w-20"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold leading-snug text-dark sm:text-base">{option.name}</p>
+                      <p className="mt-0.5 text-xs text-mid sm:text-sm">
+                        {formatPreis(optionPrice)} €/{unit}
+                        {option.paketinhalt ? ` · VE: ${String(option.paketinhalt).replace('.', ',')} ${unit}` : ''}
+                      </p>
                     </div>
-                  </div>
-                );
-              })}
-
-              {modalType === 'sockelleiste' && sockelleisteOptions.map((option) => {
-                const optionPrice = option.prices?.price
-                  ? parseFloat(option.prices.price) / 100
-                  : (option.price || 0);
-                const standardPrice = sockelleisteRegularPricePerUnit;
-                const priceDifference = optionPrice - standardPrice;
-                const isSelected = selectedSockelleiste?.id === option.id;
-                const isStandard = option.name === sockelleisteName;
-
-                return (
-                  <div
-                    key={option.id}
-                    onClick={() => setSelectedSockelleiste(option)}
-                    className={`border-2 rounded-xl p-5 hover:border-red-600 hover:shadow-lg cursor-pointer transition-all duration-200 ${
-                      isSelected ? 'border-red-600 bg-red-50 shadow-md' : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-5">
-                      {/* Radio Button */}
-                      <input
-                        type="radio"
-                        name="sockelleiste-option"
-                        checked={isSelected}
-                        onChange={() => setSelectedSockelleiste(option)}
-                        className="w-5 h-5 accent-red-600"
-                      />
-
-                      {/* Product Image */}
-                      <Image
-                        src={option.images?.[0]?.src || '/images/placeholder.jpg'}
-                        alt={option.name}
-                        width={90}
-                        height={90}
-                        className="rounded-lg object-contain"
-                      />
-
-                      {/* Product Info */}
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-1">{option.name}</h4>
-                        {option.paketinhalt && (
-                          <p className="text-sm text-gray-500 mb-0.5">
-                            VE: {option.paketinhalt}
-                            {option.einheit_short || 'lfm'}
-                          </p>
-                        )}
-                        <p className="text-base font-medium text-gray-700">
-                          {formatPrice(optionPrice)} €/{option.einheit_short || sockelleisteEinheit}
-                        </p>
-                      </div>
-
-                      {/* Price Difference */}
-                      <div className="text-right flex flex-col items-end gap-2">
-                        {priceDifference <= 0 ? (
-                          <div className="text-green-600 font-bold text-lg">
-                            <div>0,00 €</div>
-                            <div className="text-xs font-normal">(kostenlos)</div>
-                          </div>
-                        ) : (
-                          <div className="text-red-600 font-bold text-lg">
-                            <div>+{formatPrice(priceDifference)} €</div>
-                            <div className="text-xs font-normal">(Aufpreis)</div>
-                          </div>
-                        )}
-                        {isStandard && (
-                          <span className="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-semibold">
-                            ✓ Standard
-                          </span>
-                        )}
-                      </div>
+                    <div className="col-start-3 mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 sm:col-start-4 sm:row-start-1 sm:mt-0 sm:flex-col sm:items-end">
+                      <p className={`whitespace-nowrap text-sm font-bold sm:text-base ${aufpreis > 0 ? 'text-brand' : 'text-cta'}`}>
+                        {aufpreis > 0 ? `+${formatPreis(aufpreis)} € Aufpreis` : 'Kostenlos im Set'}
+                      </p>
+                      {isStandard && (
+                        <span className="rounded bg-pale px-2 py-0.5 text-xs font-bold text-mid">Standard</span>
+                      )}
                     </div>
-                  </div>
+                  </label>
                 );
               })}
             </div>
 
-            {/* Modal Footer */}
-            <div className="sticky bottom-0 bg-gray-50 border-t-2 border-gray-200 p-6 flex justify-end gap-4">
-              <button
-                onClick={closeModal}
-                className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-all font-semibold text-gray-700"
-              >
+            <div className="grid grid-cols-2 gap-3 border-t border-ash p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:flex sm:justify-end sm:p-4">
+              <button type="button" onClick={closeModal} className="min-h-12 rounded-lg border border-ash px-6 text-sm font-bold text-dark hover:bg-gray-100">
                 Abbrechen
               </button>
-              <button
-                onClick={closeModal}
-                className="px-8 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-semibold shadow-lg hover:shadow-xl"
-              >
+              <button type="button" onClick={confirmModal} className="min-h-12 rounded-lg bg-dark px-6 text-sm font-bold text-white hover:bg-[#1a1a1d]">
                 Auswählen
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

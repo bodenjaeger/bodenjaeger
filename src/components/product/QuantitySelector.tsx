@@ -176,7 +176,7 @@ export default function QuantitySelector({
               type="button"
               aria-label="Ein Paket weniger"
               onClick={decrementPackages}
-              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-bold text-xl disabled:cursor-not-allowed disabled:text-gray-300"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 active:bg-ash transition-colors text-gray-700 font-bold text-xl disabled:cursor-not-allowed disabled:text-gray-300"
               disabled={packages <= 1}
             >
               −
@@ -199,7 +199,7 @@ export default function QuantitySelector({
               type="button"
               aria-label="Ein Paket mehr"
               onClick={incrementPackages}
-              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-bold text-xl"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 active:bg-ash transition-colors text-gray-700 font-bold text-xl"
             >
               +
             </button>
@@ -220,7 +220,7 @@ export default function QuantitySelector({
               type="button"
               aria-label="Ein Paket weniger"
               onClick={decrementSqm}
-              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-bold text-xl disabled:cursor-not-allowed disabled:text-gray-300"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 active:bg-ash transition-colors text-gray-700 font-bold text-xl disabled:cursor-not-allowed disabled:text-gray-300"
               disabled={sqm <= paketinhalt}
             >
               −
@@ -244,7 +244,7 @@ export default function QuantitySelector({
               type="button"
               aria-label="Ein Paket mehr"
               onClick={incrementSqm}
-              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-bold text-xl"
+              className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 active:bg-ash transition-colors text-gray-700 font-bold text-xl"
             >
               +
             </button>

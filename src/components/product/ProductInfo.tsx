@@ -43,6 +43,8 @@ export default function ProductInfo({
   // Durchstrichener Preis (Boden-Karte) = WooCommerce Regulärer Preis
   const regularPrice = product.uvp || product.regular_price || product.price || 0;
 
+  const standardDaemmungPrice = daemmungProduct?.price || 0;
+  const standardSockelleistePrice = sockelleisteProduct?.price || 0;
   const einheit = product.einheit_short || 'm²';
   const productImage = product.images && product.images.length > 0
     ? product.images[0].src
@@ -91,6 +93,8 @@ export default function ProductInfo({
       sockelleisteVE={sockelleisteVE}
       sockelleisteEinheit={sockelleisteEinheit}
       sockelleisteOptions={sockelleisteOptions}
+      daemmungStandardPrice={standardDaemmungPrice}
+      sockelleisteStandardPrice={standardSockelleistePrice}
       onProductSelection={onProductSelection}
       savingsPercent={savingsPercent}
       sparpaket={sparpaket}

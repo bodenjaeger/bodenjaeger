@@ -68,8 +68,10 @@ export default function ZubehoerSlider({
   };
 
   // Filtere Kategorien: Nur die anzeigen, die Produkt-IDs haben
+  const [leereKategorien, setLeereKategorien] = useState<string[]>([]);
   const availableCategories = categories.filter((category) => {
     const source = getSourceProduct(category.metaKey);
+    if (leereKategorien.includes(`${source?.id}:${category.metaKey}`)) return false;
     const productIdsString = source?.[category.metaKey as keyof typeof source];
     return productIdsString && typeof productIdsString === 'string' && productIdsString.trim().length > 0;
   });
@@ -77,11 +79,12 @@ export default function ZubehoerSlider({
   const [activeCategory, setActiveCategory] = useState<string>('');
 
   // Setze die erste verfügbare Kategorie als aktiv, wenn noch keine ausgewählt ist
+  // und auf den nächsten springen, wenn der aktive Reiter wegfällt (z. B. andere Sockelleiste)
+  const availableKeys = availableCategories.map((category) => category.metaKey).join(',');
   useEffect(() => {
-    if (!activeCategory && availableCategories.length > 0) {
-      setActiveCategory(availableCategories[0].metaKey);
-    }
-  }, [availableCategories, activeCategory]);
+    const keys = availableKeys ? availableKeys.split(',') : [];
+    if (!keys.includes(activeCategory)) setActiveCategory(keys[0] ?? '');
+  }, [availableKeys, activeCategory]);
 
   // Produkte für aktive Kategorie laden (aus Meta-Keys)
   useEffect(() => {
@@ -140,6 +143,10 @@ export default function ZubehoerSlider({
 
         console.log(`✅ Loaded ${loadedProducts.length} products via API`);
         setProducts(loadedProducts);
+        // Hinterlegte IDs ohne lieferbares Produkt: Reiter ausblenden
+        if (loadedProducts.length === 0) {
+          setLeereKategorien((prev) => [...prev, `${source.id}:${activeCategory}`]);
+        }
       } catch (err) {
         console.error('❌ Error loading accessory products:', err);
         setError('Fehler beim Laden der Produkte');
@@ -329,7 +336,7 @@ export default function ZubehoerSlider({
                                         type="button"
                                         onClick={() => setSingleItemQuantity(product.id, menge - 1)}
                                         aria-label={`${product.name}: eins weniger`}
-                                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-xl font-bold text-dark"
+                                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-xl font-bold text-dark transition-colors hover:bg-gray-100 active:bg-ash"
                                       >
                                         −
                                       </button>
@@ -340,7 +347,7 @@ export default function ZubehoerSlider({
                                     type="button"
                                     onClick={(e) => handleAddToCart(product, e)}
                                     aria-label={`${product.name}: in den Warenkorb`}
-                                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-xl font-bold text-dark"
+                                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-xl font-bold text-dark transition-colors hover:bg-gray-100 active:bg-ash"
                                   >
                                     +
                                   </button>

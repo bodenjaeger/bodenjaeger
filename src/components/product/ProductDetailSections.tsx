@@ -181,11 +181,11 @@ export default function ProductDetailSections({ product, features, media }: Prod
 
   return (
     <div className="mt-8 lg:mt-10">
-      <ul className="mb-8 hidden grid-cols-5 gap-2 rounded-xl border border-ash p-3 lg:grid">
+      <ul className="mb-6 grid grid-cols-2 gap-1 rounded-xl border border-ash p-2 sm:grid-cols-3 lg:mb-8 lg:grid-cols-5 lg:gap-2 lg:p-3 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
         {benefits.map(({ icon: Icon, title, text, href }) => (
           <li key={title}>
             <Link href={href} className="flex h-full items-center gap-3 rounded-lg p-2 transition-colors hover:bg-pale">
-              <Icon className="h-8 w-8 flex-shrink-0 text-brand" strokeWidth={1.5} aria-hidden="true" />
+              <Icon className="h-6 w-6 flex-shrink-0 text-brand lg:h-8 lg:w-8" strokeWidth={1.5} aria-hidden="true" />
               <span>
                 <span className="block text-sm font-bold text-dark">{title}</span>
                 <span className="block text-xs text-mid">{text}</span>
