@@ -59,10 +59,17 @@ export default function ProductPageContent({
   const einheit = product.einheit_short || 'm²';
 
   // Cart context
-  const { addSampleToCart, getFreeSamplesRemaining } = useCart();
+  const { addSampleToCart, getFreeSamplesRemaining, cartItems, openCartDrawer } = useCart();
+
+  // Warenkorb liegt im Browser: erst nach dem Laden auswerten
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const sampleSlug = `${SAMPLE_SLUG_PREFIX}${product.slug}`;
+  const sampleInCart = mounted && cartItems.some((item) => item.isSample && item.product.slug === sampleSlug);
+  const freeSamplesRemaining = mounted ? getFreeSamplesRemaining() : FREE_SAMPLE_LIMIT;
 
   // Alert modal
-  const { alertState, showSuccess, showError, showInfo, closeAlert } = useAlert();
+  const { alertState, showError, closeAlert } = useAlert();
 
   // Klebe-Vinyl Sparpaket: Produktseite startet mit der Mindestmenge
   const hasSparpaket = sparpaketProducts.length > 0;
@@ -341,7 +348,6 @@ export default function ProductPageContent({
     setIsOrderingSample(true);
 
     try {
-      const sampleSlug = `${SAMPLE_SLUG_PREFIX}${product.slug}`;
       const response = await fetch(`/api/products/samples?slug=${encodeURIComponent(sampleSlug)}`);
       if (!response.ok) {
         throw new Error('Fehler beim Suchen des Musters');
@@ -358,16 +364,8 @@ export default function ProductPageContent({
         return;
       }
 
-      const freeSamplesRemaining = getFreeSamplesRemaining();
       const result = addSampleToCart(sampleProduct);
-
-      if (result.status === 'duplicate') {
-        showInfo(
-          `Ein Muster von "${product.name}" befindet sich bereits in Ihrem Warenkorb.`,
-          'Bereits im Warenkorb'
-        );
-        return;
-      }
+      if (result.status === 'duplicate') return;
 
       // GA4 add_to_cart — Muster (price = 0; Aufschlag steckt im Versand, nicht im Item)
       const sampleItem = mapProductToItem(sampleProduct, 1, {
@@ -376,18 +374,6 @@ export default function ProductPageContent({
         pricePerUnitOverride: 0,
       });
       track.addToCart([sampleItem], 0);
-
-      const surchargeLabel = SAMPLE_SHIPPING_SURCHARGE.toFixed(2).replace('.', ',');
-      const followUp = freeSamplesRemaining > 1
-        ? `Sie können noch ${freeSamplesRemaining - 1} weitere Muster versandkostenfrei bestellen.\nAb dem ${FREE_SAMPLE_LIMIT + 1}. Muster fallen ${surchargeLabel} € Fracht pro zusätzlichem Muster an.`
-        : freeSamplesRemaining === 1
-          ? `Sie haben alle ${FREE_SAMPLE_LIMIT} versandkostenfreien Muster verwendet.\nAb dem ${FREE_SAMPLE_LIMIT + 1}. Muster fallen ${surchargeLabel} € Fracht pro zusätzlichem Muster an.`
-          : `Für dieses zusätzliche Muster fallen ${surchargeLabel} € Fracht an.`;
-
-      showSuccess(
-        `Kostenloses Muster wurde in den Warenkorb gelegt!\n\n${followUp}`,
-        'Muster hinzugefügt'
-      );
     } catch (error) {
       console.error('Error ordering sample:', error);
       showError(
@@ -431,6 +417,10 @@ export default function ProductPageContent({
                     showSampleButton={isFloorProduct}
                     isOrderingSample={isOrderingSample}
                     onOrderSample={handleOrderSample}
+                    sampleInCart={sampleInCart}
+                    freeSamplesRemaining={freeSamplesRemaining}
+                    sampleSurcharge={SAMPLE_SHIPPING_SURCHARGE}
+                    onShowCart={openCartDrawer}
                   />
                 </div>
 
