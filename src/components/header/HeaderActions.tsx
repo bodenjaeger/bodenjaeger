@@ -136,7 +136,7 @@ export default function HeaderActions({ variant }: HeaderActionsProps) {
       </div>
 
       {/* Wunschliste */}
-      <Link href="/favoriten" className={itemClass} aria-label="Wunschliste">
+      <Link href="/favoriten" className={`${itemClass} max-[339px]:hidden`} aria-label="Wunschliste">
         <span className="relative">
           <Heart className={iconClass} strokeWidth={1.75} aria-hidden="true" />
           {favCount > 0 && <Badge value={favCount} label="Artikel auf der Wunschliste" />}

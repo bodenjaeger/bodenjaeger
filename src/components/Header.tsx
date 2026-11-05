@@ -151,8 +151,8 @@ export default function Header({
           <div className="content-container">
             <div className="flex h-[96px] items-center">
               <HeaderLogo />
-              <div className="flex flex-1 justify-center px-8">
-                <LiveSearch size="lg" className="w-[586px]" />
+              <div className="flex min-w-0 flex-1 justify-center px-8">
+                <LiveSearch size="lg" className="w-full max-w-[586px]" />
               </div>
               <HeaderActions variant="desktop" />
             </div>
