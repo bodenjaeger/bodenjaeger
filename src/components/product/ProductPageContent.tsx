@@ -11,7 +11,8 @@ import type { SparpaketAnzeige } from './SetAngebot';
 import {
   FREE_SAMPLE_LIMIT,
   SAMPLE_SHIPPING_SURCHARGE,
-  SAMPLE_SLUG_PREFIX,
+  findSampleProduct,
+  sampleSlugsFor,
 } from '@/lib/sampleUtils';
 import { useCart } from '@/contexts/CartContext';
 import { useAlert } from '@/hooks/useAlert';
@@ -64,8 +65,8 @@ export default function ProductPageContent({
   // Warenkorb liegt im Browser: erst nach dem Laden auswerten
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const sampleSlug = `${SAMPLE_SLUG_PREFIX}${product.slug}`;
-  const sampleInCart = mounted && cartItems.some((item) => item.isSample && item.product.slug === sampleSlug);
+  const sampleSlugs = sampleSlugsFor(product.slug);
+  const sampleInCart = mounted && cartItems.some((item) => item.isSample && sampleSlugs.includes(item.product.slug));
   const freeSamplesRemaining = mounted ? getFreeSamplesRemaining() : FREE_SAMPLE_LIMIT;
 
   // Alert modal
@@ -360,13 +361,7 @@ export default function ProductPageContent({
     setIsOrderingSample(true);
 
     try {
-      const response = await fetch(`/api/products/samples?slug=${encodeURIComponent(sampleSlug)}`);
-      if (!response.ok) {
-        throw new Error('Fehler beim Suchen des Musters');
-      }
-
-      const results: StoreApiProduct[] = await response.json();
-      const sampleProduct = Array.isArray(results) && results.length > 0 ? results[0] : null;
+      const sampleProduct = await findSampleProduct<StoreApiProduct>(product.slug);
 
       if (!sampleProduct) {
         showError(
@@ -416,7 +411,7 @@ export default function ProductPageContent({
 
             {/* Desktop: Spalten laufen mit und enden bündig, danach folgt das Zubehör */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
-              <StickyColumn fixedTop={16} className="min-w-0 lg:sticky lg:self-start">
+              <StickyColumn keepInPlace className="min-w-0 lg:sticky lg:self-start">
                 <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
                   <ImageGallery product={product} hideDiscount={!isAccessory} videoUrl={media.video} />
                   <ProductSummary
@@ -487,7 +482,7 @@ export default function ProductPageContent({
             </div>
 
             {/* Zubehör erst nach der Kaufbox, damit der Desktop oben ruhig bleibt */}
-            <div id="zubehoer-section" className="mt-6 min-w-0 scroll-mt-24 lg:mt-8">
+            <div id="zubehoer-section" className="mt-6 min-w-0 scroll-mt-44 lg:mt-8 lg:scroll-mt-56">
               <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
             </div>
 
