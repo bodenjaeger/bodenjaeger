@@ -7,6 +7,8 @@ import { type StoreApiProduct } from '@/lib/woocommerce';
 import Image from 'next/image';
 import UnifiedProductCard from '@/components/UnifiedProductCard';
 import { SORT_OPTIONS, listingHref } from '@/lib/category-listing';
+import { filtersToQuery, hasActiveFilters, type FilterState } from '@/lib/category-filters';
+import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar, CategoryFilterToggle, ListingToolbar, useFilterCollapse, useFilterNavigation } from '@/components/category/CategoryFilters';
 import PromoTile from '@/components/black-weeks/PromoTile';
 import { PROMO_TILE_EVERY, PROMO_TILE_POSITION } from '@/lib/black-weeks';
 
@@ -44,6 +46,8 @@ interface CategoryPageClientProps {
    * (`isPromoActive()`), damit Kachel und Seitengröße (11 statt 12) zusammenpassen.
    */
   showPromoTile?: boolean;
+  /** Filter der Kategorie, null wenn es keine gibt oder sie nicht geladen werden konnten. */
+  filterState?: FilterState | null;
 }
 
 export default function CategoryPageClient({
@@ -57,6 +61,7 @@ export default function CategoryPageClient({
   sortBy,
   error,
   showPromoTile = false,
+  filterState = null,
 }: CategoryPageClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -89,6 +94,11 @@ export default function CategoryPageClient({
   }, [products]);
 
   const reload = () => router.refresh();
+  const filterQuery = filterState ? filtersToQuery(filterState.active) : '';
+  const isFiltered = filterState ? hasActiveFilters(filterState.active) : false;
+  const { apply, pending } = useFilterNavigation(sortBy);
+  const { collapsed, toggle } = useFilterCollapse();
+  const showSidebar = Boolean(filterState) && !collapsed;
 
   // Für den Rückweg von der Produktseite (Brotkrume)
   useEffect(() => {
@@ -97,7 +107,7 @@ export default function CategoryPageClient({
     } catch {
       // Speicher nicht verfügbar: Brotkrume führt zur ersten Seite
     }
-  }, [currentPage, sortBy]);
+  }, [currentPage, sortBy, filterQuery]);
 
   if (error) {
     return (
@@ -198,36 +208,32 @@ export default function CategoryPageClient({
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-gray-600 mb-4 sm:mb-0">
-              {totalProducts} {totalProducts === 1 ? 'Produkt' : 'Produkte'} gefunden
-              {totalPages > 1 && ` (Seite ${currentPage} von ${totalPages})`}
-            </p>
-
-            {/* Sorting Options */}
-            <div className="flex items-center space-x-4">
-              <select
-                value={sortBy}
-                onChange={(e) => {
-                  // Sortierwechsel startet wieder auf Seite 1
-                  const href = listingHref(pathname, 1, e.target.value);
-                  startTransition(() => router.push(href, { scroll: false }));
-                }}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {/* Erste Option = DEFAULT_SORT, damit das Dropdown beim
-                    Seitenaufruf den tatsächlich sortierten Zustand zeigt. */}
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <ListingToolbar
+            filterControls={filterState ? (
+              <>
+                <CategoryFilterButton state={filterState} apply={apply} pending={pending} />
+                <CategoryFilterToggle collapsed={collapsed} onToggle={toggle} />
+              </>
+            ) : undefined}
+            count={`${totalProducts} ${totalProducts === 1 ? 'Produkt' : 'Produkte'}${totalPages > 1 ? ` (Seite ${currentPage} von ${totalPages})` : ''}`}
+            sort={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={(value) => {
+              // Sortierwechsel startet wieder auf Seite 1
+              const href = listingHref(pathname, 1, value, filterQuery);
+              startTransition(() => router.push(href, { scroll: false }));
+            }}
+          />
         </div>
+
+        <div className={showSidebar ? 'lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-7' : ''}>
+        {filterState && showSidebar && <CategoryFilterSidebar state={filterState} apply={apply} pending={pending} />}
+        <div className="min-w-0">
+        {filterState && <CategoryFilterChips state={filterState} apply={apply} />}
 
         {/* Products Grid */}
         {products.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 ${showSidebar ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}>
             {products.map((product, index) => (
               <Fragment key={product.id}>
                 {showPromoTile && promoTileBefore(index) && <PromoTile />}
@@ -248,14 +254,25 @@ export default function CategoryPageClient({
             </svg>
             <h3 className="text-xl font-medium text-gray-900 mb-2">Keine Produkte gefunden</h3>
             <p className="text-gray-600 mb-6">
-              In der Kategorie &ldquo;{categoryName}&rdquo; sind derzeit keine Produkte verfügbar.
+              {isFiltered
+                ? 'Für diese Auswahl gibt es keine Produkte. Entferne einen Filter oder lösche alle.'
+                : <>In der Kategorie &ldquo;{categoryName}&rdquo; sind derzeit keine Produkte verfügbar.</>}
             </p>
-            <button
-              onClick={reload}
-              className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-medium transition-colors"
-            >
-              Aktualisieren
-            </button>
+            {isFiltered ? (
+              <Link
+                href={listingHref(pathname, 1, sortBy)}
+                className="inline-block bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                Filter löschen
+              </Link>
+            ) : (
+              <button
+                onClick={reload}
+                className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                Aktualisieren
+              </button>
+            )}
           </div>
         )}
 
@@ -291,7 +308,7 @@ export default function CategoryPageClient({
             <nav aria-label="Seitennavigation" className="flex justify-center items-center gap-1 sm:gap-2">
               {currentPage > 1 ? (
                 <Link
-                  href={listingHref(pathname, currentPage - 1, sortBy)}
+                  href={listingHref(pathname, currentPage - 1, sortBy, filterQuery)}
                   rel="prev"
                   aria-label="Vorherige Seite"
                   className={`${navClass} hover:bg-gray-100`}
@@ -312,7 +329,7 @@ export default function CategoryPageClient({
                 ) : (
                   <Link
                     key={page}
-                    href={listingHref(pathname, page, sortBy)}
+                    href={listingHref(pathname, page, sortBy, filterQuery)}
                     aria-label={`Seite ${page}`}
                     aria-current={currentPage === page ? 'page' : undefined}
                     className={`px-3 py-2 rounded-lg border transition-colors shrink-0 ${
@@ -328,7 +345,7 @@ export default function CategoryPageClient({
 
               {currentPage < totalPages ? (
                 <Link
-                  href={listingHref(pathname, currentPage + 1, sortBy)}
+                  href={listingHref(pathname, currentPage + 1, sortBy, filterQuery)}
                   rel="next"
                   aria-label="Nächste Seite"
                   className={`${navClass} hover:bg-gray-100`}
@@ -343,6 +360,9 @@ export default function CategoryPageClient({
             </nav>
           );
         })()}
+
+        </div>
+        </div>
 
         {/* Full Category Description at bottom */}
         {categoryDescription && categoryDescription.replace(/<[^>]+>/g, '').trim().length > 200 && (

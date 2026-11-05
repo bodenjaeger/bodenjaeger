@@ -8,6 +8,9 @@ import { parseListingParams, listingHref, pageSuffix } from '@/lib/category-list
 import { loadListingPage } from '@/lib/category-listing-server';
 import { buildMetadata } from '@/lib/seo';
 import { getPromoTileListing } from '@/lib/black-weeks';
+import { filterAttributesFor, filtersToQuery, hasActiveFilters, parseActiveFilters, type FilterState } from '@/lib/category-filters';
+import { loadFilteredListing } from '@/lib/category-filters-server';
+import { permanentRedirect, notFound } from 'next/navigation';
 
 // Interne Muster-Kategorie: nicht indexieren (steht auch nicht in der Sitemap)
 const NOINDEX_CATEGORIES = new Set(['muster']);
@@ -39,10 +42,16 @@ const categoryNames: Record<string, string> = {
   'reinigung-pflege': 'Reinigung und Pflege',
 };
 
+const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+
 export async function generateMetadata({ params, searchParams }: PageProps<'/category/[slug]'>): Promise<Metadata> {
   const { slug } = await params;
   // Canonical zeigt auf die jeweilige Seite selbst (?page=n), ohne sort-Parameter
-  const { page } = parseListingParams(await searchParams);
+  const resolvedParams = await searchParams;
+  const { page } = parseListingParams(resolvedParams);
+  const filterAttributes = filterAttributesFor(slug);
+  // Gefilterte Seiten sind Varianten der Kategorie und gehören nicht in den Google-Index
+  const isFiltered = filterAttributes ? hasActiveFilters(parseActiveFilters(resolvedParams, filterAttributes)) : false;
   const categoryData = await wooCommerceClient.getCategoryBySlug(slug).catch(() => null);
   const name = categoryData?.name || categoryNames[slug] || slug;
 
@@ -50,15 +59,23 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/cat
     // Ab Seite 2 „– Seite N“, damit Title/Description nicht Seite 1 doppeln
     title: `${name} – Bodenbeläge online kaufen${pageSuffix(page)} | Bodenjäger`,
     description: `${name} in großer Auswahl bei Bodenjäger – Top-Qualität, schnelle Lieferung und persönliche Beratung${pageSuffix(page)}.`,
-    path: listingHref(`/category/${slug}`, page),
-    ...(NOINDEX_CATEGORIES.has(slug) && { robots: { index: false, follow: true } }),
+    path: isFiltered ? `/category/${slug}` : listingHref(`/category/${slug}`, page),
+    ...((NOINDEX_CATEGORIES.has(slug) || isFiltered) && { robots: { index: false, follow: true } }),
   });
 }
 
 export default async function CategoryPage({ params, searchParams }: PageProps<'/category/[slug]'>) {
   const { slug } = await params;
   const { showPromoTile, perPage } = getPromoTileListing(slug);
-  const { listing, page, sort } = await loadListingPage(`/category/${slug}`, slug, await searchParams, perPage);
+  const resolvedParams = await searchParams;
+  const basePath = `/category/${slug}`;
+  const filterAttributes = filterAttributesFor(slug);
+  const activeFilters = filterAttributes ? parseActiveFilters(resolvedParams, filterAttributes) : null;
+  const isFiltered = activeFilters ? hasActiveFilters(activeFilters) : false;
+  const requested = parseListingParams(resolvedParams);
+  if (isFiltered && activeFilters && first(resolvedParams.page) === '1') {
+    permanentRedirect(listingHref(basePath, 1, requested.sort, filtersToQuery(activeFilters)));
+  }
 
   // Try to fetch category information from WordPress
   let categoryData = null;
@@ -68,6 +85,37 @@ export default async function CategoryPage({ params, searchParams }: PageProps<'
   } catch (error) {
     console.error('Error fetching category:', error);
   }
+
+  let filterState: FilterState | null = null;
+  let filtered: Awaited<ReturnType<typeof loadFilteredListing>> | null = null;
+  if (filterAttributes && activeFilters && categoryData) {
+    try {
+      filtered = await loadFilteredListing({
+        slug,
+        categoryId: categoryData.id,
+        attributeNames: filterAttributes,
+        active: activeFilters,
+        sort: requested.sort,
+        page: requested.page,
+        perPage,
+        withProducts: isFiltered,
+      });
+      // Ohne Attribute (noch nicht importiert) keine Filter anzeigen
+      if (filtered.filterState.facets.length > 0) filterState = filtered.filterState;
+    } catch (error) {
+      console.error(`Filter für ${slug} nicht verfügbar:`, error);
+    }
+  }
+
+  const useFiltered = Boolean(isFiltered && filtered);
+  if (useFiltered && filtered && requested.page > filtered.totalPages) notFound();
+  const { listing, page, sort } = useFiltered && filtered
+    ? {
+        listing: { products: filtered.products, totalProducts: filtered.total, totalPages: filtered.totalPages, error: null },
+        page: requested.page,
+        sort: requested.sort,
+      }
+    : await loadListingPage(basePath, slug, resolvedParams, perPage);
 
   // Use WordPress name if available, otherwise use fallback
   const categoryName = categoryData?.name || categoryNames[slug] || slug;
@@ -94,6 +142,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<'
         sortBy={sort}
         error={listing.error}
         showPromoTile={showPromoTile}
+        filterState={filterState}
       />
     </>
   );
