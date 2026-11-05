@@ -166,16 +166,15 @@ export default function SetAngebot({
 
   return (
     <div className="w-full">
-      {/* Kopf */}
-      <div className="flex items-start justify-between gap-3">
-        {sparpaket ? (
-          <Image src="/images/labels/klebevinyl-sparpaket.png" alt="KlebeVinyl Sparpaket" width={722} height={265} className="h-14 w-auto" />
-        ) : (
-          <Image src="/images/labels/dein-set-angebot.png" alt="Dein Set-Angebot" width={686} height={125} className="h-8 w-auto" />
-        )}
-        {ersparnisProzent > 0 && (
-          <span className="rounded-full bg-dark px-3 py-1.5 text-sm font-bold text-white">-{Math.round(ersparnisProzent)}%</span>
-        )}
+      {/* Label sitzt halb auf dem oberen Rand des Kastens */}
+      <div className={`relative ${sparpaket ? 'h-3' : 'h-1'}`}>
+        <div className="absolute -top-4 left-0 z-10 -translate-y-1/2 lg:-top-5">
+          {sparpaket ? (
+            <Image src="/images/labels/klebevinyl-sparpaket.png" alt="KlebeVinyl Sparpaket" width={722} height={265} className="h-14 w-auto max-w-none" />
+          ) : (
+            <Image src="/images/labels/dein-set-angebot.png" alt="Dein Set-Angebot" width={686} height={125} className="h-8 w-auto max-w-none" />
+          )}
+        </div>
       </div>
       {sparpaket?.aktiv && (
         <p className="mt-2 text-xs text-mid">Alles, was du für die Verlegung brauchst – im Set unschlagbar günstig</p>
@@ -234,7 +233,12 @@ export default function SetAngebot({
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wide text-dark">Set-Preis</p>
           {vergleichspreisProM2 > setAngebotPreisProM2 && (
-            <p className="text-xs text-mid">statt <span className="line-through">{formatPreis(vergleichspreisProM2)} €/{einheit}</span></p>
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mid">
+              {ersparnisProzent > 0 && (
+                <span className="rounded bg-brand px-1.5 py-0.5 text-xs font-bold text-white">-{Math.round(ersparnisProzent)}%</span>
+              )}
+              <span>statt <span className="line-through">{formatPreis(vergleichspreisProM2)} €/{einheit}</span></span>
+            </p>
           )}
         </div>
         <p className="whitespace-nowrap font-bold text-dark">

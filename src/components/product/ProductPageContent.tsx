@@ -25,6 +25,7 @@ import QuantitySelector from './QuantitySelector';
 import TotalPrice from './TotalPrice';
 import ZubehoerSlider from './ZubehoerSlider';
 import ProductSummary from './ProductSummary';
+import StickyColumn from './StickyColumn';
 import ProductDetailSections from './ProductDetailSections';
 import { extractProductFeatures, formatLieferzeit } from '@/lib/product-features';
 import type { ProductMedia } from '@/lib/product-media';
@@ -828,22 +829,31 @@ export default function ProductPageContent({
               <span className="font-bold text-dark" aria-current="page">{product.name}</span>
             </nav>
 
-            {/* Mobil in DOM-Reihenfolge: Galerie/Infos, Kaufbox, Zubehör */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr]">
-              <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:col-start-1 lg:row-start-1">
-                <ImageGallery product={product} hideDiscount videoUrl={media.video} />
-                <ProductSummary
-                  product={product}
-                  features={features}
-                  media={media}
-                  rating={trustedShopsRating}
-                  showSampleButton={isFloorProduct}
-                  isOrderingSample={isOrderingSample}
-                  onOrderSample={handleOrderSample}
-                />
-              </div>
+            {/* Mobil: Galerie/Infos, Kaufbox, Zubehör. Desktop: Spalten laufen mit und enden bündig */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+              <StickyColumn className="contents lg:sticky lg:block lg:min-w-0 lg:self-start">
+                <div className="order-1 grid min-w-0 grid-cols-1 gap-6 lg:mb-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+                  <StickyColumn className="min-w-0 xl:sticky xl:self-start">
+                    <ImageGallery product={product} hideDiscount videoUrl={media.video} />
+                  </StickyColumn>
+                  <ProductSummary
+                    product={product}
+                    features={features}
+                    media={media}
+                    rating={trustedShopsRating}
+                    showSampleButton={isFloorProduct}
+                    isOrderingSample={isOrderingSample}
+                    onOrderSample={handleOrderSample}
+                  />
+                </div>
 
-              <aside className="min-w-0 space-y-4 rounded-xl border border-ash bg-white p-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start lg:p-5">
+                <div id="zubehoer-section" className="order-3 min-w-0 scroll-mt-24">
+                  <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
+                </div>
+              </StickyColumn>
+
+              <StickyColumn className="order-2 mt-7 min-w-0 lg:sticky lg:order-none lg:self-start">
+              <aside className="space-y-4 rounded-xl border border-ash bg-white p-4 lg:p-5">
                 <ProductInfo
                   product={product}
                   daemmungProduct={daemmungProduct}
@@ -903,10 +913,7 @@ export default function ProductPageContent({
 
                 <ZahlungsIcons />
               </aside>
-
-              <div id="zubehoer-section" className="min-w-0 scroll-mt-24 lg:col-start-1 lg:row-start-2 lg:self-start">
-                <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
-              </div>
+              </StickyColumn>
             </div>
 
             <ProductDetailSections product={product} features={features} media={media} />

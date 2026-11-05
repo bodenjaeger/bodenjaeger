@@ -321,7 +321,7 @@ export default function ZubehoerSlider({
                             {(() => {
                               const menge = cartItems.find((item) => item.id === product.id && !item.isSetItem && !item.isSample)?.quantity ?? 0;
                               return (
-                                <div className={`absolute bottom-2 right-2 flex h-10 items-center justify-end overflow-hidden rounded-full bg-white shadow-md transition-[width] duration-200 ${menge > 0 ? 'w-[calc(100%-1rem)]' : 'w-10'}`}>
+                                <div className={`absolute bottom-2 right-2 flex h-10 items-center justify-end overflow-hidden rounded-lg border border-ash bg-white shadow-sm transition-[width] duration-200 ${menge > 0 ? 'w-[calc(100%-1rem)]' : 'w-10'}`}>
                                   {menge > 0 && (
                                     <>
                                       <button

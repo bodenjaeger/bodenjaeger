@@ -179,7 +179,7 @@ export default function QuantitySelector({
               className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-bold text-xl disabled:cursor-not-allowed disabled:text-gray-300 border-r border-ash"
               disabled={packages <= 1}
             >
-              -
+              −
             </button>
 
             {/* Value Display/Input */}
@@ -223,7 +223,7 @@ export default function QuantitySelector({
               className="w-11 flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700 font-bold text-xl disabled:cursor-not-allowed disabled:text-gray-300 border-r border-ash"
               disabled={sqm <= paketinhalt}
             >
-              -
+              −
             </button>
 
             {/* Value Display/Input */}

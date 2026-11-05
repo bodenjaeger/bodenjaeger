@@ -88,7 +88,7 @@ export default function CartSingleItem({
             ) : (
               // Regular products: Quantity controls
               <>
-                <div className="flex items-center border border-ash rounded">
+                <div className="flex items-center overflow-hidden rounded-lg border border-ash bg-white">
                   <button
                     onClick={() => onQuantityChange(product.quantity - 1)}
                     disabled={product.quantity <= 1}
