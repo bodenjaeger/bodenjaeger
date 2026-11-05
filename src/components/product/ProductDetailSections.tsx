@@ -181,6 +181,20 @@ export default function ProductDetailSections({ product, features, media }: Prod
 
   return (
     <div className="mt-8 lg:mt-10">
+      <ul className="mb-8 hidden grid-cols-5 gap-2 rounded-xl border border-ash p-3 lg:grid">
+        {benefits.map(({ icon: Icon, title, text, href }) => (
+          <li key={title}>
+            <Link href={href} className="flex h-full items-center gap-3 rounded-lg p-2 transition-colors hover:bg-pale">
+              <Icon className="h-8 w-8 flex-shrink-0 text-brand" strokeWidth={1.5} aria-hidden="true" />
+              <span>
+                <span className="block text-sm font-bold text-dark">{title}</span>
+                <span className="block text-xs text-mid">{text}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+
       <div role="tablist" aria-label="Produktinformationen" className="mb-6 hidden w-fit gap-1 rounded-xl bg-pale p-1 lg:flex">
         {sections.map((section) => (
           <button
@@ -201,20 +215,6 @@ export default function ProductDetailSections({ product, features, media }: Prod
       {sections.map((section) => (
         <DetailSection key={section.id} section={section} desktopActive={currentId === section.id} />
       ))}
-
-      <ul className="mt-10 hidden grid-cols-5 gap-2 rounded-xl border border-ash p-3 lg:grid">
-        {benefits.map(({ icon: Icon, title, text, href }) => (
-          <li key={title}>
-            <Link href={href} className="flex h-full items-center gap-3 rounded-lg p-2 transition-colors hover:bg-pale">
-              <Icon className="h-8 w-8 flex-shrink-0 text-brand" strokeWidth={1.5} aria-hidden="true" />
-              <span>
-                <span className="block text-sm font-bold text-dark">{title}</span>
-                <span className="block text-xs text-mid">{text}</span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

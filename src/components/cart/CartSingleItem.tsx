@@ -32,7 +32,7 @@ function QuantityInput({ value, onCommit }: { value: number; onCommit: (quantity
       onFocus={(e) => e.target.select()}
       onBlur={commit}
       onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-      className="h-9 w-11 border-x border-ash bg-white text-center text-base text-dark outline-none focus:bg-pale"
+      className="h-9 w-11 bg-white text-center text-base text-dark outline-none focus:bg-pale"
     />
   );
 }

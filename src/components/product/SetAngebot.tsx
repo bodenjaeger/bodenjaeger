@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { ChevronRight } from 'lucide-react';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 
 // Klebe-Vinyl Sparpaket: kostenlose Zeilen unter der Sockelleiste
@@ -68,8 +69,9 @@ function renderZeile({ key, label, name, image, regular, preis, aendern }: SetZe
         </p>
         {regular && <p className="mt-0.5 text-xs text-mid line-through">{regular}</p>}
         {aendern && (
-          <button type="button" onClick={aendern.onClick} className="mt-1 text-xs font-bold text-dark underline hover:text-brand">
+          <button type="button" onClick={aendern.onClick} className="mt-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg border border-ash bg-white px-2.5 text-xs font-bold text-dark transition-colors hover:border-dark">
             {aendern.text}
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -241,8 +243,8 @@ export default function SetAngebot({
             </p>
           )}
         </div>
-        <p className="whitespace-nowrap font-bold text-dark">
-          <span className="text-2xl">{formatPreis(setAngebotPreisProM2)} €</span>
+        <p className="whitespace-nowrap font-bold">
+          <span className="text-2xl text-brand">{formatPreis(setAngebotPreisProM2)} €</span>
           <span className="text-sm font-normal text-mid"> /{einheit}</span>
         </p>
       </div>
