@@ -11,6 +11,7 @@ import type { SparpaketAnzeige } from './SetAngebot';
 import {
   FREE_SAMPLE_LIMIT,
   SAMPLE_SHIPPING_SURCHARGE,
+  SAMPLE_SLUG_PREFIX,
   findSampleProduct,
   sampleSlugsFor,
 } from '@/lib/sampleUtils';
