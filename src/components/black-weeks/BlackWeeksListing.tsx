@@ -80,7 +80,7 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
     if (urlSort) setSort(urlSort);
     if (urlPage > 1) setPage(urlPage);
     const fromUrl = parseActiveFilters(Object.fromEntries(params.entries()), PROMO_FILTER_ATTRIBUTES);
-    if (urlArt && !fromUrl.values.bodenart) fromUrl.values.bodenart = [urlArt];
+    if (urlArt && !fromUrl.values.bodenart) fromUrl.values.bodenart = urlArt === 'vinyl' ? ['klick-vinyl', 'klebe-vinyl'] : [urlArt];
     setActiveFilters(fromUrl);
     setUrlGelesen(true);
   }, []);
@@ -129,8 +129,9 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
     const byId = new Map(filterIndex.map((entry) => [entry.id, entry]));
     return products.map((p) => {
       const art = getPromoBodenart(p);
-      const label = PROMO_BODENART_TABS.find((t) => t.value === art)?.label;
       const entry = byId.get(p.id);
+      // Klick- und Klebe-Vinyl kommen vom Server, ohne Filterdaten bleibt die Bodenart
+      const label = entry?.attributes.bodenart?.[0] ?? PROMO_BODENART_TABS.find((t) => t.value === art)?.label;
       return {
         id: p.id,
         price: entry?.price ?? p.price ?? 0,

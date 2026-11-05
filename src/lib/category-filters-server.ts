@@ -9,7 +9,13 @@ import {
   type FilterState,
 } from '@/lib/category-filters';
 
-const BODENARTEN = ['Vinylboden', 'Laminat', 'Parkett'];
+const BODENARTEN = ['Laminat', 'Parkett'];
+
+/** WooCommerce liefert Werte teils mit HTML-Zeichen ("Klicken &amp; Kleben"). */
+function decodeEntities(text: string): string {
+  return text.replace(/&amp;/g, '&').replace(/&#0?39;/g, "'").replace(/&quot;/g, '"');
+}
+
 const INDEX_REVALIDATE_SECONDS = 300;
 const MAX_INDEX_PAGES = 20;
 
@@ -50,11 +56,14 @@ export async function loadFilterIndex(categoryId: number, sort: string, attribut
     for (const item of items) {
       const attributes: Record<string, string[]> = {};
       for (const attribute of item.attributes ?? []) {
-        if (wanted.has(attribute.name)) attributes[filterSlug(attribute.name)] = attribute.options;
+        if (wanted.has(attribute.name)) attributes[filterSlug(attribute.name)] = attribute.options.map(decodeEntities);
       }
-      // Die Bodenart steht nicht in den Attributen, sondern in den Kategorien
+      // Bodenart: Vinyl nach Klick- und Klebe-Vinyl aus der Excel, sonst aus den Kategorien
       if (wanted.has('Bodenart') && Object.keys(attributes).length > 0) {
-        const bodenart = BODENARTEN.filter((name) => item.categories?.some((c) => c.name === name));
+        const vinylArt = item.attributes?.find((a) => a.name === 'Art des Vinylbodens')?.options ?? [];
+        const bodenart = vinylArt.length > 0
+          ? vinylArt.map(decodeEntities)
+          : BODENARTEN.filter((name) => item.categories?.some((c) => c.name === name));
         if (bodenart.length > 0) attributes.bodenart = bodenart;
       }
       // Ohne Filterwerte (z. B. Muster) gehört ein Produkt nicht in die Filterliste

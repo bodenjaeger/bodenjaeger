@@ -4,14 +4,14 @@
  * Die Werte kommen aus den WooCommerce-Attributen (Excel-Import).
  */
 
-const VINYL = ['Farbgebung', 'Optik', 'Kollektion', 'Verlegeart', 'Nutzungsklasse', 'Dämmung integriert', 'Stärke', 'Marke', 'Fußbodenheizung geeignet'];
+const VINYL = ['Bodenart', 'Farbgebung', 'Optik', 'Kollektion', 'Nutzungsklasse', 'Dämmung integriert', 'Stärke', 'Marke', 'Fußbodenheizung geeignet'];
 const LAMINAT = ['Farbgebung', 'Optik', 'Nutzungsklasse', 'Abriebklasse', 'Stärke', 'Feuchtraumgeeignet', 'Marke'];
 const PARKETT = ['Farbgebung', 'Optik', 'Oberfläche', 'Sortierung', 'Verlegeart'];
 const SOCKELLEISTEN = ['Höhe', 'Material', 'Überstreichbar'];
 
-const MUSTERBOX = ['Bodenart', 'Art des Vinylbodens', 'Farbgebung', 'Optik', 'Kollektion', 'Marke'];
+const MUSTERBOX = ['Bodenart', 'Farbgebung', 'Optik', 'Kollektion', 'Marke'];
 /** Aktionsseite: Bodenarten gemischt, nur Filter, die überall passen. */
-export const PROMO_FILTER_ATTRIBUTES = ['Bodenart', 'Farbgebung', 'Optik', 'Kollektion', 'Verlegeart', 'Nutzungsklasse', 'Stärke', 'Marke'];
+export const PROMO_FILTER_ATTRIBUTES = ['Bodenart', 'Farbgebung', 'Optik', 'Kollektion', 'Nutzungsklasse', 'Stärke', 'Marke'];
 
 const FILTERS_BY_CATEGORY: Record<string, string[]> = {
   vinylboden: VINYL,
@@ -42,6 +42,8 @@ export function filterSlug(text: string): string {
     .replace(/ö/g, 'oe')
     .replace(/ü/g, 'ue')
     .replace(/ß/g, 'ss')
+    // Sonst würden "Premium" und "Premium +" zum selben Wert
+    .replace(/\+/g, ' plus ')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 }
