@@ -58,6 +58,29 @@ export default function BlackWeeksListing({ products }: BlackWeeksListingProps) 
   const [art, setArt] = useState<PromoBodenart | 'alle'>('alle');
   const [sort, setSort] = useState(DISCOUNT_SORT);
   const [page, setPage] = useState(1);
+
+  // Seite, Reiter und Sortierung stehen in der URL, damit „Zurück“ vom Produkt hierher führt
+  const [urlGelesen, setUrlGelesen] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlArt = params.get('art');
+    const urlSort = params.get('sort');
+    const urlPage = parseInt(params.get('page') || '', 10);
+    if (urlArt) setArt(urlArt as PromoBodenart);
+    if (urlSort) setSort(urlSort);
+    if (urlPage > 1) setPage(urlPage);
+    setUrlGelesen(true);
+  }, []);
+  useEffect(() => {
+    if (!urlGelesen) return;
+    const params = new URLSearchParams(window.location.search);
+    const setzen = (key: string, value: string | null) => (value ? params.set(key, value) : params.delete(key));
+    setzen('art', art === 'alle' ? null : art);
+    setzen('sort', sort === DISCOUNT_SORT ? null : sort);
+    setzen('page', page > 1 ? String(page) : null);
+    const query = params.toString();
+    window.history.replaceState(window.history.state, '', query ? `?${query}` : window.location.pathname);
+  }, [art, sort, page, urlGelesen]);
   const [addonProductsMap, setAddonProductsMap] = useState<Map<number, StoreApiProduct>>(new Map());
   const gridTopRef = useRef<HTMLDivElement>(null);
 

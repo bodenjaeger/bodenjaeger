@@ -322,6 +322,18 @@ export default function ProductPageContent({
     if (Math.abs(verschoben) > 1) window.scrollBy({ top: verschoben, behavior: 'instant' });
   }, [sparpaketZeilen]);
 
+  // Brotkrume führt zur zuletzt besuchten Listenseite derselben Kategorie (z. B. ?page=2)
+  const categoryPath = primaryCategory ? `/category/${primaryCategory.slug}` : null;
+  const [categoryHref, setCategoryHref] = useState(categoryPath);
+  useEffect(() => {
+    try {
+      const letzte = sessionStorage.getItem('letzte-liste');
+      if (categoryPath && letzte?.startsWith(`${categoryPath}?`)) setCategoryHref(letzte);
+    } catch {
+      // Speicher nicht verfügbar: normaler Kategorielink
+    }
+  }, [categoryPath]);
+
   const features = useMemo(() => extractProductFeatures(product.short_description), [product.short_description]);
 
   // Handle quantity changes from QuantitySelector
@@ -395,17 +407,17 @@ export default function ProductPageContent({
               {primaryCategory && (
                 <>
                   <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  <Link href={`/category/${primaryCategory.slug}`} className="hover:text-dark">{primaryCategory.name}</Link>
+                  <Link href={categoryHref ?? `/category/${primaryCategory.slug}`} className="hover:text-dark">{primaryCategory.name}</Link>
                 </>
               )}
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
               <span className="font-bold text-dark" aria-current="page">{product.name}</span>
             </nav>
 
-            {/* Mobil: Galerie/Infos, Kaufbox, Zubehör. Desktop: Spalten laufen mit und enden bündig */}
+            {/* Desktop: Spalten laufen mit und enden bündig, danach folgt das Zubehör */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
-              <StickyColumn className="contents lg:sticky lg:block lg:min-w-0 lg:self-start">
-                <div className="order-1 grid min-w-0 grid-cols-1 gap-6 lg:mb-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+              <StickyColumn className="min-w-0 lg:sticky lg:self-start">
+                <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
                   <StickyColumn className="min-w-0 xl:sticky xl:self-start">
                     <ImageGallery product={product} hideDiscount={!isAccessory} videoUrl={media.video} />
                   </StickyColumn>
@@ -423,13 +435,9 @@ export default function ProductPageContent({
                     onShowCart={openCartDrawer}
                   />
                 </div>
-
-                <div id="zubehoer-section" className="order-3 min-w-0 scroll-mt-24">
-                  <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
-                </div>
               </StickyColumn>
 
-              <StickyColumn className={`order-2 min-w-0 lg:sticky lg:order-none lg:self-start ${isAccessory ? '' : 'mt-7'}`}>
+              <StickyColumn className={`min-w-0 lg:sticky lg:self-start ${isAccessory ? '' : 'mt-7'}`}>
               <aside className="space-y-4 rounded-xl border border-ash bg-white p-4 lg:p-5">
                 {isAccessory ? (
                   <AccessoryBuyBox product={product} />
@@ -478,6 +486,11 @@ export default function ProductPageContent({
                 )}
               </aside>
               </StickyColumn>
+            </div>
+
+            {/* Zubehör erst nach der Kaufbox, damit der Desktop oben ruhig bleibt */}
+            <div id="zubehoer-section" className="mt-6 min-w-0 scroll-mt-24 lg:mt-8">
+              <ZubehoerSlider product={product} selectedSockelleiste={selectedSockelleiste} />
             </div>
 
             <ProductDetailSections product={product} features={features} media={media} isFloor={!isAccessory} />
