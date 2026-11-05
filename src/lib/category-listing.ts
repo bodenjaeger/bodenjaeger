@@ -51,8 +51,8 @@ export function hasExplicitFirstPage(searchParams: SearchParamsRecord): boolean 
 }
 
 /** URL einer Listenseite. Seite 1 und Standard-Sortierung werden weggelassen. */
-export function listingHref(basePath: string, page: number, sort: string = DEFAULT_SORT): string {
-  const params = new URLSearchParams();
+export function listingHref(basePath: string, page: number, sort: string = DEFAULT_SORT, filterQuery: string = ''): string {
+  const params = new URLSearchParams(filterQuery);
   if (page > 1) params.set('page', String(page));
   if (sort !== DEFAULT_SORT) params.set('sort', sort);
   const query = params.toString();
