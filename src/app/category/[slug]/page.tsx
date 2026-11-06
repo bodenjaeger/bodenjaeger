@@ -12,6 +12,7 @@ import { filterAttributesFor, filtersToQuery, hasActiveFilters, parseActiveFilte
 import { loadFilteredListing } from '@/lib/category-filters-server';
 import { permanentRedirect, notFound } from 'next/navigation';
 import { klickVinylKategorietext, klickVinylName } from '@/lib/klick-vinyl';
+import { categorySeoDescription, categorySeoTitle } from '@/content/category-seo';
 
 // Interne Muster-Kategorie: nicht indexieren (steht auch nicht in der Sitemap)
 const NOINDEX_CATEGORIES = new Set(['muster']);
@@ -58,8 +59,8 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/cat
 
   return buildMetadata({
     // Ab Seite 2 „– Seite N“, damit Title/Description nicht Seite 1 doppeln
-    title: `${name} – Bodenbeläge online kaufen${pageSuffix(page)} | Bodenjäger`,
-    description: `${name} in großer Auswahl bei Bodenjäger – Top-Qualität, schnelle Lieferung und persönliche Beratung${pageSuffix(page)}.`,
+    title: categorySeoTitle(slug, name, pageSuffix(page)),
+    description: categorySeoDescription(name, klickVinylKategorietext(slug, categoryData?.description || null), pageSuffix(page)),
     path: isFiltered ? `/category/${slug}` : listingHref(`/category/${slug}`, page),
     ...((NOINDEX_CATEGORIES.has(slug) || isFiltered) && { robots: { index: false, follow: true } }),
   });
