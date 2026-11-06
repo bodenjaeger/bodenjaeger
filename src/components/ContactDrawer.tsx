@@ -18,12 +18,14 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
       };
       window.addEventListener('keydown', handleEscape);
 
-      // Prevent body scroll when drawer is open
-      document.body.style.overflow = 'hidden';
+      // Seite dahinter sperren – am <html> wie beim Warenkorb, sonst springt der klebende Kopf
+      const root = document.documentElement;
+      const previousOverflow = root.style.overflow;
+      root.style.overflow = 'hidden';
 
       return () => {
         window.removeEventListener('keydown', handleEscape);
-        document.body.style.overflow = 'unset';
+        root.style.overflow = previousOverflow;
       };
     }
   }, [isOpen, onClose]);
@@ -47,14 +49,14 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+        className="fixed inset-0 bg-black/50 z-[60] transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Drawer */}
       <div
-        className={`fixed right-0 top-0 bottom-0 w-full md:w-[420px] bg-white z-50 shadow-2xl overflow-y-auto transform transition-transform duration-300 ease-in-out ${
+        className={`fixed right-0 top-0 bottom-0 w-full md:w-[420px] bg-white z-[61] shadow-2xl overflow-y-auto overscroll-contain transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         role="dialog"
