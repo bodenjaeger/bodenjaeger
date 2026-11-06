@@ -357,9 +357,11 @@ export default function CategoryPageClient({
               from={from}
               to={to}
               total={totalProducts}
+              hasMore={currentPage < totalPages}
               pending={loadingMore}
               href={currentPage < totalPages ? listingHref(pathname, currentPage + 1, sortBy, filterQuery) : undefined}
               onLoadMore={() => {
+                if (currentPage >= totalPages) return;
                 appendNext.current = true;
                 startTransition(() => router.push(listingHref(pathname, currentPage + 1, sortBy, filterQuery), { scroll: false }));
               }}

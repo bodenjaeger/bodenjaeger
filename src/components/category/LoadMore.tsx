@@ -8,6 +8,8 @@ interface LoadMoreProps {
   /** Letzte angezeigte Position */
   to: number;
   total: number;
+  /** Gibt es eine weitere Seite? Nicht aus der Anzahl ableiten: doppelte Produkte zwischen Seiten verfälschen sie. */
+  hasMore: boolean;
   pending?: boolean;
   /** Echter Link auf die nächste Seite (für Google und ohne JavaScript) */
   href?: string;
@@ -15,10 +17,10 @@ interface LoadMoreProps {
 }
 
 /** „1–24 von 78 Produkten“, Fortschrittsbalken und „Weitere anzeigen“. */
-export default function LoadMore({ from, to, total, pending = false, href, onLoadMore }: LoadMoreProps) {
+export default function LoadMore({ from, to: shownTo, total, hasMore, pending = false, href, onLoadMore }: LoadMoreProps) {
   if (total === 0) return null;
+  const to = hasMore ? Math.min(shownTo, total) : total;
   const percent = Math.round((to / total) * 100);
-  const hasMore = to < total;
   const buttonClass =
     'mt-1 flex min-h-12 w-full cursor-pointer items-center justify-center rounded-lg bg-dark px-6 text-sm font-bold text-white transition-colors hover:bg-[#d11820]';
 

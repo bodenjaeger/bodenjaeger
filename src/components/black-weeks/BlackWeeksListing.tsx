@@ -235,6 +235,7 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
         from={1}
         to={visible.length}
         total={filtered.length}
+        hasMore={currentPage < totalPages}
         onLoadMore={() => setPage(currentPage + 1)}
       />
       </div>
