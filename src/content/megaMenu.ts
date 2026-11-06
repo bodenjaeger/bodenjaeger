@@ -317,7 +317,7 @@ export const MEGA_PANELS: Record<string, MegaPanel> = {
       { titel: 'Silenced Board', text: 'Unsere Dämmung für Holzuntergründe und alle, die Wert auf ein Naturprodukt legen.', linkLabel: 'Zur Dämmung', href: '/category/daemmung' },
     ],
     fuss: {
-      label: 'Alles Zubehör ansehen',
+      label: 'Alles ansehen',
       href: '/category/zubehoer',
       text: 'Profile von Standard bis Premium Weimarer',
     },
@@ -337,7 +337,7 @@ export const MEGA_PANELS: Record<string, MegaPanel> = {
       { titel: 'Werkzeug leihen', text: 'Profi-Werkzeug zum Selbstverlegen gibt es im Fachmarkt zum Ausleihen.', linkLabel: 'Zum Werkzeugverleih', href: '/fachmarkt-hueckelhoven/service/werkzeugverleih' },
     ],
     fuss: {
-      label: 'Alles Zubehör ansehen',
+      label: 'Alles ansehen',
       href: '/category/zubehoer',
       text: 'Fragen zur Verlegung? Ruf uns an: 02433 938884',
     },
