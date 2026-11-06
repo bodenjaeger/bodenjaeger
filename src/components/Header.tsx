@@ -75,7 +75,7 @@ export default function Header({
   const keepMenuOpenRef = useRef(false);
 
   const measureMenuTop = useCallback(() => {
-    if (mobileRowRef.current) setMenuTop(Math.round(mobileRowRef.current.getBoundingClientRect().bottom));
+    if (mobileRowRef.current) setMenuTop(Math.max(0, Math.round(mobileRowRef.current.getBoundingClientRect().bottom)));
   }, []);
 
   const openMenu = useCallback(() => {
@@ -130,12 +130,16 @@ export default function Header({
   useEffect(() => {
     if (!overlayOpen) return;
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    // Sperre am <html>, nicht am <body>: html hat overflow-x: clip, deshalb
+    // würde overflow: hidden am body diesen zum eigenen Scrollbereich machen.
+    // Der klebende Kopf hinge dann am body und wäre beim Scrollen verschwunden.
+    const root = document.documentElement;
+    const previousOverflow = root.style.overflow;
+    root.style.overflow = 'hidden';
     document.body.classList.add('nav-menu-open');
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      root.style.overflow = previousOverflow;
       document.body.classList.remove('nav-menu-open');
     };
   }, [overlayOpen]);

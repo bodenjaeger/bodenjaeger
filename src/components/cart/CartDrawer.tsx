@@ -264,16 +264,16 @@ export default function CartDrawer({ isOpen, onClose, mobileTop = 0, desktopTop 
     onClose();
   };
 
-  // Prevent body scroll when drawer is open
+  // Seite hinter dem Warenkorb sperren. Am <html>, nicht am <body>: html hat
+  // overflow-x: clip, overflow: hidden am body machte diesen zum eigenen
+  // Scrollbereich, der klebende Kopf sprang dann beim Scrollen aus dem Bild.
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-
+    if (!isOpen) return;
+    const root = document.documentElement;
+    const previousOverflow = root.style.overflow;
+    root.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = 'unset';
+      root.style.overflow = previousOverflow;
     };
   }, [isOpen]);
 
