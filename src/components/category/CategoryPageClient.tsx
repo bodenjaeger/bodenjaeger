@@ -1,16 +1,17 @@
 'use client';
 
-import { Fragment, useState, useEffect, useTransition } from 'react';
+import { Fragment, useState, useEffect, useRef, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { type StoreApiProduct } from '@/lib/woocommerce';
 import Image from 'next/image';
 import UnifiedProductCard from '@/components/UnifiedProductCard';
-import { SORT_OPTIONS, listingHref } from '@/lib/category-listing';
+import { PRODUCTS_PER_PAGE, SORT_OPTIONS, listingHref } from '@/lib/category-listing';
 import { filtersToQuery, hasActiveFilters, type FilterState } from '@/lib/category-filters';
 import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar, CategoryFilterToggle, ListingToolbar, useFilterCollapse, useFilterNavigation } from '@/components/category/CategoryFilters';
 import { fetteZeilenAlsUeberschrift, kategorieIntro } from '@/lib/klick-vinyl';
 import PromoTile from '@/components/black-weeks/PromoTile';
+import ListingPager from '@/components/category/ListingPager';
 import { PROMO_TILE_EVERY, PROMO_TILE_POSITION } from '@/lib/black-weeks';
 
 /** Kommt vor dem Produkt an Index `i` eine Aktionskachel? (Platz 3, dann alle 12 Produkte) */
@@ -69,8 +70,26 @@ export default function CategoryPageClient({
 }: CategoryPageClientProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [, startTransition] = useTransition();
+  const [loadingMore, startTransition] = useTransition();
   const [addonProductsMap, setAddonProductsMap] = useState<Map<number, StoreApiProduct>>(new Map());
+
+  // „Weitere anzeigen“: Die nächste Seite kommt wie gewohnt vom Server (?page=n),
+  // wird hier aber an die bisherige Liste angehängt statt sie zu ersetzen.
+  const [shownProducts, setShownProducts] = useState<StoreApiProduct[]>(products);
+  const [firstShownPage, setFirstShownPage] = useState(currentPage);
+  const appendNext = useRef(false);
+  useEffect(() => {
+    if (appendNext.current) {
+      setShownProducts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...products.filter((p) => !seen.has(p.id))];
+      });
+    } else {
+      setShownProducts(products);
+      setFirstShownPage(currentPage);
+    }
+    appendNext.current = false;
+  }, [products, currentPage]);
 
   // Batch-fetch Dämmung + Sockelleiste für Set-Angebot Preisvergleich
   useEffect(() => {
@@ -90,9 +109,11 @@ export default function CategoryPageClient({
     })
       .then(r => r.ok ? r.json() : [])
       .then((addonProducts: StoreApiProduct[]) => {
-        const map = new Map<number, StoreApiProduct>();
-        addonProducts.forEach(p => map.set(p.id, p));
-        setAddonProductsMap(map);
+        setAddonProductsMap((prev) => {
+          const map = new Map(prev);
+          addonProducts.forEach(p => map.set(p.id, p));
+          return map;
+        });
       })
       .catch(() => {});
   }, [products]);
@@ -234,6 +255,14 @@ export default function CategoryPageClient({
             count={`${totalProducts} ${totalProducts === 1 ? 'Produkt' : 'Produkte'}${totalPages > 1 ? ` (Seite ${currentPage} von ${totalPages})` : ''}`}
             sort={sortBy}
             sortOptions={SORT_OPTIONS}
+            pager={(
+              <ListingPager
+                currentPage={currentPage}
+                totalPages={totalPages}
+                hrefFor={(page) => listingHref(pathname, page, sortBy, filterQuery)}
+                onSelect={(page) => startTransition(() => router.push(listingHref(pathname, page, sortBy, filterQuery)))}
+              />
+            )}
             onSortChange={(value) => {
               // Sortierwechsel startet wieder auf Seite 1
               const href = listingHref(pathname, 1, value, filterQuery);
@@ -248,9 +277,9 @@ export default function CategoryPageClient({
         {filterState && <CategoryFilterChips state={filterState} apply={apply} />}
 
         {/* Products Grid */}
-        {products.length > 0 ? (
+        {shownProducts.length > 0 ? (
           <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 ${showSidebar ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}>
-            {products.map((product, index) => (
+            {shownProducts.map((product, index) => (
               <Fragment key={product.id}>
                 {showPromoTile && promoTileBefore(index) && <PromoTile />}
                 <UnifiedProductCard
@@ -261,7 +290,7 @@ export default function CategoryPageClient({
               </Fragment>
             ))}
             {/* Weniger Produkte als Platz 3 → Kachel ans Ende */}
-            {showPromoTile && products.length < PROMO_TILE_POSITION && <PromoTile />}
+            {showPromoTile && shownProducts.length < PROMO_TILE_POSITION && <PromoTile />}
           </div>
         ) : (
           <div className="text-center py-12">
@@ -291,6 +320,37 @@ export default function CategoryPageClient({
             )}
           </div>
         )}
+
+        {/* Weitere Produkte anhängen */}
+        {totalPages > 1 && (() => {
+          const perPage = showPromoTile ? PRODUCTS_PER_PAGE - 1 : PRODUCTS_PER_PAGE;
+          const shownFrom = (firstShownPage - 1) * perPage;
+          const shownTo = Math.min(totalProducts, shownFrom + shownProducts.length);
+          const percent = totalProducts > 0 ? Math.round((shownTo / totalProducts) * 100) : 0;
+          return (
+            <div className="mx-auto mb-8 flex max-w-sm flex-col items-center gap-3 text-center">
+              <p className="text-sm text-mid">
+                {shownFrom > 0 ? `${shownFrom + 1}–${shownTo}` : shownTo} von {totalProducts} {totalProducts === 1 ? 'Produkt' : 'Produkten'}
+              </p>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-ash" aria-hidden="true">
+                <div className="h-full rounded-full bg-dark" style={{ width: `${percent}%` }} />
+              </div>
+              {currentPage < totalPages && (
+                <button
+                  type="button"
+                  disabled={loadingMore}
+                  onClick={() => {
+                    appendNext.current = true;
+                    startTransition(() => router.push(listingHref(pathname, currentPage + 1, sortBy, filterQuery), { scroll: false }));
+                  }}
+                  className="mt-1 flex min-h-12 w-full cursor-pointer items-center justify-center rounded-lg bg-dark px-6 text-sm font-bold text-white transition-colors hover:bg-[#d11820] disabled:cursor-wait disabled:opacity-70"
+                >
+                  {loadingMore ? 'Lädt …' : 'Weitere anzeigen'}
+                </button>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Pagination — gekürzt mit Ellipsen, damit die Reihe auf dem Handy nicht überläuft */}
         {totalPages > 1 && (() => {

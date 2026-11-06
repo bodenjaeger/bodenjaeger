@@ -3,17 +3,23 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { ChevronUp } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { isFachmarktRoute } from '@/lib/landingRoutes';
 import ContactDrawer from './ContactDrawer';
 
 export default function FloatingContactButton() {
   const [isContactDrawerOpen, setIsContactDrawerOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const { itemCount, openCartDrawer, isCartDrawerOpen } = useCart();
+  const [showTop, setShowTop] = useState(false);
+  const { isCartDrawerOpen } = useCart();
   const pathname = usePathname();
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 600);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Kontakt aus der mobilen Kaufleiste der Produktseite
   useEffect(() => {
@@ -38,6 +44,19 @@ export default function FloatingContactButton() {
           isCartDrawerOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
       >
+        {/* Nach oben – erst nach etwas Scrollen */}
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Nach oben"
+          tabIndex={showTop ? 0 : -1}
+          className={`w-11 h-11 md:w-14 md:h-14 bg-white border border-ash rounded-full shadow-lg flex items-center justify-center text-dark transition-all duration-300 hover:border-mid ${
+            showTop ? 'opacity-100' : 'opacity-0 pointer-events-none translate-y-2'
+          }`}
+        >
+          <ChevronUp className="w-5 h-5 md:w-6 md:h-6" aria-hidden="true" />
+        </button>
+
         {/* Kontakt Button */}
         <button
           onClick={() => setIsContactDrawerOpen(true)}
@@ -53,25 +72,6 @@ export default function FloatingContactButton() {
           />
         </button>
 
-        {/* Warenkorb Button */}
-        <button
-          onClick={openCartDrawer}
-          className="relative w-11 h-11 md:w-14 md:h-14 bg-white rounded-full hover:scale-110 transition-transform shadow-lg flex items-center justify-center"
-          aria-label="Warenkorb öffnen"
-        >
-          <Image
-            src="/images/Icons/warenkorb-schieferschwarz.png"
-            alt="Warenkorb"
-            width={28}
-            height={28}
-            className="w-[22px] h-[22px] md:w-7 md:h-7"
-          />
-          {mounted && itemCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-brand text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-              {itemCount}
-            </span>
-          )}
-        </button>
       </div>
 
       {/* Contact Drawer */}
