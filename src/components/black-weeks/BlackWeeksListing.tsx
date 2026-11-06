@@ -179,8 +179,8 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
     applyFilters({ ...activeFilters, values });
   };
   const quickClass = (active: boolean) =>
-    `h-9 shrink-0 cursor-pointer rounded-xl border px-4 text-sm font-semibold transition-colors ${
-      active ? 'border-brand bg-brand text-white' : 'border-ash bg-white text-dark hover:border-mid'
+    `min-h-11 shrink-0 cursor-pointer rounded-full border px-4 text-sm transition-colors ${
+      active ? 'border-[#d11820] bg-[#d11820] text-white' : 'border-ash bg-white text-dark hover:border-mid'
     }`;
 
   // Fenster wie im Kategorie-Listing: Seite 1 + letzte + aktuelle ±1, dazwischen „…“
@@ -194,7 +194,7 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
     if (right < totalPages - 1) pages.push('ellipsis');
     pages.push(totalPages);
   }
-  const navClass = 'px-3 py-2 rounded-lg border border-gray-300 text-gray-500 transition-colors shrink-0';
+  const navClass = 'px-3 py-2 rounded-xl border border-ash bg-white text-mid transition-colors shrink-0';
 
   return (
     <div ref={gridTopRef} className="scroll-mt-48">
@@ -253,7 +253,7 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
             disabled={currentPage === 1}
             onClick={() => goToPage(currentPage - 1)}
             aria-label="Vorherige Seite"
-            className={`${navClass} hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent`}
+            className={`${navClass} hover:border-mid disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent`}
           >
             <span className="hidden sm:inline">Zurück</span>
             <span className="sm:hidden" aria-hidden="true">‹</span>
@@ -271,10 +271,10 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
                 onClick={() => goToPage(p)}
                 aria-label={`Seite ${p}`}
                 aria-current={currentPage === p ? 'page' : undefined}
-                className={`px-3 py-2 rounded-lg border transition-colors shrink-0 ${
+                className={`px-3 py-2 rounded-xl border transition-colors shrink-0 ${
                   currentPage === p
                     ? 'bg-brand text-white border-brand'
-                    : 'border-gray-300 text-gray-500 hover:bg-gray-100'
+                    : 'border-ash bg-white text-mid hover:border-mid'
                 }`}
               >
                 {p}
@@ -287,7 +287,7 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
             disabled={currentPage === totalPages}
             onClick={() => goToPage(currentPage + 1)}
             aria-label="Nächste Seite"
-            className={`${navClass} hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent`}
+            className={`${navClass} hover:border-mid disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent`}
           >
             <span className="hidden sm:inline">Weiter</span>
             <span className="sm:hidden" aria-hidden="true">›</span>

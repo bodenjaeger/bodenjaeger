@@ -52,7 +52,6 @@ interface CategoryPageClientProps {
 }
 
 const SET_CATEGORIES = new Set(['vinylboden', 'klebe-vinyl', 'rigid-vinyl', 'luxus-vinyl', 'coretec', 'primecore', 'o-r-c-a', 'laminat', 'parkett']);
-const VINYL_BRAND_CATEGORIES = new Set(['vinylboden', 'rigid-vinyl']);
 
 export default function CategoryPageClient({
   slug,
@@ -116,17 +115,17 @@ export default function CategoryPageClient({
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-pale">
         <div className="content-container py-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">{categoryName}</h1>
 
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-2xl mb-6">
             <strong>Fehler beim Laden der Produkte:</strong> {error}
           </div>
 
           <button
             onClick={reload}
-            className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-xl font-bold transition-colors"
           >
             Erneut versuchen
           </button>
@@ -136,7 +135,7 @@ export default function CategoryPageClient({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-pale">
       <div className="content-container py-8">
         {/* Category Header */}
         <div className="mb-8">
@@ -152,7 +151,7 @@ export default function CategoryPageClient({
             const mobileIntro = intro.length > 110 ? `${intro.slice(0, 110).trimEnd()} …` : intro;
             const desktopIntro = intro.length > 320 ? `${intro.slice(0, 320).trimEnd()} …` : intro;
             return (
-              <section className={`mb-6 overflow-hidden rounded-[20px] bg-dark text-white md:rounded-[28px] ${categoryImage?.src ? 'md:grid md:grid-cols-2' : ''}`}>
+              <section className={`mb-6 overflow-hidden rounded-3xl bg-dark text-white ${categoryImage?.src ? 'md:grid md:grid-cols-2' : ''}`}>
                 <div className="flex flex-col p-5 md:p-10 lg:p-14">
                   <h1 className="text-[32px] font-bold leading-[1.08] tracking-[-0.03em] text-white md:text-5xl lg:text-[60px]">
                     {categoryName}{SET_CATEGORIES.has(slug) && <span className="text-[#ff3b41]">, direkt im Set.</span>}
@@ -166,7 +165,7 @@ export default function CategoryPageClient({
                   {categoryDescription && categoryDescription.replace(/<[^>]+>/g, '').trim().length > 110 && (
                     <a
                       href="#category-full-description"
-                      className="mt-4 inline-flex min-h-11 w-fit items-center gap-1 text-sm font-semibold text-white underline underline-offset-4 hover:text-[#ff3b41] md:mt-6 md:text-base"
+                      className="mt-4 inline-flex min-h-11 w-fit items-center gap-1 text-sm font-bold text-white underline underline-offset-4 hover:text-[#ff3b41] md:mt-6 md:text-base"
                     >
                       Weiterlesen <span aria-hidden="true">→</span>
                     </a>
@@ -189,31 +188,38 @@ export default function CategoryPageClient({
             );
           })()}
 
-          {/* Schnellwahl: echte Filter und Marken-Kategorien */}
-          {(() => {
-            const optik = filterState?.facets.find((facet) => facet.key.toLowerCase() === 'optik');
-            const chipClass = 'inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full border border-gray-300 bg-white px-4 text-sm text-dark transition-colors hover:border-dark';
-            if (!optik && !VINYL_BRAND_CATEGORIES.has(slug)) return null;
+          {/* Schnellwahl: setzt Optik- und Marken-Filter direkt auf dieser Seite */}
+          {filterState && (() => {
+            const quick = ['optik', 'marke']
+              .map((key) => filterState.facets.find((facet) => facet.key === key))
+              .filter((facet): facet is NonNullable<typeof facet> => Boolean(facet))
+              .flatMap((facet) => facet.values.filter((value) => value.count > 0 || value.selected).map((value) => ({ facet, value })));
+            if (quick.length === 0) return null;
+            const toggle = (key: string, valueSlug: string) => {
+              const current = filterState.active.values[key] ?? [];
+              const next = current.includes(valueSlug) ? current.filter((s) => s !== valueSlug) : [...current, valueSlug];
+              const values = { ...filterState.active.values };
+              if (next.length > 0) values[key] = next;
+              else delete values[key];
+              apply({ ...filterState.active, values });
+            };
             return (
-              <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div role="group" aria-label="Beliebte Filter" className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <span className="shrink-0 text-sm font-bold text-dark">Beliebt:</span>
-                {optik?.values.filter((value) => value.count > 0).map((value) => (
+                {quick.map(({ facet, value }) => (
                   <button
-                    key={value.slug}
+                    key={`${facet.key}-${value.slug}`}
                     type="button"
                     disabled={pending}
-                    onClick={() => filterState && apply({ ...filterState.active, values: { ...filterState.active.values, [optik.key]: [value.slug] } })}
-                    className={chipClass}
+                    aria-pressed={value.selected}
+                    onClick={() => toggle(facet.key, value.slug)}
+                    className={`inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full border px-4 text-sm transition-colors disabled:cursor-wait ${
+                      value.selected ? 'border-[#d11820] bg-[#d11820] text-white' : 'border-ash bg-white text-dark hover:border-mid'
+                    }`}
                   >
                     {value.label}
                   </button>
                 ))}
-                {VINYL_BRAND_CATEGORIES.has(slug) && (
-                  <>
-                    <Link href="/category/coretec" className={chipClass}>COREtec</Link>
-                    <Link href="/category/primecore" className={chipClass}>primeCORE</Link>
-                  </>
-                )}
               </div>
             );
           })()}
@@ -271,14 +277,14 @@ export default function CategoryPageClient({
             {isFiltered ? (
               <Link
                 href={listingHref(pathname, 1, sortBy)}
-                className="inline-block bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="inline-block bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-xl font-bold transition-colors"
               >
                 Filter löschen
               </Link>
             ) : (
               <button
                 onClick={reload}
-                className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-xl font-bold transition-colors"
               >
                 Aktualisieren
               </button>
@@ -300,7 +306,7 @@ export default function CategoryPageClient({
 
           // Echte Links (?page=n) statt onClick, damit Crawler alle Seiten
           // und damit alle Produkte ohne JavaScript erreichen.
-          const navClass = 'px-3 py-2 rounded-lg border border-gray-300 text-gray-500 transition-colors shrink-0';
+          const navClass = 'px-3 py-2 rounded-xl border border-ash bg-white text-mid transition-colors shrink-0';
           const prevLabel = (
             <>
               <span className="hidden sm:inline">Zurück</span>
@@ -321,7 +327,7 @@ export default function CategoryPageClient({
                   href={listingHref(pathname, currentPage - 1, sortBy, filterQuery)}
                   rel="prev"
                   aria-label="Vorherige Seite"
-                  className={`${navClass} hover:bg-gray-100`}
+                  className={`${navClass} hover:border-mid`}
                 >
                   {prevLabel}
                 </Link>
@@ -342,10 +348,10 @@ export default function CategoryPageClient({
                     href={listingHref(pathname, page, sortBy, filterQuery)}
                     aria-label={`Seite ${page}`}
                     aria-current={currentPage === page ? 'page' : undefined}
-                    className={`px-3 py-2 rounded-lg border transition-colors shrink-0 ${
+                    className={`px-3 py-2 rounded-xl border transition-colors shrink-0 ${
                       currentPage === page
                         ? 'bg-brand text-white border-brand'
-                        : 'border-gray-300 text-gray-500 hover:bg-gray-100'
+                        : 'border-ash bg-white text-mid hover:border-mid'
                     }`}
                   >
                     {page}
@@ -358,7 +364,7 @@ export default function CategoryPageClient({
                   href={listingHref(pathname, currentPage + 1, sortBy, filterQuery)}
                   rel="next"
                   aria-label="Nächste Seite"
-                  className={`${navClass} hover:bg-gray-100`}
+                  className={`${navClass} hover:border-mid`}
                 >
                   {nextLabel}
                 </Link>
@@ -376,7 +382,7 @@ export default function CategoryPageClient({
 
         {/* Ausführlicher Kategorietext */}
         {categoryDescription && categoryDescription.replace(/<[^>]+>/g, '').trim().length > 110 && (
-          <section id="category-full-description" className="mt-12 rounded-[20px] bg-white p-5 md:p-10 lg:p-12">
+          <section id="category-full-description" className="mt-12 rounded-3xl bg-white p-5 md:p-10 lg:p-12">
             <h2 className="mb-6 text-2xl font-bold tracking-[-0.02em] text-dark md:text-3xl">
               {categoryName} kaufen: Das solltest du wissen
             </h2>

@@ -205,10 +205,10 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
                 : 0;
               return (
                 <div
-                  className="w-fit whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] font-medium leading-none tracking-[0.01em] text-white shadow-md antialiased"
+                  className="w-fit whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] font-bold leading-none text-white shadow-md"
                   style={{ backgroundColor: '#140809', border: `1px solid ${PROMO_RED}` }}
                 >
-                  Black Weeks{percent > 0 && <span className="font-semibold">{` −${Math.round(percent)} %`}</span>}
+                  Black Weeks{percent > 0 ? ` −${Math.round(percent)} %` : ''}
                 </div>
               );
             })()}
@@ -216,11 +216,8 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
             {/* Aktion Badge — Stil aus Backend, Jäger-Farben */}
             {product.show_aktion && product.aktion && (
               <div
-                className="rounded font-bold shadow-md w-fit"
+                className="w-fit whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] font-bold leading-none shadow-md"
                 style={{
-                  fontSize: '12px',
-                  padding: '3% 10%',
-                  whiteSpace: 'nowrap' as const,
                   backgroundColor: {
                     'aktion-bg-black': '#2e2d32',
                     'aktion-bg-red': '#ed1b24',
@@ -249,11 +246,8 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
             {/* Angebotspreis Hinweis Badge — Stil aus Backend, Jäger-Farben */}
             {product.show_angebotspreis_hinweis && product.angebotspreis_hinweis && (
               <div
-                className="rounded font-bold shadow-md w-fit"
+                className="w-fit whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] font-bold leading-none shadow-md"
                 style={{
-                  fontSize: '12px',
-                  padding: '3% 10%',
-                  whiteSpace: 'nowrap' as const,
                   backgroundColor: {
                     'aktion-bg-black': '#2e2d32',
                     'aktion-bg-red': '#ed1b24',
@@ -428,7 +422,7 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
             onClick={sampleInCart ? openCartDrawer : handleOrderSample}
             disabled={isOrderingSample}
             aria-label={sampleInCart ? `Muster von ${klickVinylName(product.name)} im Warenkorb ansehen` : `Muster von ${klickVinylName(product.name)} bestellen`}
-            className={`flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 text-[13px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-2 text-[13px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
               sampleInCart ? 'border-2 border-cta bg-white text-cta hover:bg-cta/5' : 'bg-cta text-white hover:bg-cta-dark'
             }`}
           >
@@ -447,7 +441,7 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
           </button>
           <Link
             href={`/products/${product.slug}`}
-            className="flex min-h-11 items-center justify-center rounded-lg bg-dark px-2 text-[13px] font-bold text-white transition-colors hover:bg-[#d11820]"
+            className="flex min-h-11 items-center justify-center rounded-xl bg-dark px-2 text-[13px] font-bold text-white transition-colors hover:bg-[#d11820]"
             aria-label={`${klickVinylName(product.name)} ansehen`}
           >
             Zum Boden

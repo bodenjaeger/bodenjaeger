@@ -101,11 +101,11 @@ function FilterPanel({ state, apply, pending, onClose }: FilterProps & { onClose
           >
             <label className="grid gap-1 text-xs text-mid">
               von
-              <input value={from} onChange={(e) => setFrom(e.target.value)} onBlur={applyPrice} inputMode="decimal" placeholder={`${state.priceMin} €`} className="w-full rounded-lg border border-ash px-2.5 py-2 text-base md:text-sm text-dark" />
+              <input value={from} onChange={(e) => setFrom(e.target.value)} onBlur={applyPrice} inputMode="decimal" placeholder={`${state.priceMin} €`} className="w-full rounded-xl border border-ash px-2.5 py-2 text-base md:text-sm text-dark" />
             </label>
             <label className="grid gap-1 text-xs text-mid">
               bis
-              <input value={to} onChange={(e) => setTo(e.target.value)} onBlur={applyPrice} inputMode="decimal" placeholder={`${state.priceMax} €`} className="w-full rounded-lg border border-ash px-2.5 py-2 text-base md:text-sm text-dark" />
+              <input value={to} onChange={(e) => setTo(e.target.value)} onBlur={applyPrice} inputMode="decimal" placeholder={`${state.priceMax} €`} className="w-full rounded-xl border border-ash px-2.5 py-2 text-base md:text-sm text-dark" />
             </label>
             <button type="submit" className="sr-only">Preis anwenden</button>
           </form>
@@ -191,7 +191,7 @@ export function CategoryFilterButton(props: FilterProps) {
       {sheetOpen && createPortal(
         <div className="fixed inset-0 z-[100] lg:hidden" role="dialog" aria-modal="true" aria-label="Filter">
           <button type="button" aria-label="Filter schließen" onClick={() => setSheetOpen(false)} className="absolute inset-0 cursor-pointer bg-dark/50" />
-          <div className="absolute inset-x-0 bottom-0 max-h-[86%] overflow-y-auto rounded-t-[18px] bg-white px-[18px] shadow-[0_-6px_30px_rgba(0,0,0,0.2)]">
+          <div className="absolute inset-x-0 bottom-0 max-h-[86%] overflow-y-auto rounded-t-3xl bg-white px-[18px] shadow-[0_-6px_30px_rgba(0,0,0,0.2)]">
             <FilterPanel {...props} onClose={() => setSheetOpen(false)} />
           </div>
         </div>,
@@ -206,7 +206,7 @@ export function CategoryFilterChips({ state, apply }: FilterProps) {
   const { active } = state;
   if (!hasActiveFilters(active)) return null;
 
-  const chipClass = 'inline-flex cursor-pointer items-center gap-2 rounded-lg bg-brand px-3 py-1.5 text-[13px] font-medium text-white hover:bg-[#d11820] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2';
+  const chipClass = 'inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full bg-brand px-3.5 py-1.5 text-[13px] text-white hover:bg-[#d11820] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2';
   const cross = <span aria-hidden="true" className="font-bold">×</span>;
 
   return (

@@ -250,3 +250,14 @@ Optional: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `KV_REST_API_URL`, `KV_RES
 - `PROJEKT_ZUSAMMENFASSUNG.md` — Project overview with Set-Angebot math
 - `WOOCOMMERCE_CHECKOUT_INTEGRATION.md` — Checkout implementation plan
 - `FEHLENDE_FEATURES.md` — Missing features and roadmap
+
+## Gestaltung der Shop-Seiten (verbindlich)
+
+Vorbild ist die Karriereseite. Neue und geänderte Seiten nutzen diese Werte, damit alles einheitlich bleibt:
+
+- **Seitenhintergrund:** `bg-pale`. Karten, Boxen und Filter liegen weiß darauf, Kopfbereiche in `bg-dark`.
+- **Rundungen:** große Flächen (Kopfbereich, Textboxen, Titelbilder) `rounded-3xl` · Karten, Kacheln, Filterbox `rounded-2xl` · Buttons, Eingabefelder, Auswahlfelder, Seitenzahlen `rounded-xl` · Chips und runde Icon-Buttons `rounded-full` · kleine Labels auf Bildern `rounded-md`.
+- **Rahmen:** `border-ash`, beim Überfahren `border-mid`.
+- **Ausgewählte Chips:** `bg-[#d11820]` mit weißer Schrift (Kontrast für kleine Schrift).
+- **Schrift:** Es gibt nur Poppins Regular und Bold. Kein `font-medium` oder `font-semibold`, sonst rechnet der Browser einen unscharfen Schnitt hoch.
+- **Akzentpunkte:** weiß statt gelb.
