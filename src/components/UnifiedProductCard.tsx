@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { Check, Heart } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useAlert } from '@/hooks/useAlert';
+import { track } from '@/lib/analytics/track';
+import { mapProductToItem } from '@/lib/analytics/mapItem';
 import {
-  FREE_SAMPLE_LIMIT,
   SAMPLE_SHIPPING_SURCHARGE,
   findSampleProduct,
   isMusterProduct,
+  sampleSlugsFor,
 } from '@/lib/sampleUtils';
 import { useSparpaketStreichpreisProM2, sparpaketRabattProzent } from '@/hooks/useSparpaketStreichpreisProM2';
 import { usePromoActive } from '@/contexts/PromoContext';
@@ -25,55 +28,27 @@ interface UnifiedProductCardProps {
 }
 
 /**
- * Gemeinsame Hülle der beiden Aktions-Buttons auf der Karte.
- *
- * `cursor-pointer` ist Pflicht und nicht Kosmetik: Browser geben <button>
- * per Default `cursor: default`, und weder Tailwind Preflight noch die
- * globale button-Regel in globals.css setzen etwas anderes. Ohne den Zeiger
- * wirken die Kacheln wie Bildbeschriftung statt wie Bedienelemente — genau
- * der gemeldete Eindruck.
- *
- * Der Fokusring liegt bewusst als weißer Spalt plus brandroter Ring außen
- * (`ring-offset-white`): Die Buttons sitzen auf der Unterkante des
- * Produktbilds, ein einfarbiger Ring würde je nach Bodenfoto verschwinden.
- * Der weiße Spalt trennt ihn in jedem Fall vom Hintergrund.
- *
- * Als Hover-Rot dient #d11820, nicht `bg-brand` (#ed1b24): brandrot trägt
- * weiße Schrift nur mit Kontrast 4,39:1 und verfehlt damit WCAG AA für kleine
- * Schrift (4,5:1) — die Labels hier sind 10-12px. #d11820 kommt auf 5,44:1 und
- * ist im Projekt bereits der etablierte Hover-Ton (u.a. cart/page.tsx,
- * CategoryPageClient, FachmarktPage). Der Wert steht literal in der Klasse,
- * weil Tailwind arbitrary values zur Buildzeit braucht.
- */
-const CARD_ACTION_BUTTON = [
-  'flex cursor-pointer items-center justify-start gap-2 text-white',
-  'transition-colors duration-200',
-  'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-  'focus-visible:ring-offset-2 focus-visible:ring-offset-white',
-  'disabled:cursor-not-allowed disabled:opacity-50',
-].join(' ')
-
-/** Geometrie der Buttons — unverändert aus dem bestehenden Design. */
-const CARD_ACTION_STYLE = {
-  height: '10px',
-  padding: '1rem',
-  borderRadius: '6px',
-} as const
-
-/**
  * Einheitliche Produktkarte für alle Übersichten
  * Basiert auf CategoryPageClient Design
  */
 export default function UnifiedProductCard({ product, sockelleisteProduct }: UnifiedProductCardProps) {
   const [isOrderingSample, setIsOrderingSample] = useState(false);
-  const { addSampleToCart, getFreeSamplesRemaining } = useCart();
+  const { addSampleToCart, getFreeSamplesRemaining, cartItems, openCartDrawer } = useCart();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const { toggleWishlist, isInWishlist } = useWishlist();
-  const { showSuccess, showError, showInfo } = useAlert();
+  const { showError } = useAlert();
 
   // Klebe-Vinyl: Streichpreis = Boden + Standard-Sockelleiste + Bauchemie (wie Produktseite in Grundeinstellung)
   const sparpaketStreichpreisProM2 = useSparpaketStreichpreisProM2(product, sockelleisteProduct);
 
   const wishlisted = isInWishlist(product.id);
+  const sampleSlugs = sampleSlugsFor(product.slug);
+  const sampleInCart = mounted && cartItems.some((item) => item.isSample && sampleSlugs.includes(item.product.slug));
+  const freeSamplesRemaining = mounted ? getFreeSamplesRemaining() : 1;
+  const setInhalt = product.show_setangebot
+    ? [product.daemmung_id ? 'Dämmung' : null, product.sockelleisten_id ? 'Sockelleiste' : null].filter(Boolean).join(' & ')
+    : '';
 
   // Black-Weeks-Label: nur während der Aktion und für Produkte der Aktionskategorie
   const showPromoLabel = usePromoActive() && isPromoProduct(product);
@@ -114,28 +89,15 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
         return;
       }
 
-      const freeSamplesRemaining = getFreeSamplesRemaining();
       const result = addSampleToCart(sampleProduct);
+      if (result.status === 'duplicate') return;
 
-      if (result.status === 'duplicate') {
-        showInfo(
-          `Ein Muster von "${product.name}" befindet sich bereits in Ihrem Warenkorb.`,
-          'Bereits im Warenkorb'
-        );
-        return;
-      }
-
-      const surchargeLabel = SAMPLE_SHIPPING_SURCHARGE.toFixed(2).replace('.', ',');
-      const followUp = freeSamplesRemaining > 1
-        ? `Sie können noch ${freeSamplesRemaining - 1} weitere Muster versandkostenfrei bestellen.\nAb dem ${FREE_SAMPLE_LIMIT + 1}. Muster fallen ${surchargeLabel} € Fracht pro zusätzlichem Muster an.`
-        : freeSamplesRemaining === 1
-          ? `Sie haben alle ${FREE_SAMPLE_LIMIT} versandkostenfreien Muster verwendet.\nAb dem ${FREE_SAMPLE_LIMIT + 1}. Muster fallen ${surchargeLabel} € Fracht pro zusätzlichem Muster an.`
-          : `Für dieses zusätzliche Muster fallen ${surchargeLabel} € Fracht an.`;
-
-      showSuccess(
-        `Kostenloses Muster wurde in den Warenkorb gelegt!\n\n${followUp}`,
-        'Muster hinzugefügt'
-      );
+      const sampleItem = mapProductToItem(sampleProduct, 1, {
+        variant: 'Muster',
+        category: 'Muster',
+        pricePerUnitOverride: 0,
+      });
+      track.addToCart([sampleItem], 0);
     } catch (error) {
       console.error('Error ordering sample:', error);
       showError(
@@ -147,8 +109,8 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
     }
   };
   return (
-    <article className="bg-white rounded-lg overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-      <Link href={`/products/${product.slug}`} className="block">
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl bg-white transition-shadow duration-300 hover:shadow-lg">
+      <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
         {/* Bildbereich */}
         <div className="relative aspect-[4/3] bg-white">
           {product.images && product.images.length > 0 ? (
@@ -169,37 +131,24 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
 
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
-            {/* Prozent nur bei Aktionsböden: Im Backend sind derzeit fast alle Böden als Angebot gepflegt. */}
-            {showPromoLabel && product.on_sale && (() => {
-              const percent = sparpaketRabattProzent(
-                sparpaketStreichpreisProM2,
-                product.price || 0,
-                product.setangebot_ersparnis_prozent || product.discount_percent || 0
-              );
-              return percent > 0 ? (
-                <div className="text-white rounded font-bold shadow-md w-fit" style={{ fontSize: '12px', padding: '3% 10%', whiteSpace: 'nowrap', backgroundColor: '#ed1b24' }}>
-                  -{Math.round(percent)}%
+            {/* Aktion und Prozent in einem Label; andere Böden zeigen nur den Streichpreis. */}
+            {showPromoLabel && (() => {
+              const percent = product.on_sale
+                ? sparpaketRabattProzent(
+                    sparpaketStreichpreisProM2,
+                    product.price || 0,
+                    product.setangebot_ersparnis_prozent || product.discount_percent || 0
+                  )
+                : 0;
+              return (
+                <div
+                  className="w-fit whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-bold text-white"
+                  style={{ backgroundColor: '#140809', border: `1px solid ${PROMO_RED}` }}
+                >
+                  Black Weeks{percent > 0 ? ` -${Math.round(percent)} %` : ''}
                 </div>
-              ) : null;
+              );
             })()}
-
-            {/* Black-Weeks-Label — schwarz mit rotem Leuchtrand (Kundenvorlage) */}
-            {showPromoLabel && (
-              <div
-                className="text-white rounded font-bold uppercase w-fit"
-                style={{
-                  fontSize: '12px',
-                  padding: '3% 10%',
-                  whiteSpace: 'nowrap',
-                  letterSpacing: '0.06em',
-                  backgroundColor: '#140809',
-                  border: `1.5px solid ${PROMO_RED}`,
-                  boxShadow: `0 0 6px ${PROMO_RED}`,
-                }}
-              >
-                Black Weeks
-              </div>
-            )}
 
             {/* Aktion Badge — Stil aus Backend, Jäger-Farben */}
             {product.show_aktion && product.aktion && (
@@ -268,72 +217,26 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
             )}
           </div>
 
-        {/* Action Buttons on Border - Only for floor products */}
         {isFloorProduct && (
-          <div className="absolute left-0 right-0 flex justify-between px-4 z-10" style={{ bottom: '-2%' }}>
-            {/* Gemerkt: brandrot als Ruhezustand, Hover wird dunkel — der
-                Farbwechsel signalisiert „Klick entfernt wieder". Ungemerkt
-                umgekehrt: dunkel, Hover brandrot. So braucht der Toggle nur
-                die zwei Markenfarben und keinen dritten Ton.
-
-                Kein `aria-pressed`: Der Zustand steckt schon im wechselnden
-                Label („setzen" / „entfernen"), beides zusammen würde ihn
-                doppelt ansagen. Das Label muss wechseln, damit der Accessible
-                Name den sichtbaren Text „Auf die/der Merkliste" enthält
-                (WCAG 2.5.3 Label in Name) — ein statisches Label plus
-                `aria-pressed` würde das verletzen. */}
-            <button
-              type="button"
-              onClick={handleToggleWishlist}
-              aria-label={
-                wishlisted
-                  ? `${product.name} von der Merkliste entfernen`
-                  : `${product.name} auf die Merkliste setzen`
-              }
-              className={`${CARD_ACTION_BUTTON} ${
-                wishlisted ? 'bg-brand hover:bg-dark' : 'bg-dark hover:bg-[#d11820]'
-              }`}
-              style={CARD_ACTION_STYLE}
-            >
-              <Image
-                src="/images/Icons/favoriten-weiss.png"
-                alt=""
-                width={16}
-                height={16}
-              />
-              <div className="flex flex-col items-start">
-                <span className="text-[0.65rem] leading-tight">{wishlisted ? 'Auf der' : 'Auf die'}</span>
-                <span className="text-xs font-bold leading-tight">Merkliste</span>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={handleOrderSample}
-              disabled={isOrderingSample}
-              aria-busy={isOrderingSample}
-              aria-label={`Kostenloses Muster von ${product.name} bestellen`}
-              className={`${CARD_ACTION_BUTTON} bg-dark hover:bg-[#d11820]`}
-              style={CARD_ACTION_STYLE}
-            >
-              <Image
-                src="/images/Icons/musterbox-weiss.png"
-                alt=""
-                width={16}
-                height={16}
-              />
-              <div className="flex flex-col items-start">
-                <span className="text-[0.65rem] leading-tight">Kostenloses</span>
-                <span className="text-xs font-bold leading-tight">Muster</span>
-              </div>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleToggleWishlist}
+            aria-label={
+              wishlisted
+                ? `${klickVinylName(product.name)} von der Merkliste entfernen`
+                : `${klickVinylName(product.name)} auf die Merkliste setzen`
+            }
+            className="absolute right-3 top-3 z-10 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-white text-dark shadow-md transition-colors hover:text-[#d11820] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          >
+            <Heart className={`h-5 w-5 ${wishlisted ? 'fill-[#d11820] text-[#d11820]' : ''}`} aria-hidden="true" />
+          </button>
         )}
         </div>
 
         {/* Produktinfo-Bereich */}
-        <div className="bg-gray-100 p-4">
+        <div className="flex flex-1 flex-col p-4">
           {/* Produktname */}
-          <h3 className="text-gray-900 font-medium text-base mb-3 line-clamp-2 min-h-[3rem]">
+          <h3 className="mb-3 line-clamp-2 min-h-[3rem] text-base font-bold leading-snug text-dark">
             {klickVinylName(product.name)}
           </h3>
 
@@ -396,7 +299,7 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
           })()}
 
           {/* Trennlinie */}
-          <div className="h-[1px] bg-dark mx-8 mb-3" />
+          <div className="mt-auto mb-3 h-px bg-gray-200" />
 
           {/* Preisanzeige */}
           {(() => {
@@ -442,11 +345,41 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
                     {displayPrice.toFixed(2).replace('.', ',')} {showUnit ? `€/${unit}` : '€'}
                   </span>
                 </div>
+                {setInhalt && isSetProduct && isFloorProduct && (
+                  <p className="text-xs text-gray-700">Set inkl. {setInhalt}</p>
+                )}
               </div>
             );
           })()}
         </div>
       </Link>
+      {isFloorProduct && (
+        <div className="px-4 pb-4">
+          {/* Gleicher Button wie auf der Produktseite. Kein Alt-Text „Musterbox“: Daran erkennt Roomvo die Produktseite. */}
+          <button
+            type="button"
+            onClick={sampleInCart ? openCartDrawer : handleOrderSample}
+            disabled={isOrderingSample}
+            aria-label={sampleInCart ? `Muster von ${klickVinylName(product.name)} im Warenkorb ansehen` : `Muster von ${klickVinylName(product.name)} bestellen`}
+            className={`flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+              sampleInCart ? 'border-2 border-cta bg-white text-cta hover:bg-cta/5' : 'bg-cta text-white hover:bg-cta-dark'
+            }`}
+          >
+            {sampleInCart ? (
+              <Check className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Image src="/images/Icons/musterbox-weiss.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />
+            )}
+            {sampleInCart
+              ? 'Muster im Warenkorb – ansehen'
+              : isOrderingSample
+                ? 'Lädt …'
+                : freeSamplesRemaining > 0
+                  ? 'Kostenlose Muster bestellen'
+                  : `Muster bestellen (${SAMPLE_SHIPPING_SURCHARGE.toFixed(2).replace('.', ',')} € Fracht)`}
+          </button>
+        </div>
+      )}
     </article>
   );
 }

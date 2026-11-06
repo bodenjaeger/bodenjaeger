@@ -9,6 +9,7 @@ import UnifiedProductCard from '@/components/UnifiedProductCard';
 import { SORT_OPTIONS, listingHref } from '@/lib/category-listing';
 import { filtersToQuery, hasActiveFilters, type FilterState } from '@/lib/category-filters';
 import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar, CategoryFilterToggle, ListingToolbar, useFilterCollapse, useFilterNavigation } from '@/components/category/CategoryFilters';
+import { fetteZeilenAlsUeberschrift, kategorieIntro } from '@/lib/klick-vinyl';
 import PromoTile from '@/components/black-weeks/PromoTile';
 import { PROMO_TILE_EVERY, PROMO_TILE_POSITION } from '@/lib/black-weeks';
 
@@ -50,7 +51,12 @@ interface CategoryPageClientProps {
   filterState?: FilterState | null;
 }
 
+const FLOOR_CATEGORIES = new Set(['vinylboden', 'klebe-vinyl', 'rigid-vinyl', 'luxus-vinyl', 'coretec', 'primecore', 'o-r-c-a', 'laminat', 'parkett', 'teppichboden']);
+const SET_CATEGORIES = new Set(['vinylboden', 'klebe-vinyl', 'rigid-vinyl', 'luxus-vinyl', 'coretec', 'primecore', 'o-r-c-a', 'laminat', 'parkett']);
+const VINYL_BRAND_CATEGORIES = new Set(['vinylboden', 'rigid-vinyl']);
+
 export default function CategoryPageClient({
+  slug,
   categoryName,
   categoryDescription,
   categoryImage,
@@ -141,66 +147,79 @@ export default function CategoryPageClient({
             <h1 className="text-3xl font-bold text-gray-900 mb-8">{categoryName}</h1>
           )}
 
-          {/* Kopf im Karriere-Stil: Auf dem Handy nur Titel und Kurztext, damit die Produkte schnell sichtbar sind */}
-          {(categoryImage || categoryDescription) && (
-            <div className={`mb-8 overflow-hidden rounded-[28px] bg-dark text-white ${categoryDescription && categoryImage?.src ? 'md:grid md:grid-cols-2' : ''}`}>
-              {categoryDescription && (
-                <div className="flex flex-col p-5 md:p-10 lg:p-12">
-                  <h1 className="text-3xl font-bold tracking-[-0.035em] text-white md:text-5xl">{categoryName}</h1>
-
-                  <div className="mt-3 flex-grow text-sm leading-relaxed text-white md:mt-5 md:text-base">
-                    {(() => {
-                      const plainText = categoryDescription
-                        .replace(/<[^>]+>/g, '')
-                        .replace(/&nbsp;/g, ' ')
-                        .replace(/&amp;/g, '&')
-                        .replace(/&lt;/g, '<')
-                        .replace(/&gt;/g, '>')
-                        .trim();
-
-                      const mobilePreview = plainText.length > 110
-                        ? plainText.substring(0, 110) + '...'
-                        : plainText;
-
-                      const desktopPreview = plainText.length > 320
-                        ? plainText.substring(0, 320) + '...'
-                        : plainText;
-
-                      return (
-                        <>
-                          <span className="md:hidden">{mobilePreview}</span>
-                          <span className="hidden md:inline">{desktopPreview}</span>
-                        </>
-                      );
-                    })()}
-                  </div>
-
-                  {categoryDescription.replace(/<[^>]+>/g, '').trim().length > 110 && (
-                    <a
-                      href="#category-full-description"
-                      className="mt-3 inline-block font-medium text-white underline underline-offset-4 md:mt-5"
-                    >
-                      Weiterlesen →
-                    </a>
+          {/* Kopf im Karriere-Stil: Auf dem Handy kompakt, damit die Produkte schnell sichtbar sind */}
+          {(categoryImage?.src || categoryDescription) && (() => {
+            const intro = categoryDescription ? kategorieIntro(categoryDescription) : '';
+            const mobileIntro = intro.length > 110 ? `${intro.slice(0, 110).trimEnd()} …` : intro;
+            const desktopIntro = intro.length > 320 ? `${intro.slice(0, 320).trimEnd()} …` : intro;
+            return (
+              <section className={`mb-6 overflow-hidden rounded-[20px] bg-dark text-white md:rounded-[28px] ${categoryImage?.src ? 'md:grid md:grid-cols-2' : ''}`}>
+                <div className="flex flex-col p-5 md:p-10 lg:p-14">
+                  <h1 className="text-[32px] font-bold leading-[1.08] tracking-[-0.03em] text-white md:text-5xl lg:text-[60px]">
+                    {categoryName}{SET_CATEGORIES.has(slug) && <span className="text-[#ff3b41]">, direkt im Set.</span>}
+                  </h1>
+                  {intro && (
+                    <p className="mt-3 text-sm leading-relaxed text-white md:mt-5 md:text-[17px]">
+                      <span className="md:hidden">{mobileIntro}</span>
+                      <span className="hidden md:inline">{desktopIntro}</span>
+                    </p>
+                  )}
+                  {FLOOR_CATEGORIES.has(slug) && (
+                    <ul className="mt-6 hidden flex-wrap gap-x-5 gap-y-2 text-[13px] font-medium md:flex">
+                      {[`${totalProducts} Böden`, 'Lieferung frei ab 999 €', '12 Monate kostenfrei einlagern'].map((punkt) => (
+                        <li key={punkt} className="flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden="true" />
+                          {punkt}
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
-              )}
+                {categoryImage?.src && (
+                  <div className="relative hidden min-h-[320px] md:block">
+                    <Image
+                      src={categoryImage.src}
+                      alt={categoryImage.alt || categoryName}
+                      fill
+                      sizes="50vw"
+                      className="object-cover"
+                      priority
+                      quality={85}
+                    />
+                  </div>
+                )}
+              </section>
+            );
+          })()}
 
-              {categoryImage && categoryImage.src && (
-                <div className={`relative min-h-[280px] ${categoryDescription ? 'hidden md:block' : 'aspect-video'}`}>
-                  <Image
-                    src={categoryImage.src}
-                    alt={categoryImage.alt || categoryName}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    className="object-cover"
-                    priority
-                    quality={85}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+          {/* Schnellwahl: echte Filter und Marken-Kategorien */}
+          {(() => {
+            const optik = filterState?.facets.find((facet) => facet.key.toLowerCase() === 'optik');
+            const chipClass = 'inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full border border-gray-300 bg-white px-4 text-sm text-dark transition-colors hover:border-dark';
+            if (!optik && !VINYL_BRAND_CATEGORIES.has(slug)) return null;
+            return (
+              <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1">
+                <span className="shrink-0 text-sm font-bold text-dark">Beliebt:</span>
+                {optik?.values.filter((value) => value.count > 0).map((value) => (
+                  <button
+                    key={value.slug}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => filterState && apply({ ...filterState.active, values: { ...filterState.active.values, [optik.key]: [value.slug] } })}
+                    className={chipClass}
+                  >
+                    {value.label}
+                  </button>
+                ))}
+                {VINYL_BRAND_CATEGORIES.has(slug) && (
+                  <>
+                    <Link href="/category/coretec" className={chipClass}>COREtec</Link>
+                    <Link href="/category/primecore" className={chipClass}>primeCORE</Link>
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           <ListingToolbar
             filterControls={filterState ? (
@@ -358,27 +377,22 @@ export default function CategoryPageClient({
         </div>
         </div>
 
-        {/* Full Category Description at bottom */}
+        {/* Ausführlicher Kategorietext */}
         {categoryDescription && categoryDescription.replace(/<[^>]+>/g, '').trim().length > 110 && (
-          <div id="category-full-description" className="mt-16 bg-gray-100 rounded-md p-8">
-            <h2 className="text-2xl font-bold text-dark mb-6">
-              Über {categoryName}
+          <section id="category-full-description" className="mt-12 rounded-[20px] bg-white p-5 md:p-10 lg:p-12">
+            <h2 className="mb-6 text-2xl font-bold tracking-[-0.02em] text-dark md:text-3xl">
+              {categoryName} kaufen: Das solltest du wissen
             </h2>
             <div
-              className="text-dark prose prose-lg max-w-none
-                [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-dark [&_h3]:mt-6 [&_h3]:mb-4
-                [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-dark [&_h2]:mt-8 [&_h2]:mb-4
-                [&_p]:text-dark [&_p]:leading-relaxed [&_p]:mb-6
-                [&_ul]:text-dark [&_ul]:mb-4 [&_ul]:space-y-2
-                [&_ol]:text-dark [&_ol]:mb-4 [&_ol]:space-y-2
-                [&_li]:text-dark [&_li]:leading-relaxed
-                [&_strong]:text-dark [&_strong]:font-semibold
-                [&_em]:text-dark
-                [&_br]:block [&_br]:my-4
-                whitespace-pre-line"
-              dangerouslySetInnerHTML={{ __html: categoryDescription }}
+              className="whitespace-pre-line text-[15px] leading-relaxed text-dark lg:columns-2 lg:gap-14
+                [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:break-after-avoid [&_h3]:text-[17px] [&_h3]:font-bold [&_h3]:text-dark [&_h3:first-child]:mt-0
+                [&_p]:mb-4 [&_strong]:font-semibold
+                [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:whitespace-normal [&_ul]:pl-5
+                [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:whitespace-normal [&_ol]:pl-5
+                [&_a]:underline"
+              dangerouslySetInnerHTML={{ __html: fetteZeilenAlsUeberschrift(categoryDescription) }}
             />
-          </div>
+          </section>
         )}
       </div>
     </div>

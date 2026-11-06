@@ -1,5 +1,6 @@
 'use client';
 
+import { klickVinylName } from '@/lib/klick-vinyl';
 import Image from 'next/image';
 import { useCart } from '@/contexts/CartContext';
 import { calculateShippingCost } from '@/lib/shippingConfig';
@@ -105,7 +106,7 @@ export default function OrderSummary({
       <div className="space-y-4 mb-6">
         {cartItems.filter((item) => !isSparpaketItemType(item.setItemType) || item.quantity > 0).map((item) => {
           const image = item.product.images?.[0]?.src || '/images/placeholder.jpg';
-          const name = item.product.name;
+          const name = klickVinylName(item.product.name);
           const einheit = item.product.einheit_short || 'm²';
           const priceUnit = einheit;
 

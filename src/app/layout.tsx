@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "Bodenjäger - Premium Bodenbeläge Online",
   description: "Hochwertige Vinyl-, Laminat- und Parkettböden von COREtec, primeCORE und mehr. Fachhandel mit großem Lagerbestand und persönlicher Beratung.",
-  keywords: "Bodenbelag, Vinyl, Laminat, Parkett, COREtec, primeCORE, Rigid-Vinyl, Klebe-Vinyl",
+  keywords: "Bodenbelag, Vinyl, Laminat, Parkett, COREtec, primeCORE, Klick-Vinyl, Klebe-Vinyl",
   authors: [{ name: "Bodenjäger" }],
   viewport: "width=device-width, initial-scale=1, maximum-scale=5",
   // Standardwerte für Seiten ohne eigene Angaben; Seiten mit buildMetadata

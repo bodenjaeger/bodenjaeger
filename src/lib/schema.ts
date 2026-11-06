@@ -1,3 +1,4 @@
+import { klickVinylName } from '@/lib/klick-vinyl';
 import type { StoreApiProduct } from '@/lib/woocommerce'
 import { SITE_URL, productUrl } from '@/lib/site'
 
@@ -115,7 +116,7 @@ export function buildProductSchema(product: StoreApiProduct): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    name: product.name,
+    name: klickVinylName(product.name),
     sku: product.sku || undefined,
     url,
     image,

@@ -20,3 +20,24 @@ export function klickVinylKategorietext(slug: string, text: string | null): stri
     'Er verbindet die einfache Klickverlegung mit den Vorteilen',
   );
 }
+
+/** Backend-Zwischenüberschrift: ganze Zeile fett wird zur echten H3. */
+export function fetteZeilenAlsUeberschrift(text: string): string {
+  return text.replace(/^[ \t]*(?:<p>)?<strong>([^<]+)<\/strong>(?:<\/p>)?[ \t]*$/gm, '<h3>$1</h3>');
+}
+
+/** Erster Absatz ohne Zwischenüberschriften, als reiner Text für den Kategorie-Kopf. */
+export function kategorieIntro(text: string): string {
+  const absaetze = fetteZeilenAlsUeberschrift(text)
+    .replace(/<h3>[^<]*<\/h3>/g, '\n\n')
+    .replace(/<\/p>/g, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .split(/\n\s*\n/)
+    .map((absatz) => absatz.trim())
+    .filter(Boolean);
+  return absaetze.find((absatz) => absatz.length > 60) ?? absaetze[0] ?? '';
+}

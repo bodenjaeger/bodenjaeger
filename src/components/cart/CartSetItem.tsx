@@ -1,5 +1,6 @@
 'use client';
 
+import { klickVinylName } from '@/lib/klick-vinyl';
 import React from 'react';
 import Image from 'next/image';
 import { CartSetItem as CartSetItemType, CartItemBase } from '@/types/cart-drawer';
@@ -30,7 +31,7 @@ export default function CartSetItem({ setItem, onQuantityChange, onRemove }: Car
             {mainProduct.image ? (
               <Image
                 src={mainProduct.image}
-                alt={mainProduct.name}
+                alt={klickVinylName(mainProduct.name)}
                 width={48}
                 height={48}
                 className="object-cover w-full h-full"
@@ -44,7 +45,7 @@ export default function CartSetItem({ setItem, onQuantityChange, onRemove }: Car
             )}
           </div>
           <span className="flex-1 text-sm font-semibold text-dark">
-            Boden • {mainProduct.name}
+            Boden • {klickVinylName(mainProduct.name)}
           </span>
           <button
             onClick={onRemove}
@@ -166,7 +167,7 @@ function BundleProductItem({ product }: { product: CartItemBase }) {
           {product.image ? (
             <Image
               src={product.image}
-              alt={product.name}
+              alt={klickVinylName(product.name)}
               width={48}
               height={48}
               className="object-cover w-full h-full"
@@ -186,7 +187,7 @@ function BundleProductItem({ product }: { product: CartItemBase }) {
 
       {/* Zeile 2: Produktname */}
       <div className="ml-14 text-xs text-dark">
-        {product.name}
+        {klickVinylName(product.name)}
       </div>
 
       {/* Zeile 3: X Pak./Stk. = Y m²/m */}
