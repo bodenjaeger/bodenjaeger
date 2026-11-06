@@ -39,7 +39,7 @@ export function categorySeoTitle(slug: string, name: string, suffix: string): st
 export function categorySeoDescription(name: string, description: string | null | undefined, suffix: string): string {
   const intro = description ? kategorieIntro(description).replace(/\s+/g, ' ').trim() : '';
   if (intro.length < 60) {
-    return `${name} bei Bodenjäger: persönliche Beratung vom Fachmarkt, bis zu 3 Gratis-Muster und Lieferung frei ab 999 €${suffix}.`;
+    return `${name} bei Bodenjäger: persönliche Beratung vom Fachmarkt, bis zu 3 Gratis-Muster und versandkostenfreie Shopbestellung ab 999 €${suffix}.`;
   }
   const room = MAX_DESCRIPTION - suffix.length;
   if (intro.length <= room) return `${intro.replace(/\.$/, '')}${suffix}.`;

@@ -71,7 +71,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
 /** Ein Durchlauf der Vorteile. Zweimal hintereinander ergibt das nahtlose Band. */
 function UspListe({ kopie }: { kopie: boolean }) {
   return (
-    <ul aria-hidden={kopie || undefined} className="flex shrink-0 items-center gap-12 pr-12">
+    <ul aria-hidden={kopie || undefined} className="flex shrink-0 items-center gap-20 pr-20">
       {USP_ITEMS.map((item) => {
         const Icon = ICONS[item.icon]
         return (

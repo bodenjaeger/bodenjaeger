@@ -16,7 +16,7 @@ export default function BuyBoxServices({ product }: { product: StoreApiProduct }
         )}
         <li className="flex items-center gap-3">
           <PackageCheck className="h-5 w-5 flex-shrink-0 text-dark" aria-hidden="true" />
-          Lieferung frei ab 999 €
+          Shopbestellungen ab 999 € versandkostenfrei
         </li>
         <li className="flex items-center gap-3">
           <Package className="h-5 w-5 flex-shrink-0 text-dark" aria-hidden="true" />

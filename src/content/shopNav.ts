@@ -51,7 +51,8 @@ export const USP_INTERVAL_MS = 4000
 
 export const USP_ITEMS: UspItem[] = [
   { id: 'musterbox', icon: 'package', label: 'Gratis Musterbox' },
-  { id: 'lieferung', icon: 'truck', label: 'Kostenfreie Lieferung ab 999€' },
+  // Bewusst „Shopbestellungen“: Im Fachmarkt gibt es keine kostenfreie Lieferung.
+  { id: 'lieferung', icon: 'truck', label: 'Shopbestellungen ab 999 € versandkostenfrei' },
   { id: 'einlagerung', icon: 'calendar', label: '12 Monate kostenfrei Einlagerung' },
   { id: 'set', icon: 'gift', label: 'Dämmung & Sockelleiste kostenlos im Set' },
 ]
