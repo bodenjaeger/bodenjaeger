@@ -184,13 +184,11 @@ export default function HeaderNav({
                     </li>
                   ))}
                   <li>
+                    {/* Kein eigenes Aktions-Label: Die Black-Weeks-Leiste über dem Kopf
+                        bleibt beim Scrollen stehen und sagt das schon. „Angebote“
+                        führt während der Aktion direkt auf die Aktionsseite. */}
                     <Link href={angeboteHref(promoActive)} className={itemCls(false)}>
                       Angebote
-                      {promoActive && (
-                        <span className="ml-2 hidden rounded-md bg-hdr-red px-2 py-0.5 text-[11px] font-[family-name:var(--font-poppins-bold)] text-white 2xl:inline">
-                          Black Weeks
-                        </span>
-                      )}
                     </Link>
                   </li>
                 </ul>
