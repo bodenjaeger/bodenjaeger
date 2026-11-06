@@ -29,6 +29,11 @@ export function klickVinylKategorietext(slug: string, text: string | null): stri
  */
 export function fetteZeilenAlsUeberschrift(text: string): string {
   return text
+    // WordPress speichert Windows-Zeilenumbrüche und Striche als HTML-Zeichen (&#8211;)
+    .replace(/\r\n?/g, '\n')
+    .replace(/&#8211;|&ndash;/g, '–')
+    .replace(/&#8212;|&mdash;/g, '—')
+    .replace(/&#8226;|&bull;/g, '•')
     .replace(/^[ \t]*(?:<p>)?<strong>([^<]+)<\/strong>(?:<\/p>)?[ \t]*$/gm, '<h3>$1</h3>')
     .replace(/(?:^[ \t]*[-–—•][ \t]+.+(?:\n|$))+/gm, (block) => {
       const items = block
