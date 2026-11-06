@@ -67,8 +67,9 @@ export default function Header({
   const openMenu = useCallback(() => {
     measureMenuTop();
     setIsSearchOpen(false);
+    closeCartDrawer();
     setIsMenuOpen(true);
-  }, [measureMenuTop]);
+  }, [measureMenuTop, closeCartDrawer]);
 
   const closeMenu = useCallback(() => {
     setIsMenuOpen(false);
@@ -94,6 +95,15 @@ export default function Header({
     }
     setIsMenuOpen(false);
   }, [pathname, measureMenuTop]);
+
+  // Warenkorb öffnet mobil wie das Menü unter der Kopfzeile: Position messen,
+  // offenes Menü bzw. Suche schließen.
+  useEffect(() => {
+    if (!isCartDrawerOpen) return;
+    measureMenuTop();
+    setIsMenuOpen(false);
+    setIsSearchOpen(false);
+  }, [isCartDrawerOpen, measureMenuTop]);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -224,6 +234,7 @@ export default function Header({
                 ref={searchButtonRef}
                 onClick={() => {
                   setIsMenuOpen(false);
+                  closeCartDrawer();
                   setIsSearchOpen(true);
                 }}
                 aria-label="Suche öffnen"
@@ -256,7 +267,7 @@ export default function Header({
         }}
       />
 
-      <CartDrawer isOpen={isCartDrawerOpen} onClose={closeCartDrawer} />
+      <CartDrawer isOpen={isCartDrawerOpen} onClose={closeCartDrawer} mobileTop={menuTop} />
     </header>
   );
 }

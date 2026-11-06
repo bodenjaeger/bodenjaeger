@@ -86,8 +86,21 @@ export interface Teaser {
   dunkel?: boolean
 }
 
+/** Hervorgehobene Premium-Karte (dunkel, mit Bild), z. B. Luxus-Vinyl mit primeCORE als Favorit. */
+export interface PremiumKarte {
+  kicker: string
+  titel: string
+  href: string
+  punkte: string[]
+  /** Bild aus der Kategorie (WooCommerce-Upload) */
+  bild: string
+  favorit: { label: string; href: string; hinweis: string }
+  weitere: { label: string; href: string }
+}
+
 export interface MegaPanel {
   id: string
+  premium?: PremiumKarte
   /** Überschrift der linken Spalte */
   linksTitel: string
   karten?: MegaKarte[]
@@ -131,10 +144,16 @@ export const MEGA_PANELS: Record<string, MegaPanel> = {
       { label: 'Klick-Vinyl', href: '/category/rigid-vinyl', punkte: ['Schwimmend verlegt, ohne Kleben', 'Schnell selbst verlegt'] },
       { label: 'Klebe-Vinyl', href: '/category/klebe-vinyl', punkte: ['Fest mit dem Untergrund verklebt', 'Komplett im Sparpaket ab 5 Paketen'] },
     ],
-    marken: [
-      { label: 'COREtec', href: '/category/coretec' },
-      { label: 'primeCORE', href: '/category/primecore' },
-    ],
+    // Luxus-Vinyl: Fokus auf die Eigenmarke primeCORE, COREtec als zweite Wahl
+    premium: {
+      kicker: 'Premiumklasse',
+      titel: 'Luxus-Vinyl',
+      href: '/category/luxus-vinyl',
+      punkte: ['Bis 600 m² ohne Übergangsschienen', 'Lebenslange Garantie im Privatbereich'],
+      bild: 'https://2025.bodenjaeger.de/wp-content/uploads/2026/05/SoundCore-8mm_Sandwich_Left-scaled-e1779094451278.png',
+      favorit: { label: 'primeCORE', href: '/category/primecore', hinweis: 'Unser Favorit' },
+      weitere: { label: 'COREtec', href: '/category/coretec' },
+    },
     finder: {
       titel: 'Vinyl-Finder',
       kategorie: 'vinylboden',

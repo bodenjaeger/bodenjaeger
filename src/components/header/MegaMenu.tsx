@@ -338,6 +338,48 @@ function KategoriePanel({ panel, onNavigate }: { panel: MegaPanel } & PanelProps
           {panel.links?.map((link) => (
             <ListenLink key={link.href} {...link} onNavigate={onNavigate} />
           ))}
+          {panel.premium && (
+            <div className="relative mt-1 overflow-hidden rounded-xl bg-dark text-white">
+              {/* Schichtaufbau aus dem Kategoriebild, angeschnitten rechts unten */}
+              <Image
+                src={panel.premium.bild}
+                alt=""
+                width={220}
+                height={160}
+                className="pointer-events-none absolute -right-10 -bottom-6 w-[190px] opacity-90"
+              />
+              <div className="relative flex flex-col gap-3 p-4">
+                <Link href={panel.premium.href} onClick={onNavigate} className="group flex flex-col gap-1.5 pr-16">
+                  <span className={`text-[11px] uppercase tracking-[0.12em] text-white/70 ${BOLD}`}>{panel.premium.kicker}</span>
+                  <span className={`inline-flex items-center gap-1.5 text-[17px] ${BOLD}`}>
+                    {panel.premium.titel}
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.25} aria-hidden="true" />
+                  </span>
+                  {panel.premium.punkte.map((punkt) => (
+                    <span key={punkt} className="flex items-start gap-1.5 text-xs leading-snug text-white/85">
+                      <Check className="mt-px h-3.5 w-3.5 flex-none text-white" strokeWidth={2.5} aria-hidden="true" />
+                      {punkt}
+                    </span>
+                  ))}
+                </Link>
+                <Link
+                  href={panel.premium.favorit.href}
+                  onClick={onNavigate}
+                  className="flex h-11 items-center justify-between gap-2 rounded-lg bg-white px-3.5 text-dark transition-colors hover:bg-pale"
+                >
+                  <span className={`text-sm ${BOLD}`}>{panel.premium.favorit.label}</span>
+                  <span className={`rounded-md bg-[#d11820] px-2 py-0.5 text-[11px] text-white ${BOLD}`}>{panel.premium.favorit.hinweis}</span>
+                </Link>
+                <Link
+                  href={panel.premium.weitere.href}
+                  onClick={onNavigate}
+                  className="inline-flex items-center gap-1 self-start text-xs text-white/80 underline underline-offset-2 hover:text-white"
+                >
+                  Auch {panel.premium.weitere.label} ansehen
+                </Link>
+              </div>
+            </div>
+          )}
           {panel.marken && (
             <div className="mt-1 flex gap-2">
               {panel.marken.map((marke) => (

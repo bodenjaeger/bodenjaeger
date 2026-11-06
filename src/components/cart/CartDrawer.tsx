@@ -22,9 +22,15 @@ import CartFooter from './CartFooter';
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Mobil: Oberkante in px = Unterkante der Header-Zeile. Der Warenkorb öffnet
+   * dann wie das Menü unter dem Kopf (volle Breite), Logo und Lupe bleiben
+   * sichtbar. Ab lg bleibt er eine Seitenleiste über die volle Höhe.
+   */
+  mobileTop?: number;
 }
 
-export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
+export default function CartDrawer({ isOpen, onClose, mobileTop = 0 }: CartDrawerProps) {
   const { cartItems, totalPrice, updateQuantity, removeFromCart, removeSet, customerNote, setCustomerNote, deliveryNote, setDeliveryNote } = useCart();
   const [drawerItems, setDrawerItems] = useState<CartDrawerItem[]>([]);
 
@@ -273,7 +279,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black transition-opacity duration-300 z-40 ${
+        style={{ '--cart-top': `${mobileTop}px` } as React.CSSProperties}
+        className={`fixed inset-x-0 bottom-0 top-[var(--cart-top)] bg-black transition-opacity duration-300 z-40 lg:top-0 ${
           isOpen ? 'opacity-50' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
@@ -281,7 +288,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col
+        style={{ '--cart-top': `${mobileTop}px` } as React.CSSProperties}
+        className={`fixed top-[var(--cart-top)] bottom-0 right-0 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col lg:top-0
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
           w-full md:w-[450px]
         `}
