@@ -262,3 +262,5 @@ Vorbild ist die Karriereseite. Neue und geänderte Seiten nutzen diese Werte, da
 - **Ausgewählte Chips:** `bg-[#d11820]` mit weißer Schrift (Kontrast für kleine Schrift).
 - **Schrift:** Es gibt nur Poppins Regular und Bold. Kein `font-medium` oder `font-semibold`, sonst rechnet der Browser einen unscharfen Schnitt hoch.
 - **Akzentpunkte:** weiß statt gelb.
+
+- **Kategorietexte im Backend:** WordPress entfernt in Kategoriebeschreibungen Listen-Tags. Zwischenüberschrift = ganze Zeile `<strong>…</strong>`, Listenpunkt = Zeile mit `- `. `fetteZeilenAlsUeberschrift()` in `src/lib/klick-vinyl.ts` macht daraus H3 und Liste.
