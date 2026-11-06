@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AKTION_BANNER } from '@/content/aktion-banner';
 import { PROMO_DISCOUNT_LABEL, PROMO_IMAGES, PROMO_PATH } from '@/lib/black-weeks';
 
@@ -311,10 +312,10 @@ export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
   };
 
   return (
-    <div className="w-full bg-white overflow-hidden py-[10px]">
+    <div className="w-full overflow-hidden py-[10px]">
       <div className="content-container">
       <div
-        className="w-full relative overflow-hidden bg-white rounded-[2%]"
+        className="w-full relative overflow-hidden bg-white rounded-2xl"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onTouchStart={onTouchStart}
@@ -594,43 +595,19 @@ export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
         <button
           onClick={goToPrevSlide}
           disabled={isTransitioning}
-          className="absolute left-1 md:left-2 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 p-2 md:p-3 rounded-full shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
-          aria-label="Previous slide"
+          className="absolute left-3 top-1/2 z-20 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation"
+          aria-label="Vorheriges Angebot"
         >
-          <svg
-            className="w-5 h-5 md:w-6 md:h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2.5}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
+          <ChevronLeft className="h-6 w-6" aria-hidden="true" />
         </button>
 
         <button
           onClick={goToNextSlide}
           disabled={isTransitioning}
-          className="absolute right-1 md:right-2 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white text-gray-800 p-2 md:p-3 rounded-full shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
-          aria-label="Next slide"
+          className="absolute right-3 top-1/2 z-20 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation"
+          aria-label="Nächstes Angebot"
         >
-          <svg
-            className="w-5 h-5 md:w-6 md:h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2.5}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
+          <ChevronRight className="h-6 w-6" aria-hidden="true" />
         </button>
 
         {/* Dot Navigation */}
