@@ -12,7 +12,18 @@ export type HeaderBereich = 'shop' | 'fachmarkt'
  * Gestaltung wie die Schnellwahl-Chips im Shop: `rounded-full`, die aktive Seite
  * in `bg-[#d11820]` mit weißer Schrift. `hell` für helle Flächen (Mobile-Menü).
  */
-export function BereichUmschalter({ bereich, hell = false, kurz = false }: { bereich: HeaderBereich; hell?: boolean; kurz?: boolean }) {
+export function BereichUmschalter({
+  bereich,
+  hell = false,
+  kurz = false,
+  onWechsel,
+}: {
+  bereich: HeaderBereich
+  hell?: boolean
+  kurz?: boolean
+  /** Wird beim Klick auf den jeweils anderen Bereich aufgerufen (Mobile-Menü bleibt offen). */
+  onWechsel?: () => void
+}) {
   const pill = (aktiv: boolean) =>
     `flex h-8 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
       hell ? 'focus-visible:outline-brand' : 'focus-visible:outline-white'
@@ -28,13 +39,19 @@ export function BereichUmschalter({ bereich, hell = false, kurz = false }: { ber
       aria-label="Bereich wählen"
       className={`flex items-center gap-1 rounded-full p-1 ${hell ? 'bg-pale ring-1 ring-ash ring-inset' : 'bg-white/10'}`}
     >
-      <Link href="/" aria-current={bereich === 'shop' ? 'page' : undefined} className={pill(bereich === 'shop')}>
+      <Link
+        href="/"
+        aria-current={bereich === 'shop' ? 'page' : undefined}
+        onClick={bereich === 'shop' ? undefined : onWechsel}
+        className={pill(bereich === 'shop')}
+      >
         <ShoppingBag className="h-3.5 w-3.5 flex-none" strokeWidth={2} aria-hidden="true" />
         Onlineshop
       </Link>
       <Link
         href="/fachmarkt-hueckelhoven"
         aria-current={bereich === 'fachmarkt' ? 'page' : undefined}
+        onClick={bereich === 'fachmarkt' ? undefined : onWechsel}
         className={pill(bereich === 'fachmarkt')}
       >
         <Store className="h-3.5 w-3.5 flex-none" strokeWidth={2} aria-hidden="true" />

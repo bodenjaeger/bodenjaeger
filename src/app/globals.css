@@ -52,13 +52,16 @@ input[type="number"] {
   .usp-laufband { animation: none; }
 }
 
-/* Suche im Kopf (KopfSuche): schiebt sich aus der Mitte nach links und rechts auf. */
+/* Suche im Kopf (KopfSuche): wächst als runde Pille aus der Mitte nach links
+   und rechts auf, ruhig und weich auslaufend. Ohne `forwards`, damit danach
+   kein clip-path die Trefferliste abschneidet. */
 @keyframes kopf-suche-auf {
-  from { clip-path: inset(0 50% 0 50%); opacity: 0.4; }
-  to { clip-path: inset(0 0 0 0); opacity: 1; }
+  from { clip-path: inset(18% calc(50% - 24px) 18% calc(50% - 24px) round 999px); opacity: 0; }
+  35% { opacity: 1; }
+  to { clip-path: inset(0 0 0 0 round 0); opacity: 1; }
 }
 .kopf-suche-auf {
-  animation: kopf-suche-auf 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: kopf-suche-auf 520ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (prefers-reduced-motion: reduce) {
   .kopf-suche-auf { animation: none; }

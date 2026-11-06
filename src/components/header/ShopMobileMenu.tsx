@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronRight, Heart, MapPin } from 'lucide-react'
@@ -7,7 +8,6 @@ import { FACHMARKT_LINK, MUSTER_LINK, SHOP_NAV, getNavHref } from '@/content/sho
 import { MOBILE_SCHNELLFILTER } from '@/content/megaMenu'
 import { LANDING_NAV, LEISTUNGEN_DROPDOWN } from '@/content/fachmarkt'
 import { FensterKopf } from '@/components/shared/SchliessenButton'
-import LiveSearch from '@/components/LiveSearch'
 import { BereichUmschalter, type HeaderBereich } from './UspBar'
 
 const FM = '/fachmarkt-hueckelhoven'
@@ -19,6 +19,10 @@ interface ShopMobileMenuProps {
   promoActive?: boolean
   /** Im Fachmarkt-Bereich stehen dessen Menüpunkte oben. */
   bereich?: HeaderBereich
+  /** Oberkante in px = Unterkante der Header-Zeile; der Kopf mit Lupe bleibt sichtbar. */
+  top: number
+  /** Umschalter Shop/Fachmarkt angetippt: Menü bleibt offen. */
+  onBereichWechsel: () => void
 }
 
 /** Drei feste Schriftstufen, damit das Menü ruhig und gut lesbar bleibt. */
@@ -27,10 +31,14 @@ const STUFE_2 = 'text-base font-[family-name:var(--font-poppins-regular)] font-n
 const KICKER = 'text-xs font-[family-name:var(--font-poppins-bold)] uppercase tracking-[0.1em] text-mid'
 
 /**
- * Mobiles Menü des Shop-Headers als Vollbild-Fenster (helle Fläche, volle
- * Breite) mit Titel und dem einheitlichen X oben rechts (FensterKopf).
+ * Mobiles Menü des Shop-Headers: helle Fläche über die volle Breite, öffnet
+ * UNTER der Header-Zeile (wie die Mega-Menüs auf Desktop), damit Logo und Lupe
+ * sichtbar bleiben. Titel und einheitliches X oben (FensterKopf).
  *
- * Aufbau: Suche · Umschalter Onlineshop/Fachmarkt · (im Fachmarkt-Bereich dessen
+ * Wechsel Shop/Fachmarkt im Umschalter lässt das Menü offen; es schließt nur
+ * über das X, Escape oder wenn ein Eintrag gewählt wird.
+ *
+ * Aufbau: Umschalter Onlineshop/Fachmarkt · (im Fachmarkt-Bereich dessen
  * Menü) · Sortiment als Akkordeon · Muster-Button · Wunschliste · Fachmarkt.
  *
  * Drei Schriftstufen: Hauptpunkte 17px fett, Unterpunkte 16px normal,
@@ -43,7 +51,14 @@ const KICKER = 'text-xs font-[family-name:var(--font-poppins-bold)] uppercase tr
  * das erlaubt die Slide-Animation und nimmt die Inhalte gleichzeitig aus
  * Tab-Reihenfolge und Screenreader-Baum.
  */
-export default function ShopMobileMenu({ isOpen, onClose, promoActive = false, bereich = 'shop' }: ShopMobileMenuProps) {
+export default function ShopMobileMenu({
+  isOpen,
+  onClose,
+  promoActive = false,
+  bereich = 'shop',
+  top,
+  onBereichWechsel,
+}: ShopMobileMenuProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   // Aufgeklappte Unterliste beim Schließen zurücksetzen.
@@ -59,17 +74,16 @@ export default function ShopMobileMenu({ isOpen, onClose, promoActive = false, b
       role="dialog"
       aria-modal="true"
       aria-labelledby="shop-mobile-menu-titel"
-      className={`fixed inset-0 z-[4] flex flex-col bg-white transition-transform duration-300 ease-in-out lg:hidden ${
-        isOpen ? 'visible translate-x-0' : 'invisible -translate-x-full'
+      style={{ top }}
+      className={`fixed inset-x-0 bottom-0 z-[4] flex flex-col bg-white shadow-[0_-1px_0_rgba(0,0,0,0.08)] transition-[opacity,transform] duration-300 ease-out lg:hidden ${
+        isOpen ? 'visible translate-y-0 opacity-100' : 'invisible -translate-y-2 opacity-0'
       }`}
     >
       <FensterKopf titel="Menü" titelId="shop-mobile-menu-titel" onClose={onClose} schliessenLabel="Menü schließen" />
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(24px+env(safe-area-inset-bottom,0px))]">
         <div className="flex flex-col gap-3 px-4 pt-4 pb-2">
-          {/* Nur im offenen Menü rendern: geschlossen bleibt nichts im Tab-Zyklus */}
-          {isOpen && <LiveSearch size="md" className="w-full" />}
-          <BereichUmschalter bereich={bereich} hell kurz />
+          <BereichUmschalter bereich={bereich} hell kurz onWechsel={onBereichWechsel} />
         </div>
 
         {bereich === 'fachmarkt' && (
@@ -190,11 +204,13 @@ export default function ShopMobileMenu({ isOpen, onClose, promoActive = false, b
         </nav>
 
         <div className="flex flex-col gap-3 px-4 pt-6">
+          {/* Gleiche Optik wie der Muster-Button der Produktseite (grün, Musterbox-Symbol) */}
           <Link
             href={MUSTER_LINK.href}
             onClick={onClose}
-            className="flex min-h-12 items-center justify-center rounded-lg bg-brand px-4 text-base font-[family-name:var(--font-poppins-bold)] text-white"
+            className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-cta px-4 text-base font-[family-name:var(--font-poppins-bold)] text-white transition-colors hover:bg-cta-dark"
           >
+            <Image src="/images/Icons/musterbox-weiss.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />
             {MUSTER_LINK.label}
           </Link>
           <Link

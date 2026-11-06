@@ -54,6 +54,21 @@ export default function Header({
   const headerRef = useRef<HTMLElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
   const searchButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileRowRef = useRef<HTMLDivElement>(null);
+  const [menuTop, setMenuTop] = useState(96);
+  // Wechsel Shop/Fachmarkt im offenen Menü: der folgende Seitenwechsel soll das
+  // Menü nicht schließen.
+  const keepMenuOpenRef = useRef(false);
+
+  const measureMenuTop = useCallback(() => {
+    if (mobileRowRef.current) setMenuTop(Math.round(mobileRowRef.current.getBoundingClientRect().bottom));
+  }, []);
+
+  const openMenu = useCallback(() => {
+    measureMenuTop();
+    setIsSearchOpen(false);
+    setIsMenuOpen(true);
+  }, [measureMenuTop]);
 
   const closeMenu = useCallback(() => {
     setIsMenuOpen(false);
@@ -71,9 +86,20 @@ export default function Header({
   // Seitenwechsel (z. B. Suchtreffer angetippt) schließt Menü und Suche.
   const pathname = usePathname();
   useEffect(() => {
-    setIsMenuOpen(false);
     setIsSearchOpen(false);
-  }, [pathname]);
+    if (keepMenuOpenRef.current) {
+      keepMenuOpenRef.current = false;
+      requestAnimationFrame(measureMenuTop);
+      return;
+    }
+    setIsMenuOpen(false);
+  }, [pathname, measureMenuTop]);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    window.addEventListener('resize', measureMenuTop);
+    return () => window.removeEventListener('resize', measureMenuTop);
+  }, [isMenuOpen, measureMenuTop]);
 
   // Scroll-Lock + Body-Klasse, über die Floating-Buttons und das
   // Trusted-Shops-Badge ausgeblendet werden (globals.css).
@@ -175,11 +201,11 @@ export default function Header({
 
         {/* Zeile 2 — Header-Zeile Mobile: Burger links, Logo, Aktionen rechts */}
         <div className="lg:hidden">
-          <div className="flex h-14 items-center gap-2 px-4">
+          <div ref={mobileRowRef} className="flex h-14 items-center gap-2 px-4">
             <button
               type="button"
               ref={burgerRef}
-              onClick={() => setIsMenuOpen((prev) => !prev)}
+              onClick={() => (isMenuOpen ? closeMenu() : openMenu())}
               aria-expanded={isMenuOpen}
               aria-controls="shop-mobile-menu"
               aria-label={isMenuOpen ? 'Menü schließen' : 'Menü öffnen'}
@@ -196,7 +222,10 @@ export default function Header({
               <button
                 type="button"
                 ref={searchButtonRef}
-                onClick={() => setIsSearchOpen(true)}
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsSearchOpen(true);
+                }}
                 aria-label="Suche öffnen"
                 aria-expanded={isSearchOpen}
                 aria-controls="mobile-suche"
@@ -216,7 +245,16 @@ export default function Header({
       </div>
 
 
-      <ShopMobileMenu isOpen={isMenuOpen} onClose={closeMenu} promoActive={Boolean(promoBanner)} bereich={bereich} />
+      <ShopMobileMenu
+        isOpen={isMenuOpen}
+        onClose={closeMenu}
+        promoActive={Boolean(promoBanner)}
+        bereich={bereich}
+        top={menuTop}
+        onBereichWechsel={() => {
+          keepMenuOpenRef.current = true;
+        }}
+      />
 
       <CartDrawer isOpen={isCartDrawerOpen} onClose={closeCartDrawer} />
     </header>

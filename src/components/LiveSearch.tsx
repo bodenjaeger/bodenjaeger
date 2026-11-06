@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Search } from 'lucide-react';
 import { SEARCH_PLACEHOLDER } from '@/content/shopNav';
+import { formatPrice } from '@/lib/cart-utils';
 
 interface SearchResult {
   id: number;
@@ -38,8 +39,9 @@ interface LiveSearchProps {
 /**
  * Suchfeld des Shop-Headers mit Live-Ergebnissen.
  *
- * Aufbau nach Mockup: dunkles Eingabefeld (#0C0C0C) und direkt anschließend
- * rechts ein roter Button mit weißer Lupe. Im Header klappt die Suche über das
+ * Aufbau: Suchfeld als Pille (weiche helle Fläche auf dem dunklen Kopf, beim
+ * Fokus nur ein dezenter Ring), rechts ein runder Suchen-Button. Treffer als
+ * weiße Karte mit Kategorie-Chips, Produktbildern und Preisen. Im Header klappt die Suche über das
  * Lupen-Symbol auf (Desktop als Leiste unter der Hauptzeile, mobil als Fenster).
  */
 export default function LiveSearch({ size = 'lg', className = '', autoFocus = false }: LiveSearchProps) {
@@ -51,8 +53,8 @@ export default function LiveSearch({ size = 'lg', className = '', autoFocus = fa
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const heightClass = size === 'lg' ? 'h-[52px]' : 'h-[48px]';
-  const buttonWidthClass = size === 'lg' ? 'w-[65px]' : 'w-[56px]';
+  const heightClass = size === 'lg' ? 'h-[52px]' : 'h-[46px]';
+  const buttonWidthClass = size === 'lg' ? 'h-11 w-11' : 'h-9 w-9';
   // Mobil bewusst 16px: iOS Safari zoomt beim Fokus in jedes Eingabefeld mit
   // kleinerer Schrift hinein. 16px verhindert das ohne `user-scalable=no`,
   // das das Zoomen auf der ganzen Seite abschalten würde.
@@ -122,7 +124,7 @@ export default function LiveSearch({ size = 'lg', className = '', autoFocus = fa
     groupedResults.products.flatMap((p) => p.categories ?? []).find((c) => c.name === name)?.slug
     ?? name.toLowerCase().replace(/\s+/g, '-');
 
-  // Highlight search term in text
+  // Suchbegriff fett hervorheben (kein gelber Marker: Gelb ist kein Shop-Akzent)
   const highlightText = (text: string, search: string) => {
     if (!search.trim()) return text;
 
@@ -132,7 +134,7 @@ export default function LiveSearch({ size = 'lg', className = '', autoFocus = fa
       <>
         {parts.map((part, index) =>
           part.toLowerCase() === search.toLowerCase() ? (
-            <mark key={index} className="bg-yellow-200 font-semibold">{part}</mark>
+            <span key={index} className="font-[family-name:var(--font-poppins-bold)]">{part}</span>
           ) : (
             <span key={index}>{part}</span>
           )
@@ -141,9 +143,17 @@ export default function LiveSearch({ size = 'lg', className = '', autoFocus = fa
     );
   };
 
+  const query = searchQuery.trim();
+  const kicker = 'px-5 pt-4 pb-2 text-[11px] font-[family-name:var(--font-poppins-bold)] uppercase tracking-[0.12em] text-mid';
+
   return (
     <div ref={searchRef} className={`relative ${className}`}>
-      <form onSubmit={handleSubmit} className={`flex w-full items-stretch ${heightClass}`}>
+      {/* Pillenform wie die Chips: weiche Fläche, beim Fokus nur ein dezenter Ring */}
+      <form
+        onSubmit={handleSubmit}
+        className={`flex w-full items-center gap-1 rounded-full bg-hdr-field pr-1 pl-4 ring-1 ring-white/10 transition-shadow focus-within:ring-white/35 ${heightClass}`}
+      >
+        <Search className="h-5 w-5 flex-shrink-0 text-white/70" strokeWidth={2} aria-hidden="true" />
         <input
           ref={inputRef}
           autoFocus={autoFocus}
@@ -159,53 +169,42 @@ export default function LiveSearch({ size = 'lg', className = '', autoFocus = fa
           }}
           aria-label="Produktsuche"
           autoComplete="off"
-          // Fokusring weiß statt Markenrot: Rot auf dem Feld ergibt nur 2,49:1
-          // und verfehlt die 3:1, die ein Fokusindikator braucht. Weiß liegt bei
-          // 10,9:1 — und alle übrigen Header-Bedienelemente ringen ohnehin weiß.
-          className={`min-w-0 flex-1 rounded-l-md bg-hdr-field px-4 text-white placeholder:text-white focus:outline-none focus-visible:inset-ring-2 focus-visible:inset-ring-white ${textClass} [&::-webkit-search-cancel-button]:hidden`}
+          className={`h-full min-w-0 flex-1 bg-transparent px-2 text-white placeholder:text-white/60 focus:outline-none ${textClass} [&::-webkit-search-cancel-button]:hidden`}
         />
-        {/* Lupenfeld trägt denselben Grauton wie das Eingabefeld — Feld und
-            Button bilden zusammen eine durchgehende Fläche. Der Trennstrich
-            links hält die Schaltfläche trotzdem als solche erkennbar. */}
         <button
           type="submit"
           aria-label="Suchen"
-          className={`flex flex-shrink-0 items-center justify-center rounded-r-md border-l border-hdr-line bg-hdr-field transition-colors hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${buttonWidthClass}`}
+          className={`flex flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${buttonWidthClass}`}
         >
-          <Search className="h-5 w-5 text-white" strokeWidth={2} aria-hidden="true" />
+          {loading ? (
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />
+          ) : (
+            <Search className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
+          )}
         </button>
       </form>
 
-      {/* Dropdown with results */}
-      {isOpen && searchQuery.trim().length >= 2 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-[100] max-h-[70vh] overflow-y-auto">
-          {loading && (
-            <div className="p-4 text-center text-gray-500">
-              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-brand"></div>
-            </div>
-          )}
-
+      {/* Trefferliste */}
+      {isOpen && query.length >= 2 && (
+        <div className="absolute top-full right-0 left-0 z-[100] mt-3 max-h-[70vh] overflow-y-auto overscroll-contain rounded-xl bg-white text-dark shadow-[0_20px_50px_rgba(0,0,0,0.25)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {!loading && results.length === 0 && (
-            <div className="p-4 text-center text-gray-500">
-              Keine Ergebnisse gefunden
+            <div className="px-5 py-6 text-center text-sm text-mid">
+              Keine Treffer für „{query}“. Probier einen anderen Begriff oder ruf uns an: 02433 938884
             </div>
           )}
 
-          {!loading && results.length > 0 && (
-            <div>
-              {/* Categories Section */}
+          {results.length > 0 && (
+            <div className="pb-2">
               {uniqueCategories.length > 0 && (
-                <div className="border-b border-gray-100">
-                  <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase">
-                    Kategorien
-                  </div>
-                  <div className="py-2">
-                    {uniqueCategories.slice(0, 3).map((category, index) => (
+                <div>
+                  <p className={kicker}>Kategorien</p>
+                  <div className="flex flex-wrap gap-2 px-5 pb-2">
+                    {uniqueCategories.slice(0, 4).map((category) => (
                       <Link
-                        key={index}
+                        key={category}
                         href={`/category/${categorySlug(category)}`}
                         onClick={() => setIsOpen(false)}
-                        className="block px-4 py-2 hover:bg-gray-50 text-sm text-dark"
+                        className="inline-flex min-h-9 items-center rounded-full border border-ash px-3.5 text-[13px] text-dark transition-colors hover:border-mid"
                       >
                         {klickVinylName(category)}
                       </Link>
@@ -214,75 +213,55 @@ export default function LiveSearch({ size = 'lg', className = '', autoFocus = fa
                 </div>
               )}
 
-              {/* Products Section */}
-              <div>
-                <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase">
-                  Produkte
-                </div>
-                <div className="py-2">
-                  {results.map((product) => (
+              <p className={kicker}>Produkte</p>
+              <ul>
+                {results.map((product) => (
+                  <li key={product.id}>
                     <Link
-                      key={product.id}
                       href={`/products/${product.slug}`}
                       onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-3 px-5 py-2 transition-colors hover:bg-pale"
                     >
-                      {/* Product Image */}
-                      <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded overflow-hidden">
-                        {product.images.length > 0 ? (
+                      <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-pale">
+                        {product.images.length > 0 && (
                           <Image
                             src={product.images[0].src}
                             alt={klickVinylName(product.images[0].alt || product.name)}
-                            width={48}
-                            height={48}
-                            className="object-cover w-full h-full"
+                            width={56}
+                            height={56}
+                            className="h-full w-full object-cover"
                           />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                            Kein Bild
-                          </div>
                         )}
                       </div>
-
-                      {/* Product Info */}
-                      <div className="flex-grow min-w-0">
-                        <div className="text-sm font-medium text-dark">
-                          {highlightText(klickVinylName(product.name), searchQuery.trim())}
-                        </div>
-                        <div className="text-xs text-gray-500 truncate">
-                          {product.categories && product.categories.length > 0 && (
-                            <span>{klickVinylName(product.categories[0].name)}</span>
-                          )}
-                          {product.sku && (
-                            <span className="ml-2">
-                              {product.categories && product.categories.length > 0 && ' • '}
-                              SKU: {highlightText(product.sku, searchQuery.trim())}
-                            </span>
-                          )}
-                        </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm leading-snug text-dark">{highlightText(klickVinylName(product.name), query)}</p>
+                        {product.categories && product.categories.length > 0 && (
+                          <p className="truncate text-xs text-mid">{klickVinylName(product.categories[0].name)}</p>
+                        )}
                       </div>
-
-                      {/* Price */}
-                      <div className="flex-shrink-0 text-sm font-semibold text-dark">
-                        {parseFloat(product.price).toFixed(2)} €
+                      <div className="flex-shrink-0 text-sm font-[family-name:var(--font-poppins-bold)] text-dark tabular-nums">
+                        {formatPrice(parseFloat(product.price))} €
                       </div>
                     </Link>
-                  ))}
-                </div>
-              </div>
+                  </li>
+                ))}
+              </ul>
 
-              {/* View all results link */}
-              <div className="border-t border-gray-100">
+              <div className="px-5 pt-2">
                 <Link
-                  href={`/search?q=${encodeURIComponent(searchQuery)}`}
+                  href={`/search?q=${encodeURIComponent(query)}`}
                   onClick={() => setIsOpen(false)}
-                  className="block px-4 py-3 text-center text-sm font-medium text-brand hover:bg-gray-50"
+                  className="flex min-h-11 items-center justify-center rounded-lg bg-pale text-sm font-[family-name:var(--font-poppins-bold)] text-dark transition-colors hover:bg-ash"
                 >
-                  {results.length >= 50
-                    ? `Alle Ergebnisse anzeigen (${results.length}+)`
-                    : `Alle ${results.length} Ergebnisse anzeigen`}
+                  {results.length >= 50 ? `Alle Ergebnisse anzeigen (${results.length}+)` : `Alle ${results.length} Ergebnisse anzeigen`}
                 </Link>
               </div>
+            </div>
+          )}
+
+          {loading && results.length === 0 && (
+            <div className="flex justify-center px-5 py-6">
+              <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-ash border-t-brand" aria-hidden="true" />
             </div>
           )}
         </div>
