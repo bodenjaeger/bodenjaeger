@@ -9,6 +9,7 @@ import UnifiedProductCard from '@/components/UnifiedProductCard';
 import { SORT_OPTIONS, listingHref } from '@/lib/category-listing';
 import { filtersToQuery, hasActiveFilters, type FilterState } from '@/lib/category-filters';
 import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar, CategoryFilterToggle, ListingToolbar, useFilterCollapse, useFilterNavigation } from '@/components/category/CategoryFilters';
+import { fetteZeilenAlsUeberschrift, kategorieIntro } from '@/lib/klick-vinyl';
 import PromoTile from '@/components/black-weeks/PromoTile';
 import { PROMO_TILE_EVERY, PROMO_TILE_POSITION } from '@/lib/black-weeks';
 
@@ -50,7 +51,10 @@ interface CategoryPageClientProps {
   filterState?: FilterState | null;
 }
 
+const SET_CATEGORIES = new Set(['vinylboden', 'klebe-vinyl', 'rigid-vinyl', 'luxus-vinyl', 'coretec', 'primecore', 'o-r-c-a', 'laminat', 'parkett']);
+
 export default function CategoryPageClient({
+  slug,
   categoryName,
   categoryDescription,
   categoryImage,
@@ -111,17 +115,17 @@ export default function CategoryPageClient({
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-pale">
         <div className="content-container py-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">{categoryName}</h1>
 
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-6">
             <strong>Fehler beim Laden der Produkte:</strong> {error}
           </div>
 
           <button
             onClick={reload}
-            className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-bold transition-colors"
           >
             Erneut versuchen
           </button>
@@ -131,82 +135,94 @@ export default function CategoryPageClient({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-pale">
       <div className="content-container py-8">
         {/* Category Header */}
         <div className="mb-8">
           {/* Ohne Beschreibung gibt es keinen Beschreibungsblock (dort sitzt sonst
               die H1) — die H1 muss trotzdem immer da sein. Stil wie im Fehlerzustand. */}
-          {!categoryDescription && (
+          {!categoryDescription && !categoryImage?.src && (
             <h1 className="text-3xl font-bold text-gray-900 mb-8">{categoryName}</h1>
           )}
 
-          {/* Category Image & Description - Two Column Layout */}
-          {(categoryImage || categoryDescription) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {/* Left: Category Image */}
-              {categoryImage && categoryImage.src && (
-                <div className="relative aspect-video bg-gray-100 rounded-md overflow-hidden">
-                  <Image
-                    src={categoryImage.src}
-                    alt={categoryImage.alt || categoryName}
-                    fill
-                    className="object-cover"
-                    priority
-                    quality={85}
-                  />
-                </div>
-              )}
-
-              {/* Right: Category Name & Description */}
-              {categoryDescription && (
-                <div className="bg-gray-100 rounded-md p-6 flex flex-col">
-                  {/* Category Name as Heading */}
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{categoryName}</h1>
-
-                  {/* Category Description */}
-                  <div className="text-gray-900 text-base md:text-lg leading-relaxed md:leading-loose flex-grow">
-                    {(() => {
-                      // Remove HTML tags and get first 200 characters (mobile) or 400 (desktop)
-                      const plainText = categoryDescription
-                        .replace(/<[^>]+>/g, '')
-                        .replace(/&nbsp;/g, ' ')
-                        .replace(/&amp;/g, '&')
-                        .replace(/&lt;/g, '<')
-                        .replace(/&gt;/g, '>')
-                        .trim();
-
-                      // Mobile: 200 chars, Desktop: 400 chars (we show both, CSS handles display)
-                      const mobilePreview = plainText.length > 200
-                        ? plainText.substring(0, 200) + '...'
-                        : plainText;
-
-                      const desktopPreview = plainText.length > 400
-                        ? plainText.substring(0, 400) + '...'
-                        : plainText;
-
-                      return (
-                        <>
-                          <span className="md:hidden">{mobilePreview}</span>
-                          <span className="hidden md:inline">{desktopPreview}</span>
-                        </>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Weiterlesen Link */}
-                  {categoryDescription.replace(/<[^>]+>/g, '').trim().length > 200 && (
+          {/* Kopf im Karriere-Stil: Auf dem Handy kompakt, damit die Produkte schnell sichtbar sind */}
+          {(categoryImage?.src || categoryDescription) && (() => {
+            const intro = categoryDescription ? kategorieIntro(categoryDescription) : '';
+            const mobileIntro = intro.length > 110 ? `${intro.slice(0, 110).trimEnd()} …` : intro;
+            const desktopIntro = intro.length > 320 ? `${intro.slice(0, 320).trimEnd()} …` : intro;
+            return (
+              <section className={`mb-6 overflow-hidden rounded-2xl bg-dark text-white ${categoryImage?.src ? 'md:grid md:grid-cols-2' : ''}`}>
+                <div className="flex flex-col p-5 md:p-10 lg:p-14">
+                  <h1 className="text-[32px] font-bold leading-[1.08] tracking-[-0.03em] text-white md:text-5xl lg:text-[60px]">
+                    {categoryName}{SET_CATEGORIES.has(slug) && <span className="text-[#ff3b41]">, direkt im Set.</span>}
+                  </h1>
+                  {intro && (
+                    <p className="mt-3 text-sm leading-relaxed text-white md:mt-5 md:text-[17px]">
+                      <span className="md:hidden">{mobileIntro}</span>
+                      <span className="hidden md:inline">{desktopIntro}</span>
+                    </p>
+                  )}
+                  {categoryDescription && categoryDescription.replace(/<[^>]+>/g, '').trim().length > 110 && (
                     <a
                       href="#category-full-description"
-                      className="text-gray-900 font-medium mt-4 inline-block hover:underline"
+                      className="mt-4 inline-flex min-h-11 w-fit items-center gap-1 text-sm font-bold text-white underline underline-offset-4 hover:text-[#ff3b41] md:mt-6 md:text-base"
                     >
-                      Weiterlesen →
+                      Weiterlesen <span aria-hidden="true">→</span>
                     </a>
                   )}
                 </div>
-              )}
-            </div>
-          )}
+                {categoryImage?.src && (
+                  <div className="relative hidden min-h-[320px] md:block">
+                    <Image
+                      src={categoryImage.src}
+                      alt={categoryImage.alt || categoryName}
+                      fill
+                      sizes="50vw"
+                      className="object-cover"
+                      priority
+                      quality={85}
+                    />
+                  </div>
+                )}
+              </section>
+            );
+          })()}
+
+          {/* Schnellwahl: setzt Optik- und Marken-Filter direkt auf dieser Seite */}
+          {filterState && (() => {
+            const quick = ['optik', 'marke']
+              .map((key) => filterState.facets.find((facet) => facet.key === key))
+              .filter((facet): facet is NonNullable<typeof facet> => Boolean(facet))
+              .flatMap((facet) => facet.values.filter((value) => value.count > 0 || value.selected).map((value) => ({ facet, value })));
+            if (quick.length === 0) return null;
+            const toggle = (key: string, valueSlug: string) => {
+              const current = filterState.active.values[key] ?? [];
+              const next = current.includes(valueSlug) ? current.filter((s) => s !== valueSlug) : [...current, valueSlug];
+              const values = { ...filterState.active.values };
+              if (next.length > 0) values[key] = next;
+              else delete values[key];
+              apply({ ...filterState.active, values });
+            };
+            return (
+              <div role="group" aria-label="Beliebte Filter" className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <span className="shrink-0 text-sm font-bold text-dark">Beliebt:</span>
+                {quick.map(({ facet, value }) => (
+                  <button
+                    key={`${facet.key}-${value.slug}`}
+                    type="button"
+                    disabled={pending}
+                    aria-pressed={value.selected}
+                    onClick={() => toggle(facet.key, value.slug)}
+                    className={`inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full border px-4 text-sm transition-colors disabled:cursor-wait ${
+                      value.selected ? 'border-[#d11820] bg-[#d11820] text-white' : 'border-ash bg-white text-dark hover:border-mid'
+                    }`}
+                  >
+                    {value.label}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
 
           <ListingToolbar
             filterControls={filterState ? (
@@ -261,14 +277,14 @@ export default function CategoryPageClient({
             {isFiltered ? (
               <Link
                 href={listingHref(pathname, 1, sortBy)}
-                className="inline-block bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="inline-block bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-bold transition-colors"
               >
                 Filter löschen
               </Link>
             ) : (
               <button
                 onClick={reload}
-                className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-bold transition-colors"
               >
                 Aktualisieren
               </button>
@@ -290,7 +306,7 @@ export default function CategoryPageClient({
 
           // Echte Links (?page=n) statt onClick, damit Crawler alle Seiten
           // und damit alle Produkte ohne JavaScript erreichen.
-          const navClass = 'px-3 py-2 rounded-lg border border-gray-300 text-gray-500 transition-colors shrink-0';
+          const navClass = 'px-3 py-2 rounded-lg border border-ash bg-white text-mid transition-colors shrink-0';
           const prevLabel = (
             <>
               <span className="hidden sm:inline">Zurück</span>
@@ -311,7 +327,7 @@ export default function CategoryPageClient({
                   href={listingHref(pathname, currentPage - 1, sortBy, filterQuery)}
                   rel="prev"
                   aria-label="Vorherige Seite"
-                  className={`${navClass} hover:bg-gray-100`}
+                  className={`${navClass} hover:border-mid`}
                 >
                   {prevLabel}
                 </Link>
@@ -335,7 +351,7 @@ export default function CategoryPageClient({
                     className={`px-3 py-2 rounded-lg border transition-colors shrink-0 ${
                       currentPage === page
                         ? 'bg-brand text-white border-brand'
-                        : 'border-gray-300 text-gray-500 hover:bg-gray-100'
+                        : 'border-ash bg-white text-mid hover:border-mid'
                     }`}
                   >
                     {page}
@@ -348,7 +364,7 @@ export default function CategoryPageClient({
                   href={listingHref(pathname, currentPage + 1, sortBy, filterQuery)}
                   rel="next"
                   aria-label="Nächste Seite"
-                  className={`${navClass} hover:bg-gray-100`}
+                  className={`${navClass} hover:border-mid`}
                 >
                   {nextLabel}
                 </Link>
@@ -364,27 +380,22 @@ export default function CategoryPageClient({
         </div>
         </div>
 
-        {/* Full Category Description at bottom */}
-        {categoryDescription && categoryDescription.replace(/<[^>]+>/g, '').trim().length > 200 && (
-          <div id="category-full-description" className="mt-16 bg-gray-100 rounded-md p-8">
-            <h2 className="text-2xl font-bold text-dark mb-6">
-              Über {categoryName}
+        {/* Ausführlicher Kategorietext */}
+        {categoryDescription && categoryDescription.replace(/<[^>]+>/g, '').trim().length > 110 && (
+          <section id="category-full-description" className="mt-12 rounded-2xl bg-white p-5 md:p-10 lg:p-12">
+            <h2 className="mb-6 text-2xl font-bold tracking-[-0.02em] text-dark md:text-3xl">
+              {categoryName} kaufen: Das solltest du wissen
             </h2>
             <div
-              className="text-dark prose prose-lg max-w-none
-                [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-dark [&_h3]:mt-6 [&_h3]:mb-4
-                [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-dark [&_h2]:mt-8 [&_h2]:mb-4
-                [&_p]:text-dark [&_p]:leading-relaxed [&_p]:mb-6
-                [&_ul]:text-dark [&_ul]:mb-4 [&_ul]:space-y-2
-                [&_ol]:text-dark [&_ol]:mb-4 [&_ol]:space-y-2
-                [&_li]:text-dark [&_li]:leading-relaxed
-                [&_strong]:text-dark [&_strong]:font-semibold
-                [&_em]:text-dark
-                [&_br]:block [&_br]:my-4
-                whitespace-pre-line"
-              dangerouslySetInnerHTML={{ __html: categoryDescription }}
+              className="whitespace-pre-line text-[15px] leading-relaxed text-dark lg:columns-2 lg:gap-14
+                [&_h3]:mb-2 [&_h3]:mt-6 [&_h3]:break-after-avoid [&_h3]:text-[17px] [&_h3]:font-bold [&_h3]:text-dark [&_h3:first-child]:mt-0
+                [&_p]:mb-4 [&_strong]:font-semibold
+                [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:whitespace-normal [&_ul]:pl-5
+                [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:whitespace-normal [&_ol]:pl-5
+                [&_a]:underline"
+              dangerouslySetInnerHTML={{ __html: fetteZeilenAlsUeberschrift(categoryDescription) }}
             />
-          </div>
+          </section>
         )}
       </div>
     </div>

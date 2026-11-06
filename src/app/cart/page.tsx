@@ -1,5 +1,6 @@
 'use client';
 
+import { klickVinylName } from '@/lib/klick-vinyl';
 import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -135,7 +136,7 @@ export default function CartPage() {
                     <div className="w-12 h-12 flex-shrink-0 rounded overflow-hidden">
                       <Image
                         src={item.product.images[0]?.src || "https://via.placeholder.com/48x48/f3f4f6/9ca3af?text=Kein+Bild"}
-                        alt={item.product.images[0]?.alt || item.product.name}
+                        alt={klickVinylName(item.product.images[0]?.alt || item.product.name)}
                         width={48}
                         height={48}
                         className="object-cover w-full h-full"
@@ -145,7 +146,7 @@ export default function CartPage() {
                       href={`/products/${item.product.slug}`}
                       className="flex-1 text-sm font-medium text-dark hover:text-brand transition-colors"
                     >
-                      {item.product.name}
+                      {klickVinylName(item.product.name)}
                     </Link>
                     <button
                       onClick={() => handleRemove(item.id)}

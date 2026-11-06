@@ -1,3 +1,4 @@
+import { klickVinylName } from '@/lib/klick-vinyl';
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { wooCommerceClient, type StoreApiProduct } from "@/lib/woocommerce";
 import ProductPageContent from "@/components/product/ProductPageContent";
@@ -265,9 +266,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const breadcrumbItems = [
     { name: 'Startseite', url: SITE_URL },
     ...(primaryCategory
-      ? [{ name: primaryCategory.name, url: categoryUrl(primaryCategory.slug) }]
+      ? [{ name: klickVinylName(primaryCategory.name), url: categoryUrl(primaryCategory.slug) }]
       : []),
-    { name: product.name, url: productUrl(product.slug) },
+    { name: klickVinylName(product.name), url: productUrl(product.slug) },
   ];
 
   return (
@@ -324,7 +325,7 @@ export async function generateMetadata({ params }: ProductPageProps) {
     const description = buildProductMetaDescription(product, details?.seoDescription);
 
     return buildMetadata({
-      title: `${product.name} | Bodenjäger`,
+      title: `${klickVinylName(product.name)} | Bodenjäger`,
       description,
       path: `/products/${product.slug}`,
       image: product.images?.[0]?.src,

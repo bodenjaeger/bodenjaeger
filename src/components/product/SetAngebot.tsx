@@ -1,5 +1,6 @@
 'use client';
 
+import { klickVinylName } from '@/lib/klick-vinyl';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { createPortal } from 'react-dom';
@@ -69,11 +70,11 @@ function renderZeile({ key, label, name, image, regular, preis, aendern }: SetZe
   return (
     <div key={key} className="grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-3 py-2.5">
       <div className="relative h-[52px] w-[52px] overflow-hidden rounded bg-pale">
-        <Image src={image} alt={name} fill sizes="52px" className="object-cover" />
+        <Image src={image} alt={klickVinylName(name)} fill sizes="52px" className="object-cover" />
       </div>
       <div className="min-w-0">
         <p className="text-sm leading-tight text-dark">
-          <span className="text-mid">{label} – </span>{name}
+          <span className="text-mid">{label} – </span>{klickVinylName(name)}
         </p>
         {regular && <p className="mt-0.5 text-xs text-mid line-through">{regular}</p>}
         {aendern && (

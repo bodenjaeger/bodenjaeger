@@ -1,5 +1,6 @@
 'use client';
 
+import { klickVinylName } from '@/lib/klick-vinyl';
 import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -407,11 +408,11 @@ export default function ProductPageContent({
               {primaryCategory && (
                 <>
                   <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  <Link href={categoryHref ?? `/category/${primaryCategory.slug}`} className="hover:text-dark">{primaryCategory.name}</Link>
+                  <Link href={categoryHref ?? `/category/${primaryCategory.slug}`} className="hover:text-dark">{klickVinylName(primaryCategory.name)}</Link>
                 </>
               )}
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="font-bold text-dark" aria-current="page">{product.name}</span>
+              <span className="font-bold text-dark" aria-current="page">{klickVinylName(product.name)}</span>
             </nav>
 
             {/* Desktop: Spalten laufen mit und enden bündig, danach folgt das Zubehör */}

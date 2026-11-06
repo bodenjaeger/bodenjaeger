@@ -1,5 +1,6 @@
 'use client';
 
+import { klickVinylName } from '@/lib/klick-vinyl';
 import Image from 'next/image';
 import { Check, FileText } from 'lucide-react';
 import StarRating from '@/components/footer/StarRating';
@@ -39,7 +40,7 @@ export default function ProductSummary({
 
   return (
     <div className="min-w-0">
-      <h1 className="text-2xl font-bold leading-tight text-dark lg:text-[32px]">{product.name}</h1>
+      <h1 className="text-2xl font-bold leading-tight text-dark lg:text-[32px]">{klickVinylName(product.name)}</h1>
       {subtitle && <p className="mt-2 text-sm text-mid">{subtitle}</p>}
 
       {/* Bewusst als Shopbewertung beschriftet: keine Bewertung dieses Produkts */}

@@ -64,7 +64,7 @@ export const SHOP_NAV: NavItem[] = [
     allLabel: 'Alle Vinylböden anzeigen',
     children: [
       { id: 'klebe-vinyl', label: 'Klebe-Vinyl', href: '/category/klebe-vinyl' },
-      { id: 'rigid-vinyl', label: 'Rigid-Vinyl', href: '/category/rigid-vinyl' },
+      { id: 'rigid-vinyl', label: 'Klick-Vinyl', href: '/category/rigid-vinyl' },
       { id: 'vinyl-marken', label: 'Marken', href: '', isGroupLabel: true },
       { id: 'coretec', label: 'COREtec', href: '/category/coretec' },
       { id: 'primecore', label: 'primeCORE', href: '/category/primecore' },

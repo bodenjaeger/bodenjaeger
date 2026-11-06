@@ -28,7 +28,7 @@ export const categoriesData: Category[] = [
     hasChildren: true,
     children: [
       { id: '24', label: 'Klebe-Vinyl', slug: 'klebe-vinyl', hasChildren: false },
-      { id: '17', label: 'Rigid-Vinyl', slug: 'rigid-vinyl', hasChildren: false },
+      { id: '17', label: 'Klick-Vinyl', slug: 'rigid-vinyl', hasChildren: false },
       { id: 'marken-vinyl', label: 'Marken', slug: '', hasChildren: false, isGroupLabel: true },
       { id: '127', label: 'COREtec', slug: 'coretec', hasChildren: false },
       { id: '125', label: 'primeCORE', slug: 'primecore', hasChildren: false },

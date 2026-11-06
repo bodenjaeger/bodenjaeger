@@ -9,7 +9,7 @@ import { isPromoActive } from "@/lib/black-weeks";
 export const metadata: Metadata = buildMetadata({
   path: '/',
   title: 'Vinyl, Laminat & Parkett online kaufen | Bodenjäger',
-  description: 'Rigid-Vinyl, Klebe-Vinyl, Laminat und Parkett von COREtec, primeCORE & Co. – mit Set-Angeboten, Fachmarkt in Hückelhoven und persönlicher Beratung.',
+  description: 'Klick-Vinyl, Klebe-Vinyl, Laminat und Parkett von COREtec, primeCORE & Co. – mit Set-Angeboten, Fachmarkt in Hückelhoven und persönlicher Beratung.',
 });
 
 // Dynamic imports for below-the-fold components to reduce initial bundle size

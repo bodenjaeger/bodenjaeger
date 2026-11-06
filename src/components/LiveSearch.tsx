@@ -1,5 +1,6 @@
 'use client';
 
+import { klickVinylName } from '@/lib/klick-vinyl';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -114,6 +115,11 @@ export default function LiveSearch({ size = 'lg', className = '' }: LiveSearchPr
 
   const uniqueCategories = Array.from(groupedResults.categories);
 
+  // Link über den echten Slug: Der Anzeigename kann vom Slug abweichen (Klick-Vinyl → rigid-vinyl).
+  const categorySlug = (name: string) =>
+    groupedResults.products.flatMap((p) => p.categories ?? []).find((c) => c.name === name)?.slug
+    ?? name.toLowerCase().replace(/\s+/g, '-');
+
   // Highlight search term in text
   const highlightText = (text: string, search: string) => {
     if (!search.trim()) return text;
@@ -194,11 +200,11 @@ export default function LiveSearch({ size = 'lg', className = '' }: LiveSearchPr
                     {uniqueCategories.slice(0, 3).map((category, index) => (
                       <Link
                         key={index}
-                        href={`/category/${category.toLowerCase().replace(/\s+/g, '-')}`}
+                        href={`/category/${categorySlug(category)}`}
                         onClick={() => setIsOpen(false)}
                         className="block px-4 py-2 hover:bg-gray-50 text-sm text-dark"
                       >
-                        {category}
+                        {klickVinylName(category)}
                       </Link>
                     ))}
                   </div>
@@ -223,7 +229,7 @@ export default function LiveSearch({ size = 'lg', className = '' }: LiveSearchPr
                         {product.images.length > 0 ? (
                           <Image
                             src={product.images[0].src}
-                            alt={product.images[0].alt || product.name}
+                            alt={klickVinylName(product.images[0].alt || product.name)}
                             width={48}
                             height={48}
                             className="object-cover w-full h-full"
@@ -238,11 +244,11 @@ export default function LiveSearch({ size = 'lg', className = '' }: LiveSearchPr
                       {/* Product Info */}
                       <div className="flex-grow min-w-0">
                         <div className="text-sm font-medium text-dark">
-                          {highlightText(product.name, searchQuery.trim())}
+                          {highlightText(klickVinylName(product.name), searchQuery.trim())}
                         </div>
                         <div className="text-xs text-gray-500 truncate">
                           {product.categories && product.categories.length > 0 && (
-                            <span>{product.categories[0].name}</span>
+                            <span>{klickVinylName(product.categories[0].name)}</span>
                           )}
                           {product.sku && (
                             <span className="ml-2">

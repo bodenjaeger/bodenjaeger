@@ -1,6 +1,6 @@
 # Bodenjäger
 
-> Online-Shop und Fachmarkt für Bodenbeläge: Vinyl (Klebe-Vinyl, Rigid-Vinyl), Laminat, Parkett und Zubehör – mit Komplett-Sets aus Boden, Dämmung und Sockelleiste.
+> Online-Shop und Fachmarkt für Bodenbeläge: Vinyl (Klebe-Vinyl, Klick-Vinyl), Laminat, Parkett und Zubehör – mit Komplett-Sets aus Boden, Dämmung und Sockelleiste.
 
 ## Fachmarkt
 - [Bodenjäger Fachmarkt Hückelhoven](https://www.bodenjaeger.de/fachmarkt-hueckelhoven): Neckarstraße 9, 41836 Hückelhoven. Mo–Fr 9:00–18:30, Sa 9:00–14:00 Uhr.
@@ -8,7 +8,7 @@
 ## Sortiment
 - [Vinylboden](https://www.bodenjaeger.de/category/vinylboden)
 - [Klebe-Vinyl](https://www.bodenjaeger.de/category/klebe-vinyl)
-- [Rigid-Vinyl](https://www.bodenjaeger.de/category/rigid-vinyl)
+- [Klick-Vinyl](https://www.bodenjaeger.de/category/rigid-vinyl)
 - [Laminat](https://www.bodenjaeger.de/category/laminat)
 - [Parkett](https://www.bodenjaeger.de/category/parkett)
 - [Zubehör](https://www.bodenjaeger.de/category/zubehoer)

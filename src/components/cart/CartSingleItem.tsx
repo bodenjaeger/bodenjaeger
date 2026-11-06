@@ -1,5 +1,6 @@
 'use client';
 
+import { klickVinylName } from '@/lib/klick-vinyl';
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { CartItemBase } from '@/types/cart-drawer';
@@ -51,7 +52,7 @@ export default function CartSingleItem({
             {product.image ? (
               <Image
                 src={product.image}
-                alt={product.name}
+                alt={klickVinylName(product.name)}
                 width={48}
                 height={48}
                 className="object-cover w-full h-full"
@@ -65,7 +66,7 @@ export default function CartSingleItem({
             )}
           </div>
           <div className="flex-1 flex items-start justify-between">
-            <span className="text-sm font-semibold text-dark">{product.name}</span>
+            <span className="text-sm font-semibold text-dark">{klickVinylName(product.name)}</span>
             <span className="text-sm font-semibold text-dark ml-2">
               {formatPrice(product.total)} €
             </span>

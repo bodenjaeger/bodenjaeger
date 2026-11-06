@@ -13,7 +13,7 @@ interface Category {
 const categories: Category[] = [
   {
     id: 1,
-    name: 'Rigid-Vinyl',
+    name: 'Klick-Vinyl',
     description: 'Der wasserfeste Alleskönner',
     image: '/images/Startseite/Bodenkategorie Rigid-Vinyl.webp',
     slug: 'rigid-vinyl'
