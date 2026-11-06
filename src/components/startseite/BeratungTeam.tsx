@@ -6,8 +6,10 @@ import { MessageCircle, Phone } from 'lucide-react';
 import { TEAM_REIHEN } from '@/content/karriere';
 import { STANDORT } from '@/content/fachmarkt';
 import reviewsData from '@/data/google-reviews.json';
+import type { TrustedShopsRating } from '@/lib/trusted-shops';
 
-const WHATSAPP_HREF = 'https://wa.me/4915567017510';
+/* +49 15567 017510 – öffnet direkt den Chat in WhatsApp (Handy) bzw. WhatsApp Web, mit vorausgefülltem Text */
+const WHATSAPP_HREF = `https://wa.me/4915567017510?text=${encodeURIComponent('Hallo Bodenjäger, ich habe eine Frage zu meinem neuen Boden:')}`;
 
 /* Echte Google-Bewertungen aus data/google-reviews.json, nach Autor ausgewählt:
    Beratung, Lieferung deutschlandweit, Musterbox. */
@@ -47,7 +49,7 @@ function erreichbarkeit(datum: Date): { offen: boolean; text: string } {
   return { offen, text: `Gerade geschlossen – wieder erreichbar ${naechstes}` };
 }
 
-export default function BeratungTeam() {
+export default function BeratungTeam({ trustedShops }: { trustedShops: TrustedShopsRating | null }) {
   const [status, setStatus] = useState<{ offen: boolean; text: string } | null>(null);
 
   useEffect(() => {
@@ -127,6 +129,17 @@ export default function BeratungTeam() {
           <p className="text-6xl font-bold leading-none tracking-tight text-dark">{note}</p>
           <p className="mt-2.5 text-xl tracking-widest text-[#e8a600]" aria-label={`${note} von 5 Sternen`}>★★★★★</p>
           <p className="mt-1.5 text-sm text-mid">aus {business.reviewCount} Google-Bewertungen</p>
+          {trustedShops && (
+            <p className="mt-4 flex items-center gap-2.5 border-t border-ash pt-4 text-sm text-dark">
+              <Image src="/images/trusted-shops/Trustmark-RGB.png" alt="" width={1250} height={1250} className="h-8 w-8 object-contain" />
+              <span>
+                <strong className="font-bold">
+                  {trustedShops.note.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                </strong>{' '}
+                Trusted Shops · Käuferschutz
+              </span>
+            </p>
+          )}
         </div>
         {auswahl.map((r) => (
           <figure key={r.author} className="rounded-xl bg-white p-6">

@@ -9,6 +9,7 @@ import type { BodenfinderEmpfehlung, BodenfinderSchluessel } from "@/components/
 import { buildMetadata } from "@/lib/seo";
 import { klickVinylName } from "@/lib/klick-vinyl";
 import { angeboteHref } from "@/content/megaMenu";
+import { getTrustedShopsRating } from "@/lib/trusted-shops";
 import {
   PROMO_CATEGORY_SLUG,
   formatPromoEnd,
@@ -137,6 +138,8 @@ export default async function Home() {
     console.error('❌ Startseite: Zubehör konnte nicht geladen werden:', error);
   }
 
+  const trustedShops = await getTrustedShopsRating();
+
   const pool = [...angebote, ...bestseller.filter((b) => !angebote.some((a) => a.id === b.id))];
   const promoEnde = promoActive ? getPromoEnd()?.toISOString() ?? null : null;
   const promoEndeLabel = promoActive ? formatPromoEnd() : null;
@@ -160,7 +163,7 @@ export default async function Home() {
       />
       <VorteilBloecke />
       <Bodenfinder empfehlungen={bodenfinderEmpfehlungen(pool)} />
-      <BeratungTeam />
+      <BeratungTeam trustedShops={trustedShops} />
       <FachmarktVerlegt />
       <StartseiteFaq promoEndeLabel={promoEndeLabel} />
     </div>
