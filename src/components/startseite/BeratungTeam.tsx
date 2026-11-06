@@ -152,7 +152,6 @@ export default function BeratungTeam({
             </p>
             <p className="mt-2 flex items-baseline gap-2">
               <span className="text-4xl font-bold leading-none tracking-tight text-dark">{note}</span>
-              <span className="text-sm text-mid">Ø Sternebewertung</span>
             </p>
             <Sterne wert={google.rating} />
             <p className="mt-1 text-sm text-mid">
@@ -169,7 +168,6 @@ export default function BeratungTeam({
                 <span className="text-4xl font-bold leading-none tracking-tight text-dark">
                   {trustedShops.note.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                 </span>
-                <span className="text-sm text-mid">Ø Sternebewertung</span>
               </p>
               <Sterne wert={trustedShops.note} />
               <p className="mt-1 text-sm text-mid">Geprüfter Shop mit Käuferschutz</p>
