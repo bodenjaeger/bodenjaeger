@@ -216,7 +216,7 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
 
       {/* Schnellauswahl: am Handy und bei eingeklappter Spalte, derselbe Stand wie im Filter */}
       {bodenartFacet && (
-        <div role="group" aria-label="Nach Bodenart filtern" className={`mb-4 flex gap-2 overflow-x-auto pb-1 ${collapsed ? '' : 'lg:hidden'}`}>
+        <div role="group" aria-label="Nach Bodenart filtern" className={`mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${collapsed ? '' : 'lg:hidden'}`}>
           <button type="button" aria-pressed={!activeFilters.values.bodenart} onClick={() => toggleBodenart(null)} className={quickClass(!activeFilters.values.bodenart)}>
             Alle
           </button>

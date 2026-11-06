@@ -198,7 +198,7 @@ export default function CategoryPageClient({
             const chipClass = 'inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full border border-gray-300 bg-white px-4 text-sm text-dark transition-colors hover:border-dark';
             if (!optik && !VINYL_BRAND_CATEGORIES.has(slug)) return null;
             return (
-              <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1">
+              <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <span className="shrink-0 text-sm font-bold text-dark">Beliebt:</span>
                 {optik?.values.filter((value) => value.count > 0).map((value) => (
                   <button
