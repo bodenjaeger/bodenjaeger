@@ -7,7 +7,15 @@
 const VINYL = ['Bodenart', 'Farbgebung', 'Optik', 'Kollektion', 'Nutzungsklasse', 'Dämmung integriert', 'Stärke', 'Marke', 'Fußbodenheizung geeignet'];
 const LAMINAT = ['Farbgebung', 'Optik', 'Nutzungsklasse', 'Abriebklasse', 'Stärke', 'Feuchtraumgeeignet', 'Marke'];
 const PARKETT = ['Farbgebung', 'Optik', 'Oberfläche', 'Sortierung', 'Verlegeart'];
-const SOCKELLEISTEN = ['Höhe', 'Material', 'Überstreichbar'];
+const SOCKELLEISTEN = ['Farbe', 'Profil', 'Höhe', 'Material', 'Überstreichbar'];
+
+/** Sockelleisten-Profil aus dem Namenskürzel (St58-…, WM40-…). Unbekannte Kürzel bekommen keinen Wert. */
+export const SOCKELLEISTEN_PROFILE: Array<[RegExp, string]> = [
+  [/^PWM\d/i, 'Premium Weimarer (Nadelholz)'],
+  [/^WM\d/i, 'Weimarer'],
+  [/^HB\d/i, 'Hamburger'],
+  [/^St\s?\d/i, 'Standard'],
+];
 
 const MUSTERBOX = ['Bodenart', 'Farbgebung', 'Optik', 'Kollektion', 'Marke'];
 /** Aktionsseite: Bodenarten gemischt, nur Filter, die überall passen. */

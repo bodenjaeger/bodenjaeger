@@ -7,6 +7,7 @@ import {
   type ActiveFilters,
   type FilterIndexProduct,
   type FilterState,
+  SOCKELLEISTEN_PROFILE,
 } from '@/lib/category-filters';
 
 const BODENARTEN = ['Laminat', 'Parkett'];
@@ -39,7 +40,7 @@ export async function loadFilterIndex(categoryId: number, sort: string, attribut
       page: String(page),
       orderby,
       order,
-      _fields: 'id,price,attributes,categories',
+      _fields: 'id,name,price,attributes,categories',
     });
     const response = await fetch(`${baseUrl}/wp-json/wc/v3/products?${params}`, {
       headers: { Authorization: `Basic ${auth}` },
@@ -49,6 +50,7 @@ export async function loadFilterIndex(categoryId: number, sort: string, attribut
 
     const items = (await response.json()) as Array<{
       id: number;
+      name?: string;
       price: string;
       attributes?: Array<{ name: string; options: string[] }>;
       categories?: Array<{ name: string }>;
@@ -65,6 +67,13 @@ export async function loadFilterIndex(categoryId: number, sort: string, attribut
           ? vinylArt.map(decodeEntities)
           : BODENARTEN.filter((name) => item.categories?.some((c) => c.name === name));
         if (bodenart.length > 0) attributes.bodenart = bodenart;
+      }
+      // Sockelleisten: Farbe und Profil stehen nur im Namen
+      const name = decodeEntities(item.name ?? '').trim();
+      if (wanted.has('Farbe') && name) attributes.farbe = [/wei(ß|ss)/i.test(name) ? 'Weiß' : 'Farbig'];
+      if (wanted.has('Profil') && name) {
+        const profil = SOCKELLEISTEN_PROFILE.find(([muster]) => muster.test(name))?.[1];
+        if (profil) attributes.profil = [profil];
       }
       // Ohne Filterwerte (z. B. Muster) gehört ein Produkt nicht in die Filterliste
       if (Object.keys(attributes).length > 0) {

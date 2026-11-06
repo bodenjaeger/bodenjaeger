@@ -177,8 +177,14 @@ export function isPromoActive(now: Date = new Date()): boolean {
  * Mit Kachel lädt die Seite ein Produkt weniger, damit das Raster voll bleibt
  * (Kachel + 11 Produkte = 12 Plätze). Nicht in der Aktionskategorie selbst.
  */
+/** Zubehör-Kategorien: Die Kachel wirbt für Böden und passt dort nicht. */
+const NO_PROMO_TILE_CATEGORIES = new Set([
+  'zubehoer', 'sockelleisten', 'zubehoer-fuer-sockelleisten', 'daemmung', 'untergrundvorbereitung',
+  'kleber', 'montagekleber-silikon', 'werkzeug', 'reinigung-pflege',
+]);
+
 export function getPromoTileListing(category: string): { showPromoTile: boolean; perPage: number } {
-  const showPromoTile = category !== PROMO_CATEGORY_SLUG && isPromoActive();
+  const showPromoTile = category !== PROMO_CATEGORY_SLUG && !NO_PROMO_TILE_CATEGORIES.has(category) && isPromoActive();
   return { showPromoTile, perPage: showPromoTile ? PRODUCTS_PER_PAGE - 1 : PRODUCTS_PER_PAGE };
 }
 

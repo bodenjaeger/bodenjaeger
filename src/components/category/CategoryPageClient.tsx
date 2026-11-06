@@ -190,7 +190,7 @@ export default function CategoryPageClient({
 
           {/* Schnellwahl: setzt Optik- und Marken-Filter direkt auf dieser Seite */}
           {filterState && (() => {
-            const quick = ['optik', 'marke']
+            const quick = ['optik', 'marke', 'farbe', 'profil']
               .map((key) => filterState.facets.find((facet) => facet.key === key))
               .filter((facet): facet is NonNullable<typeof facet> => Boolean(facet))
               .flatMap((facet) => facet.values.filter((value) => value.count > 0 || value.selected).map((value) => ({ facet, value })));

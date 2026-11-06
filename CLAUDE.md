@@ -264,3 +264,4 @@ Vorbild ist die Karriereseite. Neue und geänderte Seiten nutzen diese Werte, da
 - **Akzentpunkte:** weiß statt gelb.
 
 - **Kategorietexte im Backend:** WordPress entfernt in Kategoriebeschreibungen Listen-Tags. Zwischenüberschrift = ganze Zeile `<strong>…</strong>`, Listenpunkt = Zeile mit `- ` (WordPress speichert daraus `– `). `fetteZeilenAlsUeberschrift()` in `src/lib/klick-vinyl.ts` macht daraus H3 und Liste.
+- **Sockelleisten-Filter:** Farbe (Weiß/Farbig) und Profil kommen aus dem Produktnamen: St = Standard, WM = Weimarer, HB = Hamburger, PWM = Premium Weimarer (Nadelholz).

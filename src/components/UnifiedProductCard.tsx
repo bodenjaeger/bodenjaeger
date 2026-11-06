@@ -274,7 +274,7 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
             )}
           </div>
 
-        {isFloorProduct && (
+        {!isMusterProduct(product) && (
           <button
             type="button"
             onClick={handleToggleWishlist}
@@ -445,6 +445,17 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
             aria-label={`${klickVinylName(product.name)} ansehen`}
           >
             Zum Boden
+          </Link>
+        </div>
+      )}
+      {!isFloorProduct && !isMusterProduct(product) && (
+        <div className="px-4 pb-4">
+          <Link
+            href={`/products/${product.slug}`}
+            className="flex min-h-11 w-full items-center justify-center rounded-lg bg-dark px-2 text-[13px] font-bold text-white transition-colors hover:bg-[#d11820]"
+            aria-label={`${klickVinylName(product.name)} ansehen`}
+          >
+            Zum Produkt
           </Link>
         </div>
       )}
