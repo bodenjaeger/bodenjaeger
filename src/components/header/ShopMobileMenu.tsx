@@ -117,7 +117,8 @@ export default function ShopMobileMenu({
           <p className={`px-5 pt-3 pb-1 ${KICKER}`}>Sortiment</p>
           <ul className="border-b border-ash">
             {SHOP_NAV.map((item) => {
-              const hasChildren = Boolean(item.children?.length)
+              // Aufklappbar mit Unterpunkten oder Schnellfiltern (z. B. Parkett nur mit Filtern)
+              const hasChildren = Boolean(item.children?.length || MOBILE_SCHNELLFILTER[item.id])
               const isExpanded = expandedId === item.id
               const istAngebot = item.id === 'angebote'
 

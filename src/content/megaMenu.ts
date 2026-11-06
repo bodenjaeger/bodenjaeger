@@ -376,7 +376,10 @@ export const MOBILE_SCHNELLFILTER: Record<string, MegaChip[]> = {
   ],
   parkett: [
     ...farbton('/category/parkett').map(({ label, href, swatch }) => ({ label, href, swatch })),
+    { label: 'Landhausdiele', href: '/category/parkett?optik=landhausdiele' },
     { label: 'XL Landhausdiele', href: '/category/parkett?optik=xl-landhausdiele' },
+    { label: 'Natur geölt', href: '/category/parkett?oberflaeche=gebuerstet-natur-geoelt' },
+    { label: 'Weiß geölt', href: '/category/parkett?oberflaeche=gebuerstet-weiss-geoelt' },
   ],
   zubehoer: [
     { label: 'Standard', href: '/category/sockelleisten?profil=standard' },

@@ -75,6 +75,8 @@ export const SHOP_NAV: NavItem[] = [
     id: 'parkett',
     label: 'Parkett',
     href: '/category/parkett',
+    // Mobil klappt Parkett auf: Kategorie + Schnellfilter (MOBILE_SCHNELLFILTER)
+    allLabel: 'Alle Parkettböden anzeigen',
   },
   {
     id: 'laminat',
