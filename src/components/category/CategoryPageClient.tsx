@@ -143,7 +143,7 @@ export default function CategoryPageClient({
         <div className="mb-8">
           {/* Ohne Beschreibung gibt es keinen Beschreibungsblock (dort sitzt sonst
               die H1) — die H1 muss trotzdem immer da sein. Stil wie im Fehlerzustand. */}
-          {!categoryDescription && (
+          {!categoryDescription && !categoryImage?.src && (
             <h1 className="text-3xl font-bold text-gray-900 mb-8">{categoryName}</h1>
           )}
 

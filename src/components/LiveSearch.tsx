@@ -204,7 +204,7 @@ export default function LiveSearch({ size = 'lg', className = '' }: LiveSearchPr
                         onClick={() => setIsOpen(false)}
                         className="block px-4 py-2 hover:bg-gray-50 text-sm text-dark"
                       >
-                        {category}
+                        {klickVinylName(category)}
                       </Link>
                     ))}
                   </div>
