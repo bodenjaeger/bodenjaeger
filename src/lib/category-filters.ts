@@ -28,6 +28,7 @@ export const PROMO_FILTER_ATTRIBUTES = ['Bodenart', 'Farbgebung', 'Optik', 'Koll
 const FILTERS_BY_CATEGORY: Record<string, string[]> = {
   vinylboden: VINYL,
   'rigid-vinyl': VINYL,
+  'luxus-vinyl': VINYL,
   'klebe-vinyl': VINYL,
   coretec: VINYL,
   primecore: VINYL,

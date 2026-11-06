@@ -1,16 +1,17 @@
 'use client';
 
-import { Fragment, useState, useEffect, useTransition } from 'react';
+import { Fragment, useState, useEffect, useRef, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { type StoreApiProduct } from '@/lib/woocommerce';
 import Image from 'next/image';
 import UnifiedProductCard from '@/components/UnifiedProductCard';
-import { SORT_OPTIONS, listingHref } from '@/lib/category-listing';
+import { PRODUCTS_PER_PAGE, SORT_OPTIONS, listingHref } from '@/lib/category-listing';
 import { filtersToQuery, hasActiveFilters, type FilterState } from '@/lib/category-filters';
 import { CategoryFilterButton, CategoryFilterChips, CategoryFilterSidebar, CategoryFilterToggle, ListingToolbar, useFilterCollapse, useFilterNavigation } from '@/components/category/CategoryFilters';
 import { fetteZeilenAlsUeberschrift, kategorieIntro } from '@/lib/klick-vinyl';
 import PromoTile from '@/components/black-weeks/PromoTile';
+import LoadMore from '@/components/category/LoadMore';
 import { PROMO_TILE_EVERY, PROMO_TILE_POSITION } from '@/lib/black-weeks';
 
 /** Kommt vor dem Produkt an Index `i` eine Aktionskachel? (Platz 3, dann alle 12 Produkte) */
@@ -69,8 +70,60 @@ export default function CategoryPageClient({
 }: CategoryPageClientProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [, startTransition] = useTransition();
+  const [loadingMore, startTransition] = useTransition();
   const [addonProductsMap, setAddonProductsMap] = useState<Map<number, StoreApiProduct>>(new Map());
+
+  // „Weitere anzeigen“: Die nächste Seite kommt wie gewohnt vom Server (?page=n),
+  // wird hier aber an die bisherige Liste angehängt statt sie zu ersetzen.
+  const [shownProducts, setShownProducts] = useState<StoreApiProduct[]>(products);
+  const [firstShownPage, setFirstShownPage] = useState(currentPage);
+  const appendNext = useRef(false);
+  const listKey = `liste:${pathname}:${sortBy}:${filterState ? filtersToQuery(filterState.active) : ''}`;
+  useEffect(() => {
+    if (appendNext.current) {
+      appendNext.current = false;
+      setShownProducts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...products.filter((p) => !seen.has(p.id))];
+      });
+      return;
+    }
+    // Zurück von einer Produktseite: bereits nachgeladene Produkte und Position wiederherstellen
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(listKey) || 'null') as
+        | { page: number; first: number; products: StoreApiProduct[]; y: number }
+        | null;
+      if (saved && saved.page === currentPage && saved.first < currentPage && saved.products.length > products.length) {
+        setShownProducts(saved.products);
+        setFirstShownPage(saved.first);
+        requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, saved.y)));
+        return;
+      }
+    } catch {
+      // Speicher nicht verfügbar: normale Seite zeigen
+    }
+    setShownProducts(products);
+    setFirstShownPage(currentPage);
+  }, [products, currentPage, listKey]);
+
+  // Stand merken, damit die Liste nach „Zurück“ vollständig wieder da ist
+  useEffect(() => {
+    if (firstShownPage >= currentPage) return;
+    const save = () => {
+      try {
+        sessionStorage.setItem(listKey, JSON.stringify({ page: currentPage, first: firstShownPage, products: shownProducts, y: window.scrollY }));
+      } catch {
+        // Speicher voll oder gesperrt: ohne Wiederherstellung weiter
+      }
+    };
+    save();
+    window.addEventListener('pagehide', save);
+    document.addEventListener('click', save, true);
+    return () => {
+      window.removeEventListener('pagehide', save);
+      document.removeEventListener('click', save, true);
+    };
+  }, [shownProducts, firstShownPage, currentPage, listKey]);
 
   // Batch-fetch Dämmung + Sockelleiste für Set-Angebot Preisvergleich
   useEffect(() => {
@@ -90,9 +143,11 @@ export default function CategoryPageClient({
     })
       .then(r => r.ok ? r.json() : [])
       .then((addonProducts: StoreApiProduct[]) => {
-        const map = new Map<number, StoreApiProduct>();
-        addonProducts.forEach(p => map.set(p.id, p));
-        setAddonProductsMap(map);
+        setAddonProductsMap((prev) => {
+          const map = new Map(prev);
+          addonProducts.forEach(p => map.set(p.id, p));
+          return map;
+        });
       })
       .catch(() => {});
   }, [products]);
@@ -231,7 +286,7 @@ export default function CategoryPageClient({
                 <CategoryFilterToggle collapsed={collapsed} onToggle={toggle} />
               </>
             ) : undefined}
-            count={`${totalProducts} ${totalProducts === 1 ? 'Produkt' : 'Produkte'}${totalPages > 1 ? ` (Seite ${currentPage} von ${totalPages})` : ''}`}
+            count={`${totalProducts} ${totalProducts === 1 ? 'Produkt' : 'Produkte'}`}
             sort={sortBy}
             sortOptions={SORT_OPTIONS}
             onSortChange={(value) => {
@@ -248,9 +303,9 @@ export default function CategoryPageClient({
         {filterState && <CategoryFilterChips state={filterState} apply={apply} />}
 
         {/* Products Grid */}
-        {products.length > 0 ? (
+        {shownProducts.length > 0 ? (
           <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 ${showSidebar ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}>
-            {products.map((product, index) => (
+            {shownProducts.map((product, index) => (
               <Fragment key={product.id}>
                 {showPromoTile && promoTileBefore(index) && <PromoTile />}
                 <UnifiedProductCard
@@ -261,7 +316,7 @@ export default function CategoryPageClient({
               </Fragment>
             ))}
             {/* Weniger Produkte als Platz 3 → Kachel ans Ende */}
-            {showPromoTile && products.length < PROMO_TILE_POSITION && <PromoTile />}
+            {showPromoTile && shownProducts.length < PROMO_TILE_POSITION && <PromoTile />}
           </div>
         ) : (
           <div className="text-center py-12">
@@ -292,88 +347,25 @@ export default function CategoryPageClient({
           </div>
         )}
 
-        {/* Pagination — gekürzt mit Ellipsen, damit die Reihe auf dem Handy nicht überläuft */}
+        {/* Weitere Produkte anhängen; der Button ist ein echter Link auf ?page=n, damit Google alle Produkte findet */}
         {totalPages > 1 && (() => {
-          // Fenster: immer Seite 1 + letzte Seite + aktuelle ±1, dazwischen "…"
-          const pages: (number | 'ellipsis')[] = [];
-          const left = Math.max(2, currentPage - 1);
-          const right = Math.min(totalPages - 1, currentPage + 1);
-          pages.push(1);
-          if (left > 2) pages.push('ellipsis');
-          for (let i = left; i <= right; i++) pages.push(i);
-          if (right < totalPages - 1) pages.push('ellipsis');
-          pages.push(totalPages);
-
-          // Echte Links (?page=n) statt onClick, damit Crawler alle Seiten
-          // und damit alle Produkte ohne JavaScript erreichen.
-          const navClass = 'px-3 py-2 rounded-lg border border-ash bg-white text-mid transition-colors shrink-0';
-          const prevLabel = (
-            <>
-              <span className="hidden sm:inline">Zurück</span>
-              <span className="sm:hidden" aria-hidden="true">‹</span>
-            </>
-          );
-          const nextLabel = (
-            <>
-              <span className="hidden sm:inline">Weiter</span>
-              <span className="sm:hidden" aria-hidden="true">›</span>
-            </>
-          );
-
+          const perPage = showPromoTile ? PRODUCTS_PER_PAGE - 1 : PRODUCTS_PER_PAGE;
+          const from = (firstShownPage - 1) * perPage + 1;
+          const to = Math.min(totalProducts, from - 1 + shownProducts.length);
           return (
-            <nav aria-label="Seitennavigation" className="flex justify-center items-center gap-1 sm:gap-2">
-              {currentPage > 1 ? (
-                <Link
-                  href={listingHref(pathname, currentPage - 1, sortBy, filterQuery)}
-                  rel="prev"
-                  aria-label="Vorherige Seite"
-                  className={`${navClass} hover:border-mid`}
-                >
-                  {prevLabel}
-                </Link>
-              ) : (
-                <span aria-disabled="true" aria-label="Vorherige Seite" className={`${navClass} opacity-50 cursor-not-allowed`}>
-                  {prevLabel}
-                </span>
-              )}
-
-              {pages.map((page, index) =>
-                page === 'ellipsis' ? (
-                  <span key={`ellipsis-${index}`} className="px-1 sm:px-2 py-2 text-gray-400 select-none">
-                    …
-                  </span>
-                ) : (
-                  <Link
-                    key={page}
-                    href={listingHref(pathname, page, sortBy, filterQuery)}
-                    aria-label={`Seite ${page}`}
-                    aria-current={currentPage === page ? 'page' : undefined}
-                    className={`px-3 py-2 rounded-lg border transition-colors shrink-0 ${
-                      currentPage === page
-                        ? 'bg-brand text-white border-brand'
-                        : 'border-ash bg-white text-mid hover:border-mid'
-                    }`}
-                  >
-                    {page}
-                  </Link>
-                )
-              )}
-
-              {currentPage < totalPages ? (
-                <Link
-                  href={listingHref(pathname, currentPage + 1, sortBy, filterQuery)}
-                  rel="next"
-                  aria-label="Nächste Seite"
-                  className={`${navClass} hover:border-mid`}
-                >
-                  {nextLabel}
-                </Link>
-              ) : (
-                <span aria-disabled="true" aria-label="Nächste Seite" className={`${navClass} opacity-50 cursor-not-allowed`}>
-                  {nextLabel}
-                </span>
-              )}
-            </nav>
+            <LoadMore
+              from={from}
+              to={to}
+              total={totalProducts}
+              hasMore={currentPage < totalPages}
+              pending={loadingMore}
+              href={currentPage < totalPages ? listingHref(pathname, currentPage + 1, sortBy, filterQuery) : undefined}
+              onLoadMore={() => {
+                if (currentPage >= totalPages) return;
+                appendNext.current = true;
+                startTransition(() => router.push(listingHref(pathname, currentPage + 1, sortBy, filterQuery), { scroll: false }));
+              }}
+            />
           );
         })()}
 

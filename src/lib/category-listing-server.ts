@@ -44,6 +44,8 @@ export async function loadListingPage(
  * Lädt eine Seite einer Produktliste serverseitig, damit Produktkacheln und
  * Paginierung ohne JavaScript im HTML stehen (Crawlbarkeit).
  */
+const MAX_LISTING_CHUNKS = 5;
+
 export async function loadListing(
   category: string,
   page: number,
@@ -53,18 +55,27 @@ export async function loadListing(
   const [orderby, order] = sort.split('-');
 
   try {
-    const result = await wooCommerceClient.getProductsPage({
-      category,
-      page,
-      per_page: perPage,
-      orderby,
-      order,
-    });
+    // Die ganze Kategorie in 100er-Blöcken laden und selbst in Seiten teilen:
+    // Bei gleichen Sortierwerten (z. B. „Beliebteste“ ohne Verkäufe) liefert die API
+    // je Seite eine andere Reihenfolge – Produkte kämen doppelt oder gar nicht.
+    const all: StoreApiProduct[] = [];
+    const seen = new Set<number>();
+    for (let chunk = 1; chunk <= MAX_LISTING_CHUNKS; chunk++) {
+      const result = await wooCommerceClient.getProductsPage({ category, page: chunk, per_page: 100, orderby, order });
+      for (const product of result.products) {
+        if (!seen.has(product.id)) {
+          seen.add(product.id);
+          all.push(product);
+        }
+      }
+      if (chunk >= result.totalPages) break;
+    }
 
+    const start = (page - 1) * perPage;
     return {
-      products: result.products,
-      totalProducts: result.total,
-      totalPages: result.totalPages,
+      products: all.slice(start, start + perPage),
+      totalProducts: all.length,
+      totalPages: Math.max(1, Math.ceil(all.length / perPage)),
       error: null,
     };
   } catch (error) {

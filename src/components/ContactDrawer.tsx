@@ -18,12 +18,14 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
       };
       window.addEventListener('keydown', handleEscape);
 
-      // Prevent body scroll when drawer is open
-      document.body.style.overflow = 'hidden';
+      // Seite dahinter sperren – am <html> wie beim Warenkorb, sonst springt der klebende Kopf
+      const root = document.documentElement;
+      const previousOverflow = root.style.overflow;
+      root.style.overflow = 'hidden';
 
       return () => {
         window.removeEventListener('keydown', handleEscape);
-        document.body.style.overflow = 'unset';
+        root.style.overflow = previousOverflow;
       };
     }
   }, [isOpen, onClose]);
@@ -47,14 +49,14 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+        className="fixed inset-0 bg-black/50 z-[60] transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Drawer */}
       <div
-        className={`fixed right-0 top-0 bottom-0 w-full md:w-[420px] bg-white z-50 shadow-2xl overflow-y-auto transform transition-transform duration-300 ease-in-out ${
+        className={`fixed right-0 top-0 bottom-0 w-full md:w-[420px] bg-white z-[61] shadow-2xl overflow-y-auto overscroll-contain transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         role="dialog"
@@ -72,13 +74,13 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
           </p>
 
           {/* Availability Indicator */}
-          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-pale rounded-lg">
             <span
               className={`w-3 h-3 rounded-full ${
                 isCurrentlyOpen() ? 'bg-green-500' : 'bg-red-500'
               }`}
             />
-            <span className="text-sm font-medium text-dark">
+            <span className="text-sm font-bold text-dark">
               {isCurrentlyOpen() ? 'Wir sind jetzt erreichbar' : 'Aktuell geschlossen'}
             </span>
           </div>
@@ -97,7 +99,7 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
             </a>
             <a
               href="tel:+492433938884"
-              className="inline-block w-full text-center bg-brand text-white px-6 py-3 rounded hover:bg-[#d11820] transition-colors shadow-sm hover:shadow-md font-medium"
+              className="inline-block w-full text-center bg-brand text-white px-6 py-3 rounded-lg hover:bg-[#d11820] transition-colors font-bold"
             >
               Jetzt anrufen
             </a>
@@ -112,23 +114,23 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
             <Link
               href="/kontakt"
               onClick={onClose}
-              className="inline-block w-full text-center bg-brand text-white px-6 py-3 rounded hover:bg-[#d11820] transition-colors shadow-sm hover:shadow-md font-medium"
+              className="inline-block w-full text-center bg-brand text-white px-6 py-3 rounded-lg hover:bg-[#d11820] transition-colors font-bold"
             >
               Zum Kontaktformular
             </Link>
           </div>
 
           {/* Opening Hours Section */}
-          <div className="space-y-3 p-4 border border-gray-200 rounded-lg">
+          <div className="space-y-3 p-4 border border-ash rounded-lg">
             <h3 className="text-lg font-bold text-dark">Service- und Beratungszeiten:</h3>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-[#666666]">Mo. bis Fr.</span>
-                <span className="font-medium text-dark">9:00 - 18:30 Uhr</span>
+                <span className="font-bold text-dark">9:00 - 18:30 Uhr</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-[#666666]">Sa.</span>
-                <span className="font-medium text-dark">9:00 - 14:00 Uhr</span>
+                <span className="font-bold text-dark">9:00 - 14:00 Uhr</span>
               </div>
             </div>
           </div>
@@ -138,7 +140,7 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
             <h3 className="text-lg font-bold text-dark">Weitere Kontaktmöglichkeiten:</h3>
 
             {/* Address */}
-            <div className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+            <div className="flex items-start gap-3 p-3 hover:bg-pale rounded-lg transition-colors">
               <svg
                 className="w-6 h-6 text-brand flex-shrink-0 mt-0.5"
                 fill="none"
@@ -159,7 +161,7 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
                 />
               </svg>
               <div>
-                <p className="font-medium text-dark">Fachmarkt Hückelhoven</p>
+                <p className="font-bold text-dark">Fachmarkt Hückelhoven</p>
                 <p className="text-sm text-[#666666]">Neckarstraße 9</p>
                 <p className="text-sm text-[#666666]">41836 Hückelhoven</p>
               </div>
@@ -168,7 +170,7 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
             {/* Email */}
             <a
               href="mailto:info@bodenjaeger.de"
-              className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+              className="flex items-start gap-3 p-3 hover:bg-pale rounded-lg transition-colors"
             >
               <svg
                 className="w-6 h-6 text-brand flex-shrink-0 mt-0.5"
@@ -184,26 +186,26 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
                 />
               </svg>
               <div>
-                <p className="font-medium text-dark">E-Mail</p>
+                <p className="font-bold text-dark">E-Mail</p>
                 <p className="text-sm text-brand hover:underline">info@bodenjaeger.de</p>
               </div>
             </a>
           </div>
 
           {/* Quick Links */}
-          <div className="pt-4 border-t border-gray-200">
+          <div className="pt-4 border-t border-ash">
             <div className="grid grid-cols-2 gap-3">
               <Link
                 href="/fachmarkt-hueckelhoven"
                 onClick={onClose}
-                className="text-center px-4 py-2 border border-gray-300 rounded hover:border-brand hover:text-brand transition-colors text-sm font-medium"
+                className="text-center px-4 py-2 border border-ash rounded-lg hover:border-brand hover:text-brand transition-colors text-sm font-bold"
               >
                 Fachmarkt
               </Link>
               <Link
                 href="/fachmarkt-hueckelhoven/service"
                 onClick={onClose}
-                className="text-center px-4 py-2 border border-gray-300 rounded hover:border-brand hover:text-brand transition-colors text-sm font-medium"
+                className="text-center px-4 py-2 border border-ash rounded-lg hover:border-brand hover:text-brand transition-colors text-sm font-bold"
               >
                 Service
               </Link>
