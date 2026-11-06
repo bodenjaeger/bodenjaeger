@@ -46,14 +46,26 @@ export function fetteZeilenAlsUeberschrift(text: string): string {
     })
     // Zeilenumbrüche direkt an Überschriften und Listen würden sonst als Leerzeile erscheinen
     .replace(/\s*(<h3>|<ul>)/g, '\n$1')
-    .replace(/(<\/h3>|<\/ul>)\s*/g, '$1');
+    .replace(/(<\/h3>|<\/ul>)\s*/g, '$1')
+    // Freier Text zwischen Überschriften und Listen wird zu Absätzen, damit die Abstände greifen
+    .split(/(<h3>[\s\S]*?<\/h3>|<ul>[\s\S]*?<\/ul>)/)
+    .map((teil) => {
+      if (/^<(h3|ul)>/.test(teil)) return teil;
+      return teil
+        .split(/\n\s*\n/)
+        .map((absatz) => absatz.trim())
+        .filter(Boolean)
+        .map((absatz) => (/^<(p|div|table|ol|blockquote)\b/i.test(absatz) ? absatz : `<p>${absatz}</p>`))
+        .join('');
+    })
+    .join('');
 }
 
 /** Erster Absatz ohne Zwischenüberschriften, als reiner Text für den Kategorie-Kopf. */
 export function kategorieIntro(text: string): string {
   const absaetze = fetteZeilenAlsUeberschrift(text)
     .replace(/<h3>[^<]*<\/h3>/g, '\n\n')
-    .replace(/<\/p>/g, '\n\n')
+    .replace(/<\/(p|li|ul)>/g, '\n\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
