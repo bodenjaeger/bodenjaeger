@@ -7,7 +7,19 @@
 const VINYL = ['Bodenart', 'Farbgebung', 'Optik', 'Kollektion', 'Nutzungsklasse', 'Dämmung integriert', 'Stärke', 'Marke', 'Fußbodenheizung geeignet'];
 const LAMINAT = ['Farbgebung', 'Optik', 'Nutzungsklasse', 'Abriebklasse', 'Stärke', 'Feuchtraumgeeignet', 'Marke'];
 const PARKETT = ['Farbgebung', 'Optik', 'Oberfläche', 'Sortierung', 'Verlegeart'];
-const SOCKELLEISTEN = ['Höhe', 'Material', 'Überstreichbar'];
+const SOCKELLEISTEN = ['Farbe', 'Profil', 'Höhe', 'Material', 'Überstreichbar'];
+
+/** Sockelleisten-Profil aus dem Namenskürzel (St58-…, WM40-…). Unbekannte Kürzel bekommen keinen Wert. */
+export const SOCKELLEISTEN_PROFILE: Array<[RegExp, string]> = [
+  [/^PWM\d/i, 'Premium Weimarer (Nadelholz)'],
+  [/^WM\d/i, 'Weimarer'],
+  [/^HB\d/i, 'Hamburger'],
+  [/^St\s?\d/i, 'Standard'],
+  [/^AD\d/i, 'Abdeckleiste'],
+];
+
+/** Anzeigereihenfolge der Profile im Filter. */
+const PROFIL_REIHENFOLGE = ['Standard', 'Hamburger', 'Weimarer', 'Premium Weimarer (Nadelholz)', 'Abdeckleiste'];
 
 const MUSTERBOX = ['Bodenart', 'Farbgebung', 'Optik', 'Kollektion', 'Marke'];
 /** Aktionsseite: Bodenarten gemischt, nur Filter, die überall passen. */
@@ -159,6 +171,12 @@ function sortValues(key: string, labels: string[]): string[] {
       return position === -1 ? KOLLEKTION_REIHENFOLGE.length : position;
     };
     return [...labels].sort((a, b) => rang(a) - rang(b));
+  }
+  if (key === 'profil') {
+    return [...labels].sort((a, b) => PROFIL_REIHENFOLGE.indexOf(a) - PROFIL_REIHENFOLGE.indexOf(b));
+  }
+  if (key === 'farbe') {
+    return [...labels].sort((a, b) => (a === 'Weiß' ? -1 : b === 'Weiß' ? 1 : 0));
   }
   if (key === 'staerke' || key === 'hoehe') {
     return [...labels].sort((a, b) => parseFloat(a.replace(',', '.')) - parseFloat(b.replace(',', '.')));

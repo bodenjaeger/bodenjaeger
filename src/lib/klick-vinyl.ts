@@ -25,15 +25,15 @@ export function klickVinylKategorietext(slug: string, text: string | null): stri
  * Kategorietext aus dem Backend aufbereiten. WordPress erlaubt in Kategoriebeschreibungen
  * nur wenige Tags (u. a. <strong>, keine Listen), deshalb:
  * - ganze Zeile fett → H3
- * - Zeilen mit „- “ oder „• “ am Anfang → Liste
+ * - Zeilen mit „- “, „– “ oder „• “ am Anfang → Liste (WordPress macht aus „- “ einen Gedankenstrich)
  */
 export function fetteZeilenAlsUeberschrift(text: string): string {
   return text
     .replace(/^[ \t]*(?:<p>)?<strong>([^<]+)<\/strong>(?:<\/p>)?[ \t]*$/gm, '<h3>$1</h3>')
-    .replace(/(?:^[ \t]*[-•][ \t]+.+(?:\n|$))+/gm, (block) => {
+    .replace(/(?:^[ \t]*[-–—•][ \t]+.+(?:\n|$))+/gm, (block) => {
       const items = block
         .split('\n')
-        .map((line) => line.replace(/^[ \t]*[-•][ \t]+/, '').trim())
+        .map((line) => line.replace(/^[ \t]*[-–—•][ \t]+/, '').trim())
         .filter(Boolean)
         .map((line) => `<li>${line}</li>`)
         .join('');
