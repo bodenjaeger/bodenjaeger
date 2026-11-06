@@ -340,13 +340,13 @@ function KategoriePanel({ panel, onNavigate }: { panel: MegaPanel } & PanelProps
           ))}
           {panel.premium && (
             <div className="relative mt-1 overflow-hidden rounded-xl bg-dark text-white">
-              {/* Schichtaufbau aus dem Kategoriebild, angeschnitten rechts unten */}
+              {/* Schichtaufbau aus dem Kategoriebild, rechts neben Titel und Vorteilen angeschnitten */}
               <Image
                 src={panel.premium.bild}
                 alt=""
                 width={220}
                 height={160}
-                className="pointer-events-none absolute -right-10 -bottom-6 w-[190px] opacity-90"
+                className="pointer-events-none absolute top-6 -right-10 w-[190px] opacity-90"
               />
               <div className="relative flex flex-col gap-3 p-4">
                 <Link href={panel.premium.href} onClick={onNavigate} className="group flex flex-col gap-1.5 pr-16">
