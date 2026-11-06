@@ -1,5 +1,7 @@
 'use client';
 
+import LoadMore from '@/components/category/LoadMore';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import UnifiedProductCard from '@/components/UnifiedProductCard';
 import { type StoreApiProduct } from '@/lib/woocommerce';
@@ -163,12 +165,8 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PRODUCTS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
-  const visible = filtered.slice((currentPage - 1) * PRODUCTS_PER_PAGE, currentPage * PRODUCTS_PER_PAGE);
-
-  const goToPage = (next: number) => {
-    setPage(next);
-    gridTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  // „Weitere anzeigen“: Seiten werden angehängt statt gewechselt
+  const visible = filtered.slice(0, currentPage * PRODUCTS_PER_PAGE);
 
   const toggleBodenart = (slug: string | null) => {
     const current = activeFilters.values.bodenart ?? [];
@@ -183,19 +181,6 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
       active ? 'border-[#d11820] bg-[#d11820] text-white' : 'border-ash bg-white text-dark hover:border-mid'
     }`;
 
-  // Fenster wie im Kategorie-Listing: Seite 1 + letzte + aktuelle ±1, dazwischen „…“
-  const pages: (number | 'ellipsis')[] = [];
-  if (totalPages > 1) {
-    const left = Math.max(2, currentPage - 1);
-    const right = Math.min(totalPages - 1, currentPage + 1);
-    pages.push(1);
-    if (left > 2) pages.push('ellipsis');
-    for (let i = left; i <= right; i++) pages.push(i);
-    if (right < totalPages - 1) pages.push('ellipsis');
-    pages.push(totalPages);
-  }
-  const navClass = 'px-3 py-2 rounded-lg border border-ash bg-white text-mid transition-colors shrink-0';
-
   return (
     <div ref={gridTopRef} className="scroll-mt-48">
       <ListingToolbar
@@ -205,7 +190,7 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
             <CategoryFilterToggle collapsed={collapsed} onToggle={toggle} />
           </>
         ) : undefined}
-        count={`${filtered.length} ${filtered.length === 1 ? 'Produkt' : 'Produkte'}${totalPages > 1 ? ` (Seite ${currentPage} von ${totalPages})` : ''}`}
+        count={`${filtered.length} ${filtered.length === 1 ? 'Produkt' : 'Produkte'}`}
         sort={sort}
         sortOptions={PROMO_SORT_OPTIONS}
         onSortChange={(value) => {
@@ -246,54 +231,12 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
         ))}
       </div>
 
-      {totalPages > 1 && (
-        <nav aria-label="Seitennavigation" className="flex justify-center items-center gap-1 sm:gap-2">
-          <button
-            type="button"
-            disabled={currentPage === 1}
-            onClick={() => goToPage(currentPage - 1)}
-            aria-label="Vorherige Seite"
-            className={`${navClass} hover:border-mid disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent`}
-          >
-            <span className="hidden sm:inline">Zurück</span>
-            <span className="sm:hidden" aria-hidden="true">‹</span>
-          </button>
-
-          {pages.map((p, index) =>
-            p === 'ellipsis' ? (
-              <span key={`ellipsis-${index}`} className="px-1 sm:px-2 py-2 text-gray-400 select-none">
-                …
-              </span>
-            ) : (
-              <button
-                key={p}
-                type="button"
-                onClick={() => goToPage(p)}
-                aria-label={`Seite ${p}`}
-                aria-current={currentPage === p ? 'page' : undefined}
-                className={`px-3 py-2 rounded-lg border transition-colors shrink-0 ${
-                  currentPage === p
-                    ? 'bg-brand text-white border-brand'
-                    : 'border-ash bg-white text-mid hover:border-mid'
-                }`}
-              >
-                {p}
-              </button>
-            )
-          )}
-
-          <button
-            type="button"
-            disabled={currentPage === totalPages}
-            onClick={() => goToPage(currentPage + 1)}
-            aria-label="Nächste Seite"
-            className={`${navClass} hover:border-mid disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent`}
-          >
-            <span className="hidden sm:inline">Weiter</span>
-            <span className="sm:hidden" aria-hidden="true">›</span>
-          </button>
-        </nav>
-      )}
+      <LoadMore
+        from={1}
+        to={visible.length}
+        total={filtered.length}
+        onLoadMore={() => setPage(currentPage + 1)}
+      />
       </div>
       </div>
     </div>

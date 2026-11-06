@@ -286,21 +286,17 @@ interface ListingToolbarProps {
   sort: string;
   sortOptions: ReadonlyArray<{ value: string; label: string }>;
   onSortChange: (value: string) => void;
-  /** Seitenwähler (nur bei mehreren Seiten) */
-  pager?: React.ReactNode;
 }
 
 /** Leiste über den Produkten: Filter, Trefferzahl und Sortierung in einer Höhe. */
-export function ListingToolbar({ filterControls, count, sort, sortOptions, onSortChange, pager }: ListingToolbarProps) {
+export function ListingToolbar({ filterControls, count, sort, sortOptions, onSortChange }: ListingToolbarProps) {
   return (
     <div className="mb-5 grid grid-cols-2 items-center gap-3 lg:flex lg:justify-between">
       <div className={`flex items-center gap-4 ${filterControls ? '' : 'hidden lg:flex'}`}>
         {filterControls}
         <p className="hidden text-sm font-medium text-mid lg:block">{count}</p>
       </div>
-      <div className={`flex items-center gap-3 ${filterControls ? '' : 'col-span-2 lg:col-span-1'}`}>
-        {pager && <div className="hidden lg:block">{pager}</div>}
-        <div className="relative w-full lg:w-auto">
+      <div className={`relative ${filterControls ? '' : 'col-span-2 lg:col-span-1'}`}>
         <select
           value={sort}
           aria-label="Sortierung"
@@ -312,12 +308,8 @@ export function ListingToolbar({ filterControls, count, sort, sortOptions, onSor
           ))}
         </select>
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-dark"><Chevron open={false} /></span>
-        </div>
       </div>
-      <div className="col-span-2 flex items-center justify-between gap-3 lg:hidden">
-        <p className="text-sm font-medium text-mid">{count}</p>
-        {pager}
-      </div>
+      <p className="col-span-2 text-sm font-medium text-mid lg:hidden">{count}</p>
     </div>
   );
 }
