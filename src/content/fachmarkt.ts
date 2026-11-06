@@ -412,27 +412,6 @@ export const LANDING_NAV = {
   shopCta: { label: 'Zum Shop', href: '/' },
 } as const
 
-/**
- * Dynamisches Primär-CTA je Route. Auf bestimmten Service-Seiten passendes
- * Label/Ziel, sonst „Beratung vereinbaren". Auswahl in FachmarktLandingNav.
- */
-export function primaryNavCta(pathname: string): Cta {
-  // verlegeservice-anfrage selbst → Default (nicht auf sich selbst verlinken)
-  if (
-    pathname.startsWith(`${FM}/service/verlegeservice`) &&
-    !pathname.startsWith(`${FM}/service/verlegeservice-anfrage`)
-  ) {
-    return { label: 'Verlegeservice anfragen', href: `${FM}/service/verlegeservice-anfrage`, variant: 'primary' }
-  }
-  if (pathname.startsWith(`${FM}/service/musterservice`)) {
-    return { label: 'Muster anfragen', href: '/kontakt', variant: 'primary' }
-  }
-  if (pathname.startsWith(`${FM}/service/set-angebote`)) {
-    return { label: 'Set-Angebot sichern', href: '/kontakt', variant: 'primary' }
-  }
-  return { label: 'Beratung vereinbaren', href: '/kontakt', variant: 'primary' }
-}
-
 // ── Sticky Bottom Bar (mobil) ───────────────────────────────────────────────────
 export const STICKY = {
   route: CTA_ROUTE,

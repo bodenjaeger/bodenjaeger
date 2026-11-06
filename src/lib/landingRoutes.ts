@@ -1,10 +1,9 @@
 /**
  * Zentrale Definition der Fachmarkt-Routen und ihrer Navigations-Logik.
  *
- * Der Fachmarkt-Header (`FachmarktLandingNav`) ersetzt die Shop-Navigation im
- * GESAMTEN Bereich `/fachmarkt-hueckelhoven` (Landingpage + alle Unterseiten) –
- * gesteuert über `isFachmarktRoute` (Prefix-Match). So ist der Fachmarkt
- * navigatorisch ein geschlossener Bereich (Kundenvorgabe).
+ * Im GESAMTEN Bereich `/fachmarkt-hueckelhoven` (Landingpage + alle
+ * Unterseiten, Prefix-Match über `isFachmarktRoute`) zeigt der Shop-Kopf das
+ * Fachmarkt-Menü (HeaderWrapper → Header mit `bereich="fachmarkt"`).
  *
  * `isLandingRoute` (exakter Match) bleibt als schmalere Prüfung erhalten,
  * falls einzelne Elemente NUR auf der exakten Landingpage gebraucht werden.
