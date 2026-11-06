@@ -236,7 +236,7 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
         {/* Produktinfo-Bereich */}
         <div className="flex flex-1 flex-col p-4">
           {/* Produktname */}
-          <h3 className="mb-3 line-clamp-2 min-h-[3rem] text-base font-bold leading-snug text-dark">
+          <h3 className="mb-2 line-clamp-2 text-base font-bold leading-snug text-dark">
             {klickVinylName(product.name)}
           </h3>
 

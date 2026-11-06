@@ -9,24 +9,21 @@ import {
 } from '@/lib/black-weeks';
 
 /**
- * Aktionskachel im Produktgrid — Rahmen, Rundung und Hover wie
- * `UnifiedProductCard`, Höhe über das Grid (Zeilenhöhe der Nachbarkarten).
+ * Aktionskachel im Produktgrid — Rundung und Hover wie
+ * `UnifiedProductCard`, ab md so hoch wie die Nachbarkarten.
  *
  * Die ganze Kachel ist über einen gestreckten Link klickbar.
  */
 export default function PromoTile() {
   return (
-    <article className="relative aspect-[600/857] self-start overflow-hidden rounded-lg bg-black transition-all duration-300 hover:scale-[1.02] hover:shadow-lg md:aspect-auto md:min-h-[420px] md:self-stretch">
-      {/* Hochformat 600×857 (≈ 0,7). Mobil (eine Spalte) bestimmt das
-          Seitenverhältnis die Höhe, `object-contain` zeigt die ganze Grafik
-          samt Button. Ab md wie bisher: Zeilenhöhe der Nachbarkarten,
-          `object-cover` schneidet höchstens seitlich wenige Prozent ab. */}
+    <article className="relative aspect-[600/857] overflow-hidden rounded-2xl bg-black transition-shadow duration-300 hover:shadow-lg md:aspect-auto md:h-full md:min-h-full">
+      {/* Die ganze Grafik bleibt sichtbar; Höhenunterschiede fängt der schwarze Hintergrund auf. */}
       <PromoImage
         src={PROMO_IMAGES.tile}
         alt={PROMO_TILE_ALT}
         sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
         unoptimized
-        imageClassName="object-contain md:object-cover"
+        imageClassName="object-contain"
         fallback={
           <div
             aria-hidden="true"
