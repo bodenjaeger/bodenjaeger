@@ -184,6 +184,60 @@ export function MehrfachKarte({
   )
 }
 
+/**
+ * Große Auswahlkarte mit Titel, Erklärtext und optional Preis und Kennzeichen —
+ * für den Schritt „Wie soll es weitergehen?". Verhält sich wie ein Radio.
+ */
+export function WegKarte({
+  titel,
+  text,
+  badge,
+  preis,
+  aktiv,
+  gesperrt,
+  onClick,
+}: {
+  titel: string
+  text: string
+  badge?: string | null
+  preis?: string | null
+  aktiv: boolean
+  gesperrt?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={aktiv}
+      aria-disabled={gesperrt || undefined}
+      disabled={gesperrt}
+      onClick={onClick}
+      className={`flex w-full items-start gap-3 rounded-2xl border-2 px-4 py-4 text-left transition-colors ${
+        aktiv ? KARTE_AN : KARTE_AUS
+      } disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-ash`}
+    >
+      <span
+        className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${aktiv ? 'border-brand' : 'border-ash'}`}
+      >
+        {aktiv && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}
+      </span>
+      <span className="min-w-0">
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="font-bold text-dark">{titel}</span>
+          {preis && <span className="font-bold text-brand">{preis}</span>}
+          {badge && (
+            <span className="rounded-md bg-dark px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+              {badge}
+            </span>
+          )}
+        </span>
+        <span className="mt-1 block text-sm text-mid">{text}</span>
+      </span>
+    </button>
+  )
+}
+
 /** Raster für Auswahlkarten — eine Spalte mobil, zwei ab sm. */
 export function KartenRaster({ children, spalten = 2 }: { children: ReactNode; spalten?: 1 | 2 }) {
   return (

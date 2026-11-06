@@ -48,8 +48,10 @@ export const VS_EVENTS = {
   locationChecked: 'verlegeservice_location_checked',
   stepProject: 'verlegeservice_step_project_completed',
   stepAltboden: 'verlegeservice_step_altboden_completed',
+  stepAblauf: 'verlegeservice_step_ablauf_completed',
   leadInArea: 'verlegeservice_lead_in_area',
   leadOutOfArea: 'verlegeservice_lead_out_of_area',
+  aufmassBezahlt: 'verlegeservice_aufmass_bezahlt',
 } as const
 
 export function trackFormView(): void {
@@ -83,6 +85,10 @@ export function trackStepAltboden(altbodenEntfernen: string | null): void {
   dataLayerPush(VS_EVENTS.stepAltboden, { altboden_entfernen: altbodenEntfernen })
 }
 
+export function trackStepAblauf(naechsterSchritt: string | null): void {
+  dataLayerPush(VS_EVENTS.stepAblauf, { next_step: naechsterSchritt })
+}
+
 // ── Abschluss: Lead ───────────────────────────────────────────────────────────
 
 export interface LeadAbschluss {
@@ -91,6 +97,8 @@ export interface LeadAbschluss {
   areaRange: string | null
   floorType: string | null
   timeline: string | null
+  /** Gewählter nächster Schritt: `aufmass`, `telefon` oder `preis`. */
+  naechsterSchritt?: string | null
 }
 
 /**
@@ -130,6 +138,7 @@ function sendeMetaPixel(a: LeadAbschluss): void {
       ...(a.areaRange ? { area_range: a.areaRange } : {}),
       ...(a.floorType ? { floor_type: a.floorType } : {}),
       ...(a.timeline ? { timeline: a.timeline } : {}),
+      ...(a.naechsterSchritt ? { next_step: a.naechsterSchritt } : {}),
     },
     { eventID: a.leadId },
   )
@@ -147,10 +156,59 @@ export function trackLeadAbschluss(a: LeadAbschluss): void {
     area_range: a.areaRange,
     floor_type: a.floorType,
     timeline: a.timeline,
+    next_step: a.naechsterSchritt ?? null,
   })
 
   sendeGoogleAdsConversion(a)
   sendeMetaPixel(a)
+}
+
+// ── Abschluss: bezahltes Aufmaß ───────────────────────────────────────────────
+
+export interface AufmassBezahlt {
+  /** `aufmass-<Bestellnummer>` — identisch mit der Conversions API. */
+  eventId: string
+  leadId: string
+  /** Bruttobetrag in Euro. */
+  wert: number
+}
+
+/**
+ * Feuert den Kauf „Aufmaß gebucht" — nur auf der Bezahlt-Seite und nur, wenn
+ * der Server die Zahlung bestätigt hat. Reloads zählen nicht doppelt: Google
+ * entdoppelt über `transaction_id`, Meta über `eventID`.
+ *
+ * Google Ads braucht dafür eine eigene Conversion-Aktion; ihr Label kommt aus
+ * NEXT_PUBLIC_GOOGLE_ADS_LABEL_AUFMASS. Fehlt es, geht nur der dataLayer-Push.
+ */
+export function trackAufmassBezahlt(a: AufmassBezahlt): void {
+  dataLayerPush(VS_EVENTS.aufmassBezahlt, {
+    lead_id: a.leadId,
+    transaction_id: a.eventId,
+    value: a.wert,
+    currency: 'EUR',
+  })
+
+  const w = fenster()
+  const conversionId = process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID?.trim()
+  const label = process.env.NEXT_PUBLIC_GOOGLE_ADS_LABEL_AUFMASS?.trim()
+  if (w?.gtag && conversionId && label) {
+    w.gtag('event', 'conversion', {
+      send_to: `${conversionId}/${label}`,
+      value: a.wert,
+      currency: 'EUR',
+      transaction_id: a.eventId,
+    })
+  }
+
+  if (w?.fbq && process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim()) {
+    w.fbq(
+      'track',
+      'Purchase',
+      { value: a.wert, currency: 'EUR', content_name: 'Aufmaß Verlegeservice', lead_id: a.leadId },
+      { eventID: a.eventId },
+    )
+  }
 }
 
 // ── Kontextdaten für den Server ───────────────────────────────────────────────

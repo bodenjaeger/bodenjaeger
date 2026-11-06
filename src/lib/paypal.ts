@@ -45,6 +45,12 @@ export interface CreatePayPalOrderParams {
     quantity: number;
     unit_amount: string;
   }>;
+  /**
+   * Abweichende Rückkehr-Adressen (z. B. für das Aufmaß aus dem
+   * Verlegeservice-Formular). Ohne Angabe gelten die Checkout-Routen.
+   */
+  returnUrl?: string;
+  cancelUrl?: string;
 }
 
 export interface PayPalOrderResult {
@@ -133,7 +139,7 @@ export async function createPayPalOrder(
 ): Promise<PayPalOrderResult> {
   checkProxyConfig();
 
-  const { orderId, orderKey, amount, lineItems } = params;
+  const { orderId, orderKey, amount, lineItems, returnUrl, cancelUrl } = params;
 
   try {
     const res = await fetch(`${PROXY_URL}/paypal/create-order`, {
@@ -144,8 +150,8 @@ export async function createPayPalOrder(
         orderKey,
         amount,
         lineItems,
-        returnUrl: `${NEXT_PUBLIC_SITE_URL}/api/checkout/paypal/capture?order=${orderId}`,
-        cancelUrl: `${NEXT_PUBLIC_SITE_URL}/checkout?cancelled=true&order=${orderId}`,
+        returnUrl: returnUrl ?? `${NEXT_PUBLIC_SITE_URL}/api/checkout/paypal/capture?order=${orderId}`,
+        cancelUrl: cancelUrl ?? `${NEXT_PUBLIC_SITE_URL}/checkout?cancelled=true&order=${orderId}`,
       }),
     });
 

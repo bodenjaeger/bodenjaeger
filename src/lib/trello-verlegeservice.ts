@@ -20,9 +20,11 @@ import {
   labelFlaeche,
   labelKontaktart,
   labelVerlegeart,
+  labelWeg,
   labelZeitraum,
 } from '@/lib/verlegeservice-validierung'
-import { VS_BELAG_SONSTIGER, VS_RAUM_SONSTIGER } from '@/content/verlegeservice-anfrage'
+import { VS_BELAG_SONSTIGER, VS_RAUM_SONSTIGER, VS_WEG_AUFMASS } from '@/content/verlegeservice-anfrage'
+import { formatEuro } from '@/lib/aufmass-kreise'
 import type { VsAnfrage, VsDatei } from '@/types/verlegeservice-anfrage'
 
 const TRELLO_API = 'https://api.trello.com/1'
@@ -45,6 +47,13 @@ function config(): TrelloConfig | null {
   const idList = process.env.TRELLO_LIST_ID?.trim()
   if (!key || !token || !idList) return null
   return { key, token, idList }
+}
+
+/** Angaben zum bezahlten Aufmaß, falls der Interessent es gebucht hat. */
+export interface TrelloAufmassInfo {
+  preis: number
+  kreis: string
+  sku: string
 }
 
 /** „In Area" / „Out of Area" für die menschenlesbare Anzeige. */
@@ -88,6 +97,7 @@ export function kartenBeschreibung(
     distanceKm: number | null
     ort: string
     eingang: Date
+    aufmass?: TrelloAufmassInfo | null
   },
 ): string {
   const abschnitte: string[] = ['**VERLEGESERVICE-ANFRAGE**']
@@ -99,6 +109,18 @@ export function kartenBeschreibung(
     status.push(`Entfernung: ca. ${formatEntfernung(opts.distanceKm)}`)
   }
   abschnitte.push(`**STATUS**\n${status.join('\n')}`)
+
+  const weg = labelWeg(a.weg)
+  if (weg) {
+    const zeilen = [weg]
+    if (a.weg === VS_WEG_AUFMASS && opts.aufmass) {
+      zeilen.push(
+        `Aufmaß: ${formatEuro(opts.aufmass.preis)} (${opts.aufmass.kreis}, Artikel ${opts.aufmass.sku})`,
+        'Zahlung offen – nach erfolgreicher Zahlung wandert die Karte in die Liste „Aufmaß bezahlt".',
+      )
+    }
+    abschnitte.push(`**NÄCHSTER SCHRITT**\n${zeilen.join('\n')}`)
+  }
 
   const kontakt = [
     `Name: ${a.vorname} ${a.nachname}`.trim(),
@@ -269,6 +291,7 @@ export async function leadNachTrello(
     distanceKm: number | null
     ort: string
     eingang: Date
+    aufmass?: TrelloAufmassInfo | null
   },
 ): Promise<TrelloErgebnis> {
   const gesamt = a.dateien.length
@@ -303,4 +326,44 @@ export async function leadNachTrello(
   }
 
   return { cardId, dateienUebertragen: uebertragen, dateienGesamt: gesamt }
+}
+
+/**
+ * Nach bezahltem Aufmaß: Karte in die Liste „Aufmaß bezahlt – Termin
+ * vereinbaren" verschieben (TRELLO_LIST_ID_AUFMASS_BEZAHLT) und die Zahlung als
+ * Kommentar vermerken. Fehlt die Listen-ID, bleibt die Karte, wo sie ist, und
+ * bekommt nur den Kommentar.
+ */
+export async function aufmassBezahltNachTrello(cardId: string, text: string): Promise<boolean> {
+  const cfg = config()
+  if (!cfg) {
+    console.error('[trello] TRELLO_KEY/TRELLO_TOKEN/TRELLO_LIST_ID fehlt')
+    return false
+  }
+  const zielListe = process.env.TRELLO_LIST_ID_AUFMASS_BEZAHLT?.trim()
+  let ok = true
+  if (zielListe) {
+    try {
+      const params = new URLSearchParams({ key: cfg.key, token: cfg.token, idList: zielListe, pos: 'top' })
+      const res = await fetch(`${TRELLO_API}/cards/${cardId}?${params.toString()}`, { method: 'PUT' })
+      if (!res.ok) {
+        ok = false
+        console.error('[trello] Karte verschieben fehlgeschlagen:', res.status, await res.text().catch(() => ''))
+      }
+    } catch (e) {
+      ok = false
+      console.error('[trello] Karte verschieben Netzwerkfehler:', e)
+    }
+  } else {
+    console.warn('[trello] TRELLO_LIST_ID_AUFMASS_BEZAHLT fehlt — Karte bleibt in ihrer Liste.')
+  }
+  await kommentar(cfg, cardId, text)
+  return ok
+}
+
+/** Kommentar an eine bestehende Karte, ohne sie zu verschieben. */
+export async function kommentarAnKarte(cardId: string, text: string): Promise<void> {
+  const cfg = config()
+  if (!cfg) return
+  await kommentar(cfg, cardId, text)
 }

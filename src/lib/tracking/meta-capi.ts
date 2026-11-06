@@ -26,6 +26,8 @@ export interface MetaLeadEingabe {
   floorType: string | null
   /** Zeitraum-Key, z. B. `asap`. */
   timeline: string | null
+  /** Gewählter nächster Schritt: `aufmass`, `telefon` oder `preis`. */
+  naechsterSchritt?: string | null
   email: string
   telefon: string
   vorname: string
@@ -124,6 +126,7 @@ export async function sendeMetaLead(e: MetaLeadEingabe): Promise<boolean> {
     area_range: e.areaRange ?? undefined,
     floor_type: e.floorType ?? undefined,
     timeline: e.timeline ?? undefined,
+    next_step: e.naechsterSchritt ?? undefined,
   })
 
   const payload = {
@@ -161,6 +164,96 @@ export async function sendeMetaLead(e: MetaLeadEingabe): Promise<boolean> {
     return true
   } catch (err) {
     console.error('[meta-capi] Netzwerkfehler:', err)
+    return false
+  }
+}
+
+// ── Kauf: bezahltes Aufmaß ────────────────────────────────────────────────────
+
+export interface MetaAufmassKauf {
+  /** Gemeinsame ID mit dem Pixel auf der Bezahlt-Seite: `aufmass-<Bestellnummer>`. */
+  eventId: string
+  leadId: string
+  /** Bruttobetrag in Euro. */
+  wert: number
+  sku: string
+  email: string
+  telefon: string
+  vorname: string
+  nachname: string
+  plz: string
+  ort: string
+  fbp?: string
+  fbc?: string
+  clientIp?: string
+  userAgent?: string
+  eventSourceUrl?: string
+  zeitpunkt: Date
+}
+
+/**
+ * Sendet `Purchase` für ein bezahltes Aufmaß — das stärkste Signal, das Meta
+ * aus dem Verlegeservice bekommt. Gibt zurück, ob der Versand geklappt hat.
+ */
+export async function sendeMetaAufmassKauf(e: MetaAufmassKauf): Promise<boolean> {
+  if (!istKonfiguriert()) return false
+
+  const id = pixelId()!
+  const token = process.env.META_CAPI_ACCESS_TOKEN!.trim()
+
+  const payload = {
+    data: [
+      ohneLeere({
+        event_name: 'Purchase',
+        event_id: e.eventId,
+        event_time: Math.floor(e.zeitpunkt.getTime() / 1000),
+        action_source: 'website',
+        event_source_url: e.eventSourceUrl,
+        user_data: ohneLeere({
+          em: hashOptional(normText(e.email)),
+          ph: hashOptional(normTelefon(e.telefon)),
+          fn: hashOptional(normText(e.vorname)),
+          ln: hashOptional(normText(e.nachname)),
+          zp: hashOptional(normText(e.plz)),
+          ct: hashOptional(normText(e.ort)),
+          country: hashOptional('de'),
+          fbp: e.fbp,
+          fbc: e.fbc,
+          client_ip_address: e.clientIp,
+          client_user_agent: e.userAgent,
+        }),
+        custom_data: {
+          currency: 'EUR',
+          value: Math.round(e.wert * 100) / 100,
+          content_name: 'Aufmaß Verlegeservice',
+          content_ids: [e.sku],
+          content_type: 'product',
+          lead_id: e.leadId,
+        },
+      }),
+    ],
+    ...(process.env.META_CAPI_TEST_CODE?.trim()
+      ? { test_event_code: process.env.META_CAPI_TEST_CODE.trim() }
+      : {}),
+  }
+
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/${GRAPH_VERSION}/${id}/events?access_token=${encodeURIComponent(token)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      },
+    )
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      console.error('[meta-capi] Aufmaß-Kauf fehlgeschlagen:', res.status, text)
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error('[meta-capi] Aufmaß-Kauf Netzwerkfehler:', err)
     return false
   }
 }

@@ -19,10 +19,13 @@ import {
   VS_ALTBODEN_VERLEGEART,
   VS_ERREICHBARKEIT,
   VS_KONTAKTART,
+  VS_WEGE,
+  VS_WEG_AUFMASS,
+  VS_ZAHLARTEN,
   type VsFlaecheKey,
 } from '@/content/verlegeservice-anfrage'
 import { istPlzFormat } from '@/lib/servicegebiet'
-import type { VsAnfrage, VsDatei } from '@/types/verlegeservice-anfrage'
+import type { VsAnfrage, VsAufmassBuchung, VsDatei } from '@/types/verlegeservice-anfrage'
 
 /** Feldname → Fehlermeldung. Leeres Objekt = alles in Ordnung. */
 export type Feldfehler = Record<string, string>
@@ -164,6 +167,25 @@ export function pruefeKontakt(
   return f
 }
 
+/** Schritt „Ablauf": Ein nächster Schritt muss gewählt sein. */
+export function pruefeAblauf(a: Pick<VsAnfrage, 'weg'>): Feldfehler {
+  const f: Feldfehler = {}
+  if (!istKey(VS_WEGE, a.weg)) f.weg = VS_FEHLER.wegPflicht
+  return f
+}
+
+/**
+ * Schritt „Zahlung" (nur Aufmaß). Ob der Standort im Gebiet liegt und welcher
+ * Preis gilt, prüft allein der Server — hier nur die Eingaben des Nutzers.
+ */
+export function pruefeZahlung(z: VsAufmassBuchung | undefined): Feldfehler {
+  const f: Feldfehler = {}
+  if (!z?.strasse?.trim() || z.strasse.trim().length < 3) f.strasse = VS_FEHLER.strassePflicht
+  if (!istKey(VS_ZAHLARTEN, z?.zahlart)) f.zahlart = VS_FEHLER.zahlartPflicht
+  if (z?.widerruf !== true) f.widerruf = VS_FEHLER.widerrufPflicht
+  return f
+}
+
 /** Ungefähre Byte-Größe eines Base64-Strings (ohne dataURL-Präfix). */
 export function base64Bytes(b64: string): number {
   const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0
@@ -198,7 +220,9 @@ export function pruefeAnfrage(a: VsAnfrage): Feldfehler {
     ...pruefeStandort(a),
     ...pruefeProjekt(a),
     ...pruefeAltboden(a),
+    ...pruefeAblauf(a),
     ...pruefeKontakt(a),
+    ...(a.weg === VS_WEG_AUFMASS ? pruefeZahlung(a.aufmass) : {}),
     ...pruefeDateien(a.dateien ?? []),
   }
 }
@@ -230,3 +254,5 @@ export const labelAltbodenBelag = (k: string | null) => label(VS_ALTBODEN_BELAG,
 export const labelVerlegeart = (k: string | null) => label(VS_ALTBODEN_VERLEGEART, k)
 export const labelKontaktart = (k: string | null) => label(VS_KONTAKTART, k)
 export const labelErreichbarkeit = (k: string | null) => label(VS_ERREICHBARKEIT, k)
+export const labelWeg = (k: string | null) => label(VS_WEGE, k)
+export const labelZahlart = (k: string | null) => label(VS_ZAHLARTEN, k)
