@@ -256,7 +256,8 @@ Optional: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `KV_REST_API_URL`, `KV_RES
 Vorbild ist die Karriereseite. Neue und geänderte Seiten nutzen diese Werte, damit alles einheitlich bleibt:
 
 - **Seitenhintergrund:** `bg-pale`. Karten, Boxen und Filter liegen weiß darauf, Kopfbereiche in `bg-dark`.
-- **Rundungen:** große Flächen (Kopfbereich, Textboxen, Titelbilder) `rounded-3xl` · Karten, Kacheln, Filterbox `rounded-2xl` · Buttons, Eingabefelder, Auswahlfelder, Seitenzahlen `rounded-xl` · Chips und runde Icon-Buttons `rounded-full` · kleine Labels auf Bildern `rounded-md`.
+- **Rundungen:** große Flächen (Kopfbereich, Textboxen, Titelbilder) `rounded-2xl` (16 px) · Karten, Kacheln, Filterbox `rounded-xl` (12 px) · Buttons, Eingabefelder, Auswahlfelder, Seitenzahlen, Slider-Pfeile `rounded-lg` (8 px, wie Produktseite) · Chips und Herz `rounded-full` · kleine Labels auf Bildern `rounded-md`.
+- **Slider-Pfeile:** wie auf der Produktseite: `h-10 w-10 rounded-lg border border-ash bg-white`, Pfeil `h-6 w-6`.
 - **Rahmen:** `border-ash`, beim Überfahren `border-mid`.
 - **Ausgewählte Chips:** `bg-[#d11820]` mit weißer Schrift (Kontrast für kleine Schrift).
 - **Schrift:** Es gibt nur Poppins Regular und Bold. Kein `font-medium` oder `font-semibold`, sonst rechnet der Browser einen unscharfen Schnitt hoch.

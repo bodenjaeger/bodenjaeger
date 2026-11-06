@@ -194,7 +194,7 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
     if (right < totalPages - 1) pages.push('ellipsis');
     pages.push(totalPages);
   }
-  const navClass = 'px-3 py-2 rounded-xl border border-ash bg-white text-mid transition-colors shrink-0';
+  const navClass = 'px-3 py-2 rounded-lg border border-ash bg-white text-mid transition-colors shrink-0';
 
   return (
     <div ref={gridTopRef} className="scroll-mt-48">
@@ -233,7 +233,7 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
       <div className="min-w-0">
       {filterState && <CategoryFilterChips state={filterState} apply={applyFilters} />}
       {filtered.length === 0 && (
-        <p className="mb-12 rounded-2xl bg-white p-8 text-center text-gray-600">Für diese Auswahl gibt es keine Aktionsprodukte. Entferne einen Filter oder lösche alle.</p>
+        <p className="mb-12 rounded-xl bg-white p-8 text-center text-gray-600">Für diese Auswahl gibt es keine Aktionsprodukte. Entferne einen Filter oder lösche alle.</p>
       )}
       <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 ${showSidebar ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}>
         {visible.map((product) => (
@@ -271,7 +271,7 @@ export default function BlackWeeksListing({ products, filterIndex = [] }: BlackW
                 onClick={() => goToPage(p)}
                 aria-label={`Seite ${p}`}
                 aria-current={currentPage === p ? 'page' : undefined}
-                className={`px-3 py-2 rounded-xl border transition-colors shrink-0 ${
+                className={`px-3 py-2 rounded-lg border transition-colors shrink-0 ${
                   currentPage === p
                     ? 'bg-brand text-white border-brand'
                     : 'border-ash bg-white text-mid hover:border-mid'

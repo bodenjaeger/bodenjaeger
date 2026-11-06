@@ -120,7 +120,7 @@ export default async function BlackWeeksPage() {
               width={1500}
               height={500}
               fetchPriority="high"
-              className="h-auto w-full rounded-3xl"
+              className="h-auto w-full rounded-2xl"
             />
           )}
 
@@ -134,7 +134,7 @@ export default async function BlackWeeksPage() {
 
       <div id="angebote" className="content-container scroll-mt-48 py-10">
         {tooMany && isPromoPreview() && (
-          <div className="mb-6 rounded-2xl border-2 border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
+          <div className="mb-6 rounded-xl border-2 border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
             <strong>Nur in der Vorschau sichtbar:</strong> Die Kategorie hat {total} Produkte, die Seite
             lädt höchstens {PROMO_MAX_PRODUCTS}. Es fehlen {total - products.length} Produkte.
           </div>
@@ -154,7 +154,7 @@ export default async function BlackWeeksPage() {
             </p>
             <Link
               href="/sale"
-              className="inline-block rounded-xl bg-brand px-6 py-3 font-bold text-white transition-colors hover:bg-[#d11820]"
+              className="inline-block rounded-lg bg-brand px-6 py-3 font-bold text-white transition-colors hover:bg-[#d11820]"
             >
               Zu den Angeboten
             </Link>

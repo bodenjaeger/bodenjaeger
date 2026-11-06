@@ -101,11 +101,11 @@ function FilterPanel({ state, apply, pending, onClose }: FilterProps & { onClose
           >
             <label className="grid gap-1 text-xs text-mid">
               von
-              <input value={from} onChange={(e) => setFrom(e.target.value)} onBlur={applyPrice} inputMode="decimal" placeholder={`${state.priceMin} €`} className="w-full rounded-xl border border-ash px-2.5 py-2 text-base md:text-sm text-dark" />
+              <input value={from} onChange={(e) => setFrom(e.target.value)} onBlur={applyPrice} inputMode="decimal" placeholder={`${state.priceMin} €`} className="w-full rounded-lg border border-ash px-2.5 py-2 text-base md:text-sm text-dark" />
             </label>
             <label className="grid gap-1 text-xs text-mid">
               bis
-              <input value={to} onChange={(e) => setTo(e.target.value)} onBlur={applyPrice} inputMode="decimal" placeholder={`${state.priceMax} €`} className="w-full rounded-xl border border-ash px-2.5 py-2 text-base md:text-sm text-dark" />
+              <input value={to} onChange={(e) => setTo(e.target.value)} onBlur={applyPrice} inputMode="decimal" placeholder={`${state.priceMax} €`} className="w-full rounded-lg border border-ash px-2.5 py-2 text-base md:text-sm text-dark" />
             </label>
             <button type="submit" className="sr-only">Preis anwenden</button>
           </form>
@@ -148,7 +148,7 @@ function FilterPanel({ state, apply, pending, onClose }: FilterProps & { onClose
 
       {onClose && (
         <div className="sticky bottom-0 border-t border-ash bg-white pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3">
-          <button type="button" onClick={onClose} className="w-full cursor-pointer rounded-xl bg-brand py-3.5 font-semibold text-white hover:bg-[#d11820]">
+          <button type="button" onClick={onClose} className="w-full cursor-pointer rounded-lg bg-brand py-3.5 font-semibold text-white hover:bg-[#d11820]">
             {state.total} {state.total === 1 ? 'Produkt' : 'Produkte'} anzeigen
           </button>
         </div>
@@ -161,7 +161,7 @@ function FilterPanel({ state, apply, pending, onClose }: FilterProps & { onClose
 export function CategoryFilterSidebar(props: FilterProps) {
   return (
     <StickyColumn className="hidden lg:sticky lg:block lg:self-start">
-      <aside aria-label="Filter" className="rounded-2xl bg-white px-[18px] pb-3 shadow-[0_2px_14px_rgba(46,45,50,0.06)]">
+      <aside aria-label="Filter" className="rounded-xl bg-white px-[18px] pb-3 shadow-[0_2px_14px_rgba(46,45,50,0.06)]">
         <FilterPanel {...props} />
       </aside>
     </StickyColumn>
@@ -185,13 +185,13 @@ export function CategoryFilterButton(props: FilterProps) {
 
   return (
     <>
-      <button type="button" onClick={() => setSheetOpen(true)} className="h-11 w-full cursor-pointer rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-[#d11820] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:hidden">
+      <button type="button" onClick={() => setSheetOpen(true)} className="h-11 w-full cursor-pointer rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-[#d11820] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:hidden">
         {count > 0 ? `Filtern (${count})` : 'Filtern'}
       </button>
       {sheetOpen && createPortal(
         <div className="fixed inset-0 z-[100] lg:hidden" role="dialog" aria-modal="true" aria-label="Filter">
           <button type="button" aria-label="Filter schließen" onClick={() => setSheetOpen(false)} className="absolute inset-0 cursor-pointer bg-dark/50" />
-          <div className="absolute inset-x-0 bottom-0 max-h-[86%] overflow-y-auto rounded-t-3xl bg-white px-[18px] shadow-[0_-6px_30px_rgba(0,0,0,0.2)]">
+          <div className="absolute inset-x-0 bottom-0 max-h-[86%] overflow-y-auto rounded-t-2xl bg-white px-[18px] shadow-[0_-6px_30px_rgba(0,0,0,0.2)]">
             <FilterPanel {...props} onClose={() => setSheetOpen(false)} />
           </div>
         </div>,
@@ -270,7 +270,7 @@ export function useFilterCollapse() {
 /** Ein- und Ausblenden der Filterspalte, nur ab Desktop-Breite. */
 export function CategoryFilterToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   return (
-    <button type="button" aria-expanded={!collapsed} onClick={onToggle} className="hidden h-11 cursor-pointer whitespace-nowrap rounded-xl border border-ash bg-white px-4 text-sm font-semibold text-dark hover:border-mid focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:inline-block">
+    <button type="button" aria-expanded={!collapsed} onClick={onToggle} className="hidden h-11 cursor-pointer whitespace-nowrap rounded-lg border border-ash bg-white px-4 text-sm font-semibold text-dark hover:border-mid focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:inline-block">
       {collapsed ? 'Filter einblenden' : 'Filter ausblenden'}
     </button>
   );
@@ -297,7 +297,7 @@ export function ListingToolbar({ filterControls, count, sort, sortOptions, onSor
           value={sort}
           aria-label="Sortierung"
           onChange={(e) => onSortChange(e.target.value)}
-          className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-ash bg-white pl-4 pr-9 text-sm font-semibold text-dark hover:border-mid focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:w-auto"
+          className="h-11 w-full cursor-pointer appearance-none rounded-lg border border-ash bg-white pl-4 pr-9 text-sm font-semibold text-dark hover:border-mid focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:w-auto"
         >
           {sortOptions.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>

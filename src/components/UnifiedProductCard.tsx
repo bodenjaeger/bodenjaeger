@@ -130,7 +130,7 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
     }
   };
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white transition-shadow duration-300 hover:shadow-lg">
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl bg-white transition-shadow duration-300 hover:shadow-lg">
       <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
         {/* Bildbereich */}
         <div className="relative aspect-[4/3] bg-white">
@@ -171,18 +171,18 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
                 onClick={(e) => showImage(e, activeImage - 1)}
                 onPointerEnter={() => setGalleryActive(true)}
                 aria-label="Vorheriges Bild"
-                className="absolute left-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-dark opacity-0 shadow-md transition-opacity group-hover:opacity-100 focus-visible:opacity-100 md:flex"
+                className="absolute left-3 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg border border-ash bg-white text-dark opacity-0 transition hover:bg-gray-100 active:bg-ash group-hover:opacity-100 focus-visible:opacity-100 md:flex"
               >
-                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                <ChevronLeft className="h-6 w-6" aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={(e) => showImage(e, activeImage + 1)}
                 onPointerEnter={() => setGalleryActive(true)}
                 aria-label="Nächstes Bild"
-                className="absolute right-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-dark opacity-0 shadow-md transition-opacity group-hover:opacity-100 focus-visible:opacity-100 md:flex"
+                className="absolute right-3 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg border border-ash bg-white text-dark opacity-0 transition hover:bg-gray-100 active:bg-ash group-hover:opacity-100 focus-visible:opacity-100 md:flex"
               >
-                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                <ChevronRight className="h-6 w-6" aria-hidden="true" />
               </button>
               <div className="pointer-events-none absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/40 px-2 py-1" aria-hidden="true">
                 {images.map((image, index) => (
@@ -422,7 +422,7 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
             onClick={sampleInCart ? openCartDrawer : handleOrderSample}
             disabled={isOrderingSample}
             aria-label={sampleInCart ? `Muster von ${klickVinylName(product.name)} im Warenkorb ansehen` : `Muster von ${klickVinylName(product.name)} bestellen`}
-            className={`flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-2 text-[13px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 text-[13px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
               sampleInCart ? 'border-2 border-cta bg-white text-cta hover:bg-cta/5' : 'bg-cta text-white hover:bg-cta-dark'
             }`}
           >
@@ -441,7 +441,7 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
           </button>
           <Link
             href={`/products/${product.slug}`}
-            className="flex min-h-11 items-center justify-center rounded-xl bg-dark px-2 text-[13px] font-bold text-white transition-colors hover:bg-[#d11820]"
+            className="flex min-h-11 items-center justify-center rounded-lg bg-dark px-2 text-[13px] font-bold text-white transition-colors hover:bg-[#d11820]"
             aria-label={`${klickVinylName(product.name)} ansehen`}
           >
             Zum Boden

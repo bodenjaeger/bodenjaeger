@@ -119,13 +119,13 @@ export default function CategoryPageClient({
         <div className="content-container py-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">{categoryName}</h1>
 
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-2xl mb-6">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-6">
             <strong>Fehler beim Laden der Produkte:</strong> {error}
           </div>
 
           <button
             onClick={reload}
-            className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-xl font-bold transition-colors"
+            className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-bold transition-colors"
           >
             Erneut versuchen
           </button>
@@ -151,7 +151,7 @@ export default function CategoryPageClient({
             const mobileIntro = intro.length > 110 ? `${intro.slice(0, 110).trimEnd()} …` : intro;
             const desktopIntro = intro.length > 320 ? `${intro.slice(0, 320).trimEnd()} …` : intro;
             return (
-              <section className={`mb-6 overflow-hidden rounded-3xl bg-dark text-white ${categoryImage?.src ? 'md:grid md:grid-cols-2' : ''}`}>
+              <section className={`mb-6 overflow-hidden rounded-2xl bg-dark text-white ${categoryImage?.src ? 'md:grid md:grid-cols-2' : ''}`}>
                 <div className="flex flex-col p-5 md:p-10 lg:p-14">
                   <h1 className="text-[32px] font-bold leading-[1.08] tracking-[-0.03em] text-white md:text-5xl lg:text-[60px]">
                     {categoryName}{SET_CATEGORIES.has(slug) && <span className="text-[#ff3b41]">, direkt im Set.</span>}
@@ -277,14 +277,14 @@ export default function CategoryPageClient({
             {isFiltered ? (
               <Link
                 href={listingHref(pathname, 1, sortBy)}
-                className="inline-block bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-xl font-bold transition-colors"
+                className="inline-block bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-bold transition-colors"
               >
                 Filter löschen
               </Link>
             ) : (
               <button
                 onClick={reload}
-                className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-xl font-bold transition-colors"
+                className="bg-brand hover:bg-[#d11820] text-white px-6 py-3 rounded-lg font-bold transition-colors"
               >
                 Aktualisieren
               </button>
@@ -306,7 +306,7 @@ export default function CategoryPageClient({
 
           // Echte Links (?page=n) statt onClick, damit Crawler alle Seiten
           // und damit alle Produkte ohne JavaScript erreichen.
-          const navClass = 'px-3 py-2 rounded-xl border border-ash bg-white text-mid transition-colors shrink-0';
+          const navClass = 'px-3 py-2 rounded-lg border border-ash bg-white text-mid transition-colors shrink-0';
           const prevLabel = (
             <>
               <span className="hidden sm:inline">Zurück</span>
@@ -348,7 +348,7 @@ export default function CategoryPageClient({
                     href={listingHref(pathname, page, sortBy, filterQuery)}
                     aria-label={`Seite ${page}`}
                     aria-current={currentPage === page ? 'page' : undefined}
-                    className={`px-3 py-2 rounded-xl border transition-colors shrink-0 ${
+                    className={`px-3 py-2 rounded-lg border transition-colors shrink-0 ${
                       currentPage === page
                         ? 'bg-brand text-white border-brand'
                         : 'border-ash bg-white text-mid hover:border-mid'
@@ -382,7 +382,7 @@ export default function CategoryPageClient({
 
         {/* Ausführlicher Kategorietext */}
         {categoryDescription && categoryDescription.replace(/<[^>]+>/g, '').trim().length > 110 && (
-          <section id="category-full-description" className="mt-12 rounded-3xl bg-white p-5 md:p-10 lg:p-12">
+          <section id="category-full-description" className="mt-12 rounded-2xl bg-white p-5 md:p-10 lg:p-12">
             <h2 className="mb-6 text-2xl font-bold tracking-[-0.02em] text-dark md:text-3xl">
               {categoryName} kaufen: Das solltest du wissen
             </h2>

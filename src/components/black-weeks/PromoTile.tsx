@@ -16,7 +16,7 @@ import {
  */
 export default function PromoTile() {
   return (
-    <article className="relative aspect-[600/857] overflow-hidden rounded-2xl bg-black transition-shadow duration-300 hover:shadow-lg md:aspect-auto md:h-full md:min-h-full">
+    <article className="relative aspect-[600/857] overflow-hidden rounded-xl bg-black transition-shadow duration-300 hover:shadow-lg md:aspect-auto md:h-full md:min-h-full">
       {/* Füllt die Kachel; rechts verankert, damit die Schrift bei schmalen Kacheln sichtbar bleibt. */}
       <PromoImage
         src={PROMO_IMAGES.tile}
