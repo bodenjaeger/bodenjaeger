@@ -21,9 +21,27 @@ export function klickVinylKategorietext(slug: string, text: string | null): stri
   );
 }
 
-/** Backend-Zwischenüberschrift: ganze Zeile fett wird zur echten H3. */
+/**
+ * Kategorietext aus dem Backend aufbereiten. WordPress erlaubt in Kategoriebeschreibungen
+ * nur wenige Tags (u. a. <strong>, keine Listen), deshalb:
+ * - ganze Zeile fett → H3
+ * - Zeilen mit „- “ oder „• “ am Anfang → Liste
+ */
 export function fetteZeilenAlsUeberschrift(text: string): string {
-  return text.replace(/^[ \t]*(?:<p>)?<strong>([^<]+)<\/strong>(?:<\/p>)?[ \t]*$/gm, '<h3>$1</h3>');
+  return text
+    .replace(/^[ \t]*(?:<p>)?<strong>([^<]+)<\/strong>(?:<\/p>)?[ \t]*$/gm, '<h3>$1</h3>')
+    .replace(/(?:^[ \t]*[-•][ \t]+.+(?:\n|$))+/gm, (block) => {
+      const items = block
+        .split('\n')
+        .map((line) => line.replace(/^[ \t]*[-•][ \t]+/, '').trim())
+        .filter(Boolean)
+        .map((line) => `<li>${line}</li>`)
+        .join('');
+      return `<ul>${items}</ul>\n`;
+    })
+    // Zeilenumbrüche direkt an Überschriften und Listen würden sonst als Leerzeile erscheinen
+    .replace(/\s*(<h3>|<ul>)/g, '\n$1')
+    .replace(/(<\/h3>|<\/ul>)\s*/g, '$1');
 }
 
 /** Erster Absatz ohne Zwischenüberschriften, als reiner Text für den Kategorie-Kopf. */
