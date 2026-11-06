@@ -1,11 +1,12 @@
 'use client';
 
+import SchliessenButton from '@/components/shared/SchliessenButton';
 import { klickVinylName } from '@/lib/klick-vinyl';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import { readSetAuswahl, writeSetAuswahl } from '@/lib/set-auswahl';
-import { ChevronRight, X } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { formatPrice } from '@/lib/cart-utils';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import { lockPageScroll } from '@/lib/scroll-lock';
@@ -325,9 +326,7 @@ export default function SetAngebot({
               <h3 id="set-auswahl-titel" className="text-lg font-bold text-dark sm:text-xl">
                 {modalType === 'daemmung' ? 'Dämmung wählen' : 'Sockelleiste wählen'}
               </h3>
-              <button type="button" onClick={closeModal} aria-label="Schließen" className="flex h-10 w-10 items-center justify-center rounded-lg text-dark hover:bg-gray-100">
-                <X className="h-5 w-5" />
-              </button>
+              <SchliessenButton onClick={closeModal} />
             </div>
 
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 sm:space-y-3 sm:p-6">

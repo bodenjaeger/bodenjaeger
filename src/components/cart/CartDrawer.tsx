@@ -1,5 +1,6 @@
 'use client';
 
+import { FensterKopf } from '@/components/shared/SchliessenButton';
 import React, { useEffect, useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import {
@@ -286,23 +287,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         `}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-white border-b border-gray-200">
-          <h2 className="text-xl font-bold text-dark">Warenkorb</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label="Warenkorb schließen"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+        <FensterKopf titel="Warenkorb" onClose={onClose} schliessenLabel="Warenkorb schließen" />
 
         {/* Cart Items - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 bg-white">

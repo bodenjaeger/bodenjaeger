@@ -2,15 +2,16 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { Heart, Package, ShoppingCart, User } from 'lucide-react'
+import { Heart, ShoppingCart, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCart } from '@/contexts/CartContext'
 import { useWishlist } from '@/contexts/WishlistContext'
 
 interface HeaderActionsProps {
   /**
-   * `desktop` = Icon mit Label darunter (Hauptzeile ab lg),
-   * `mobile`  = nur Icons (mobile Header-Zeile).
+   * `desktop` = Hauptzeile ab lg, `mobile` = mobile Header-Zeile.
+   * Beide nur als Symbol; Name per aria-label und Tooltip. So bleibt in der
+   * Desktop-Zeile Platz für alle Reiter.
    */
   variant: 'desktop' | 'mobile'
 }
@@ -26,10 +27,8 @@ function Badge({ value, label }: { value: number; label: string }) {
 }
 
 /**
- * Muster / Konto / Wunschliste / Warenkorb rechts in der Header-Hauptzeile.
- *
- * Muster: zählt die Muster im Warenkorb. Ohne Muster führt das Symbol zur
- * Musterbox, mit Mustern öffnet es den Warenkorb, in dem sie liegen.
+ * Konto / Wunschliste / Warenkorb rechts in der Header-Hauptzeile (die Suche
+ * davor steuert die aufrufende Zeile).
  *
  * Alle Ziele sind mindestens 44×44px groß. Der Warenkorb-Badge wird immer
  * gerendert (Default „0"), damit beim Nachladen des localStorage-Warenkorbs
@@ -37,7 +36,7 @@ function Badge({ value, label }: { value: number; label: string }) {
  */
 export default function HeaderActions({ variant }: HeaderActionsProps) {
   const { wishlistCount } = useWishlist()
-  const { itemCount, openCartDrawer, cartItems } = useCart()
+  const { itemCount, openCartDrawer } = useCart()
   const { user, isLoggedIn, logout } = useAuth()
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -61,34 +60,15 @@ export default function HeaderActions({ variant }: HeaderActionsProps) {
   // localStorage und wären sonst nicht hydrations-sicher.
   const cartCount = mounted ? itemCount : 0
   const favCount = mounted ? wishlistCount : 0
-  const musterCount = mounted ? cartItems.filter((item) => item.isSample).length : 0
 
   // Gemeinsames Layout für alle drei Aktionen.
-  const itemClass = isDesktop
-    ? 'group relative flex h-[52px] min-w-[72px] flex-col items-center justify-center gap-1 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'
-    : 'group relative flex h-11 w-11 items-center justify-center rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'
+  const itemClass =
+    'group relative flex h-11 w-11 items-center justify-center rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'
 
   const iconClass = isDesktop ? 'h-6 w-6 text-white' : 'h-[22px] w-[22px] text-white'
-  const labelClass = 'text-[11px] leading-none text-white'
 
   return (
-    <div className={`flex flex-shrink-0 items-center ${isDesktop ? 'gap-2' : 'gap-0.5'}`}>
-      {/* Muster */}
-      {musterCount > 0 ? (
-        <button type="button" onClick={openCartDrawer} className={`${itemClass} max-[379px]:hidden`} aria-label="Muster im Warenkorb ansehen">
-          <span className="relative">
-            <Package className={iconClass} strokeWidth={1.75} aria-hidden="true" />
-            <Badge value={musterCount} label="Muster im Warenkorb" />
-          </span>
-          {isDesktop && <span className={labelClass}>Muster</span>}
-        </button>
-      ) : (
-        <Link href="/category/musterbox" className={`${itemClass} max-[379px]:hidden`} aria-label="Kostenlose Bodenmuster bestellen">
-          <Package className={iconClass} strokeWidth={1.75} aria-hidden="true" />
-          {isDesktop && <span className={labelClass}>Muster</span>}
-        </Link>
-      )}
-
+    <div className={`flex flex-shrink-0 items-center ${isDesktop ? 'gap-1' : 'gap-0.5'}`}>
       {/* Konto */}
       <div className="relative" ref={accountMenuRef}>
         {isLoggedIn ? (
@@ -97,6 +77,7 @@ export default function HeaderActions({ variant }: HeaderActionsProps) {
               type="button"
               onClick={() => setIsAccountMenuOpen((prev) => !prev)}
               className={itemClass}
+              title="Konto"
               aria-label="Kundenkonto"
               aria-expanded={isAccountMenuOpen}
               aria-haspopup="menu"
@@ -104,7 +85,6 @@ export default function HeaderActions({ variant }: HeaderActionsProps) {
               <span className="relative">
                 <User className={iconClass} strokeWidth={1.75} aria-hidden="true" />
               </span>
-              {isDesktop && <span className={labelClass}>Konto</span>}
             </button>
             {isAccountMenuOpen && (
               <div
@@ -148,29 +128,27 @@ export default function HeaderActions({ variant }: HeaderActionsProps) {
             )}
           </>
         ) : (
-          <Link href="/login" className={itemClass} aria-label="Anmelden">
+          <Link href="/login" className={itemClass} aria-label="Anmelden" title="Konto">
             <User className={iconClass} strokeWidth={1.75} aria-hidden="true" />
-            {isDesktop && <span className={labelClass}>Konto</span>}
           </Link>
         )}
       </div>
 
       {/* Wunschliste */}
-      <Link href="/favoriten" className={`${itemClass} max-[339px]:hidden`} aria-label="Wunschliste">
+      {/* Mobil unter 430px ausgeblendet (Platz für die Suche), dann im Menü */}
+      <Link href="/favoriten" className={`${itemClass} max-[429px]:hidden`} aria-label="Wunschliste" title="Wunschliste">
         <span className="relative">
           <Heart className={iconClass} strokeWidth={1.75} aria-hidden="true" />
           {favCount > 0 && <Badge value={favCount} label="Artikel auf der Wunschliste" />}
         </span>
-        {isDesktop && <span className={labelClass}>Wunschliste</span>}
       </Link>
 
       {/* Warenkorb */}
-      <button type="button" onClick={openCartDrawer} className={itemClass} aria-label="Warenkorb öffnen">
+      <button type="button" onClick={openCartDrawer} className={itemClass} aria-label="Warenkorb öffnen" title="Warenkorb">
         <span className="relative">
           <ShoppingCart className={iconClass} strokeWidth={1.75} aria-hidden="true" />
           <Badge value={cartCount} label="Artikel im Warenkorb" />
         </span>
-        {isDesktop && <span className={labelClass}>Warenkorb</span>}
       </button>
     </div>
   )

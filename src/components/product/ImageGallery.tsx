@@ -1,9 +1,10 @@
 'use client';
 
+import SchliessenButton from '@/components/shared/SchliessenButton';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, Expand, Play, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Expand, Play } from 'lucide-react';
 import type { StoreApiProduct } from '@/lib/woocommerce';
 import { lockPageScroll } from '@/lib/scroll-lock';
 
@@ -299,14 +300,7 @@ export default function ImageGallery({ product, hideDiscount = false, videoUrl }
             sizes="100vw"
             className="object-contain sm:px-20 sm:py-4"
           />
-          <button
-            onClick={() => setIsZoomed(false)}
-            autoFocus
-            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash"
-            aria-label="Schließen"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          <SchliessenButton onClick={() => setIsZoomed(false)} autoFocus className="absolute right-4 top-4" />
           {images.length > 1 && (
             <>
               <button

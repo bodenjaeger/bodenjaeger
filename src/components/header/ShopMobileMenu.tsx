@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { ChevronRight, MapPin } from 'lucide-react'
+import { ChevronDown, ChevronRight, Heart, MapPin } from 'lucide-react'
 import { FACHMARKT_LINK, MUSTER_LINK, SHOP_NAV, getNavHref } from '@/content/shopNav'
 import { MOBILE_SCHNELLFILTER } from '@/content/megaMenu'
 import { LANDING_NAV, LEISTUNGEN_DROPDOWN } from '@/content/fachmarkt'
-import { BereichUmschalter, StatusAnzeige, useOeffnungsstatus, type HeaderBereich } from './UspBar'
+import { FensterKopf } from '@/components/shared/SchliessenButton'
+import { BereichUmschalter, type HeaderBereich } from './UspBar'
 
 const FM = '/fachmarkt-hueckelhoven'
 
@@ -19,23 +20,23 @@ interface ShopMobileMenuProps {
   bereich?: HeaderBereich
 }
 
+/** Drei feste Schriftstufen, damit das Menü ruhig und gut lesbar bleibt. */
+const STUFE_1 = 'text-[17px] font-[family-name:var(--font-poppins-bold)] text-dark'
+const STUFE_2 = 'text-base font-[family-name:var(--font-poppins-regular)] font-normal text-dark'
+const KICKER = 'text-xs font-[family-name:var(--font-poppins-bold)] uppercase tracking-[0.1em] text-mid'
+
 /**
- * Mobiles Menü des Shop-Headers.
+ * Mobiles Menü des Shop-Headers als Vollbild-Fenster (helle Fläche, volle
+ * Breite) mit Titel und dem einheitlichen X oben rechts (FensterKopf).
  *
- * Layout: Drawer von links über 85% der Breite, rechts daneben und darunter ein
- * abdunkelnder Backdrop. Das Panel beginnt unterhalb der Header-Zeile
- * (`top-14` = 56px, muss zur Höhe der Header-Zeile in Header.tsx passen), damit
- * Burger, Logo und Icons unverändert sichtbar und bedienbar bleiben.
+ * Aufbau: Umschalter Onlineshop/Fachmarkt · (im Fachmarkt-Bereich dessen
+ * Menü) · Sortiment als Akkordeon · Muster-Button · Wunschliste · Fachmarkt.
  *
- * Kein Suchfeld — die Suche steht im geschlossenen Zustand in der eigenen
- * Header-Zeile. Unterkategorien öffnen als Akkordeon, damit die Header-Zeile
- * ohne Zurück-Pfeil auskommt.
+ * Drei Schriftstufen: Hauptpunkte 17px fett, Unterpunkte 16px normal,
+ * Zwischenüberschriften 12px Versalien grau. Alle Zeilen mindestens 48px hoch.
  *
- * Tippen auf eine Zeile: Hat die Kategorie Unterpunkte, klappt die gesamte Zeile
- * (Text und Pfeil) das Akkordeon auf; die Kategorieseite selbst liegt darin als
- * erster Eintrag. Dessen Text kommt aus `allLabel` in shopNav.ts und ist pro
- * Kategorie ausformuliert („Alle Vinylböden anzeigen") — ohne Angabe steht dort
- * „Alles anzeigen". Ohne Unterpunkte navigiert die Zeile direkt.
+ * Tippen auf eine Zeile mit Unterpunkten klappt sie auf; die Kategorieseite
+ * selbst steht darin als erster Eintrag (`allLabel` in shopNav.ts).
  *
  * Bleibt dauerhaft im DOM und wird geschlossen über `invisible` ausgeblendet:
  * das erlaubt die Slide-Animation und nimmt die Inhalte gleichzeitig aus
@@ -43,148 +44,123 @@ interface ShopMobileMenuProps {
  */
 export default function ShopMobileMenu({ isOpen, onClose, promoActive = false, bereich = 'shop' }: ShopMobileMenuProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const status = useOeffnungsstatus()
 
   // Aufgeklappte Unterliste beim Schließen zurücksetzen.
   useEffect(() => {
     if (!isOpen) setExpandedId(null)
   }, [isOpen])
 
-  return (
-    <div className="lg:hidden">
-      {/* Backdrop – deckt die Fläche rechts vom Drawer und darunter ab */}
-      <div
-        onClick={onClose}
-        aria-hidden="true"
-        className={`fixed inset-x-0 top-14 bottom-0 z-[1] bg-black/70 transition-opacity duration-300 ${
-          isOpen ? 'visible opacity-100' : 'invisible opacity-0'
-        }`}
-      />
+  const unterLink = 'flex min-h-12 items-center justify-between gap-3 px-5 ' + STUFE_2
 
-      {/* Panel */}
-      <div
-        id="shop-mobile-menu"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Hauptnavigation"
-        className={`fixed top-14 bottom-0 left-0 z-[2] w-[85%] max-w-[420px] overflow-y-auto overscroll-contain bg-hdr-bg transition-transform duration-300 ease-in-out ${
-          isOpen ? 'visible translate-x-0' : 'invisible -translate-x-full'
-        }`}
-      >
-        {/* Umschalter Shop/Fachmarkt und Öffnungsstatus, wie oben im Desktop-Kopf */}
-        <div className="flex items-center justify-between gap-3 border-b border-hdr-line px-4 py-3">
-          <BereichUmschalter bereich={bereich} kurz />
-          <StatusAnzeige status={status} kurz />
+  return (
+    <div
+      id="shop-mobile-menu"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="shop-mobile-menu-titel"
+      className={`fixed inset-0 z-[4] flex flex-col bg-white transition-transform duration-300 ease-in-out lg:hidden ${
+        isOpen ? 'visible translate-x-0' : 'invisible -translate-x-full'
+      }`}
+    >
+      <FensterKopf titel="Menü" titelId="shop-mobile-menu-titel" onClose={onClose} schliessenLabel="Menü schließen" />
+
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(24px+env(safe-area-inset-bottom,0px))]">
+        <div className="px-4 pt-4 pb-2">
+          <BereichUmschalter bereich={bereich} hell kurz />
         </div>
 
         {bereich === 'fachmarkt' && (
-          <nav aria-label="Fachmarkt" className="border-b border-hdr-line pb-2">
-            <p className="px-4 pt-4 pb-1 text-[11px] font-[family-name:var(--font-poppins-bold)] tracking-wider text-hdr-muted uppercase">
-              Fachmarkt Hückelhoven
-            </p>
-            <ul>
+          <nav aria-label="Fachmarkt" className="pt-2">
+            <p className={`px-5 pt-3 pb-1 ${KICKER}`}>Fachmarkt Hückelhoven</p>
+            <ul className="divide-y divide-ash border-b border-ash">
               {LANDING_NAV.items.map((item) =>
                 item.kind === 'leistungen' ? (
                   LEISTUNGEN_DROPDOWN.map((l) => (
                     <li key={l.href}>
-                      <Link href={l.href} onClick={onClose} className="flex min-h-11 items-center px-4 text-sm text-white/90">
+                      <Link href={l.href} onClick={onClose} className={unterLink}>
                         {l.label}
+                        <ChevronRight className="h-5 w-5 flex-shrink-0 text-mid" strokeWidth={2} aria-hidden="true" />
                       </Link>
                     </li>
                   ))
                 ) : (
                   <li key={item.href}>
-                    <Link href={`${FM}${item.href}`} onClick={onClose} className="flex min-h-11 items-center px-4 text-sm text-white/90">
+                    <Link href={`${FM}${item.href}`} onClick={onClose} className={unterLink}>
                       {item.label}
+                      <ChevronRight className="h-5 w-5 flex-shrink-0 text-mid" strokeWidth={2} aria-hidden="true" />
                     </Link>
                   </li>
                 )
               )}
             </ul>
-            <p className="px-4 pt-4 pb-1 text-[11px] font-[family-name:var(--font-poppins-bold)] tracking-wider text-hdr-muted uppercase">
-              Onlineshop
-            </p>
           </nav>
         )}
 
-        <nav aria-label="Kategorien">
-          <ul>
+        <nav aria-label="Sortiment" className="pt-2">
+          <p className={`px-5 pt-3 pb-1 ${KICKER}`}>Sortiment</p>
+          <ul className="border-b border-ash">
             {SHOP_NAV.map((item) => {
               const hasChildren = Boolean(item.children?.length)
               const isExpanded = expandedId === item.id
+              const istAngebot = item.id === 'angebote'
 
               return (
-                <li key={item.id} className="border-b border-hdr-line">
+                <li key={item.id} className="border-t border-ash">
                   {hasChildren ? (
                     <>
-                      {/* Ganze Zeile klappt auf — Text und Pfeil dürfen nicht
-                          unterschiedliche Ziele haben. Die Kategorieseite selbst
-                          steht als erster Eintrag im Untermenü. */}
                       <button
                         type="button"
                         onClick={() => setExpandedId(isExpanded ? null : item.id)}
                         aria-expanded={isExpanded}
                         aria-controls={`mobile-sub-${item.id}`}
-                        className={`flex min-h-14 w-full items-center justify-between gap-2 px-4 text-left text-[15px] text-white ${
-                          isExpanded ? 'font-[family-name:var(--font-poppins-bold)]' : 'font-[family-name:var(--font-poppins-regular)] font-normal'
-                        }`}
+                        className={`flex min-h-14 w-full items-center justify-between gap-3 px-5 text-left ${STUFE_1}`}
                       >
                         {item.label}
-                        {/* Geschlossen zeigt der Pfeil nach rechts, aufgeklappt
-                            dreht er um 90° nach unten. */}
-                        <ChevronRight
-                          className={`h-5 w-5 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                          strokeWidth={2}
+                        <ChevronDown
+                          className={`h-5 w-5 flex-shrink-0 text-dark transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                          strokeWidth={2.25}
                           aria-hidden="true"
                         />
                       </button>
 
-                      <ul id={`mobile-sub-${item.id}`} hidden={!isExpanded} className="bg-hdr-panel">
+                      <ul id={`mobile-sub-${item.id}`} hidden={!isExpanded} className="bg-pale pb-3">
                         <li>
                           <Link
                             href={getNavHref(item, promoActive)}
                             onClick={onClose}
-                            className="flex min-h-11 items-center px-4 text-sm text-white/90"
+                            className={`flex min-h-12 items-center justify-between gap-3 px-5 text-base font-[family-name:var(--font-poppins-bold)] text-brand`}
                           >
                             {item.allLabel ?? 'Alles anzeigen'}
+                            <ChevronRight className="h-5 w-5 flex-shrink-0" strokeWidth={2} aria-hidden="true" />
                           </Link>
                         </li>
                         {item.children?.map((child) =>
                           child.isGroupLabel ? (
-                            <li
-                              key={child.id}
-                              className="px-4 pt-3 pb-1 text-[11px] font-bold tracking-wider text-hdr-muted uppercase"
-                            >
+                            <li key={child.id} className={`px-5 pt-4 pb-1 ${KICKER}`}>
                               {child.label}
                             </li>
                           ) : (
                             <li key={child.id}>
-                              <Link
-                                href={child.href}
-                                onClick={onClose}
-                                className="flex min-h-11 items-center px-4 text-sm text-white/90"
-                              >
+                              <Link href={child.href} onClick={onClose} className={unterLink}>
                                 {child.label}
+                                <ChevronRight className="h-5 w-5 flex-shrink-0 text-mid" strokeWidth={2} aria-hidden="true" />
                               </Link>
                             </li>
                           )
                         )}
                         {MOBILE_SCHNELLFILTER[item.id] && (
-                          <li className="pt-3 pb-4">
-                            <p className="px-4 pb-2 text-[11px] font-[family-name:var(--font-poppins-bold)] tracking-wider text-hdr-muted uppercase">
-                              Schnell filtern
-                            </p>
-                            {/* Umbrechend statt wischbar: alle Filter auf einen Blick */}
-                            <div className="flex flex-wrap gap-2 px-4">
+                          <li className="px-5 pt-4">
+                            <p className={`pb-2 ${KICKER}`}>Schnell filtern</p>
+                            <div className="flex flex-wrap gap-2">
                               {MOBILE_SCHNELLFILTER[item.id].map((chip) => (
                                 <Link
                                   key={chip.href}
                                   href={chip.href}
                                   onClick={onClose}
-                                  className="inline-flex min-h-9 flex-none items-center gap-2 whitespace-nowrap rounded-full bg-white/10 px-3.5 text-[13px] text-white"
+                                  className="inline-flex min-h-10 items-center gap-2 whitespace-nowrap rounded-full border border-ash bg-white px-4 text-sm text-dark"
                                 >
                                   {chip.swatch && (
-                                    <span aria-hidden="true" className="h-3 w-3 flex-none rounded-full border border-white/30" style={{ background: chip.swatch }} />
+                                    <span aria-hidden="true" className="h-3.5 w-3.5 flex-none rounded-full border border-black/15" style={{ background: chip.swatch }} />
                                   )}
                                   {chip.label}
                                 </Link>
@@ -198,10 +174,10 @@ export default function ShopMobileMenu({ isOpen, onClose, promoActive = false, b
                     <Link
                       href={getNavHref(item, promoActive)}
                       onClick={onClose}
-                      className="flex min-h-14 items-center justify-between px-4 text-[15px] text-white"
+                      className={`flex min-h-14 items-center justify-between gap-3 px-5 ${STUFE_1} ${istAngebot ? 'text-brand' : ''}`}
                     >
                       {item.label}
-                      <ChevronRight className="h-5 w-5 flex-shrink-0" strokeWidth={2} aria-hidden="true" />
+                      <ChevronRight className="h-5 w-5 flex-shrink-0" strokeWidth={2.25} aria-hidden="true" />
                     </Link>
                   )}
                 </li>
@@ -210,33 +186,30 @@ export default function ShopMobileMenu({ isOpen, onClose, promoActive = false, b
           </ul>
         </nav>
 
-        {/* Muster-Link, abgesetzt */}
-        <Link
-          href={MUSTER_LINK.href}
-          onClick={onClose}
-          className="mt-6 flex min-h-11 items-center px-4 text-[15px] font-[family-name:var(--font-poppins-bold)] text-white"
-        >
-          {MUSTER_LINK.label}
-        </Link>
-
-        {/* Fachmarkt-Block, abgesetzt. Der gesamte Block ist EIN Link —
-            Überschrift, Zeile darunter und „Zum Fachmarkt" führen alle zum
-            selben Ziel, also gibt es keinen Grund, nur den Schlusssatz
-            anklickbar zu machen. Das „→" bleibt deshalb ein <span>: ein Link im
-            Link ist ungültiges HTML. */}
-        <div className="mt-6 mb-8 border-t border-hdr-line pt-6">
+        <div className="flex flex-col gap-3 px-4 pt-6">
           <Link
-            href={FACHMARKT_LINK.href}
+            href={MUSTER_LINK.href}
             onClick={onClose}
-            className="flex gap-3 px-4 py-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="flex min-h-12 items-center justify-center rounded-lg bg-brand px-4 text-base font-[family-name:var(--font-poppins-bold)] text-white"
           >
-            <MapPin className="mt-0.5 h-5 w-5 flex-shrink-0 text-white" strokeWidth={2} aria-hidden="true" />
+            {MUSTER_LINK.label}
+          </Link>
+          <Link
+            href="/favoriten"
+            onClick={onClose}
+            className="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-ash px-4 text-base font-[family-name:var(--font-poppins-bold)] text-dark"
+          >
+            <Heart className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+            Wunschliste
+          </Link>
+
+          {/* Fachmarkt-Block: der ganze Block ist EIN Link */}
+          <Link href={FACHMARKT_LINK.href} onClick={onClose} className="mt-2 flex gap-3 rounded-xl bg-pale p-4">
+            <MapPin className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
             <div>
-              <p className="font-[family-name:var(--font-poppins-bold)] text-[15px] text-white">
-                {FACHMARKT_LINK.title}
-              </p>
-              <p className="mt-1 text-xs text-hdr-muted">{FACHMARKT_LINK.subline}</p>
-              <span className="mt-3 inline-flex items-center text-sm font-[family-name:var(--font-poppins-bold)] text-hdr-link">
+              <p className={STUFE_1}>{FACHMARKT_LINK.title}</p>
+              <p className="mt-1 text-sm text-mid">{FACHMARKT_LINK.subline}</p>
+              <span className="mt-3 inline-flex items-center text-sm font-[family-name:var(--font-poppins-bold)] text-brand">
                 {FACHMARKT_LINK.linkLabel} <span aria-hidden="true">&nbsp;→</span>
               </span>
             </div>

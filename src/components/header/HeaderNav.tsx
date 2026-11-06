@@ -2,26 +2,33 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronDown, Store } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { ChevronDown, Search } from 'lucide-react'
 import { MEGA_NAV, angeboteHref } from '@/content/megaMenu'
-import { LANDING_NAV, primaryNavCta } from '@/content/fachmarkt'
-import CtaButton from '@/components/shared/CtaButton'
+import { LANDING_NAV } from '@/content/fachmarkt'
+import LiveSearch from '@/components/LiveSearch'
+import SchliessenButton from '@/components/shared/SchliessenButton'
 import MegaMenu from './MegaMenu'
-import { useOeffnungsstatus, type HeaderBereich } from './UspBar'
+import HeaderLogo from './HeaderLogo'
+import type { HeaderBereich } from './UspBar'
 
 const FM = '/fachmarkt-hueckelhoven'
+const SUCHE = 'suche'
 
 /**
- * Zeile 3 des Headers (nur ab lg), Höhe fest 64px.
+ * Hauptzeile des Desktop-Headers (ab lg), Höhe fest 80px:
+ * Logo · Reiter · Suche + Konto/Wunschliste/Warenkorb (`actions`).
  *
- * Shop: Kategorien mit Mega-Menü (Inhalte in `src/content/megaMenu.ts`), rechts
- * der Fachmarkt mit eigenem Mega-Menü. Fachmarkt-Seiten: dieselbe Zeile zeigt
- * das Fachmarkt-Menü, „Leistungen“ öffnet das Fachmarkt-Panel.
+ * Shop: Reiter mit Mega-Menü (Inhalte in `src/content/megaMenu.ts`).
+ * Fachmarkt-Seiten: dieselbe Zeile zeigt das Fachmarkt-Menü, „Leistungen“ öffnet
+ * das Fachmarkt-Panel. Zum Wechseln dient der Umschalter in der Zeile darüber.
  *
- * Das Label bleibt ein Link auf die Kategorie. Geöffnet wird per Hover (mit
- * kurzer Verzögerung, damit beim Überfahren nichts aufflackert) oder per Klick
- * auf den Pfeil. Escape schließt und gibt den Fokus an den Pfeil zurück.
+ * Die Suche steht als Symbol neben den Aktionen und klappt darunter als Leiste
+ * auf. Mega-Menüs und Suche teilen sich denselben Platz unter der Zeile; es ist
+ * immer nur eines offen. Schließen: X, Escape, Klick daneben oder Seitenwechsel.
+ *
+ * Mega-Menüs öffnen per Hover (kurze Verzögerung gegen Flackern) oder per Klick
+ * auf den Pfeil; das Label bleibt ein Link auf die Kategorie.
  *
  * Der abdunkelnde Hintergrund liegt bewusst außerhalb des Hover-Bereichs,
  * damit das Menü schließt, sobald die Maus Kopf und Panel verlässt.
@@ -29,12 +36,13 @@ const FM = '/fachmarkt-hueckelhoven'
 export default function HeaderNav({
   promoActive = false,
   bereich = 'shop',
+  actions,
 }: {
   promoActive?: boolean
   bereich?: HeaderBereich
+  actions: ReactNode
 }) {
   const pathname = usePathname()
-  const status = useOeffnungsstatus()
   const [openId, setOpenId] = useState<string | null>(null)
   const [backdropTop, setBackdropTop] = useState(0)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -58,19 +66,25 @@ export default function HeaderNav({
     setOpenId(null)
   }, [clearTimers])
 
-  // Escape, Klick außerhalb und Scrollen schließen das Menü.
+  /** Schließen per X oder Escape: Fokus zurück auf den Auslöser. */
+  const closeAndFocus = useCallback(() => {
+    const id = openId
+    close()
+    if (id) triggerRefs.current[id]?.focus()
+  }, [openId, close])
+
+  // Escape, Klick außerhalb und Größenänderung.
   useEffect(() => {
     if (!openId) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        triggerRefs.current[openId]?.focus()
-        close()
-      }
+      if (e.key === 'Escape') closeAndFocus()
     }
     const onMouseDown = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) close()
     }
-    const onResize = () => rowRef.current && setBackdropTop(rowRef.current.getBoundingClientRect().bottom)
+    const onResize = () => {
+      if (rowRef.current) setBackdropTop(rowRef.current.getBoundingClientRect().bottom)
+    }
     document.addEventListener('keydown', onKeyDown)
     document.addEventListener('mousedown', onMouseDown)
     window.addEventListener('resize', onResize)
@@ -81,7 +95,7 @@ export default function HeaderNav({
       window.removeEventListener('resize', onResize)
       window.removeEventListener('scroll', onResize)
     }
-  }, [openId, close])
+  }, [openId, close, closeAndFocus])
 
   // Seitenwechsel schließt das Menü.
   useEffect(() => {
@@ -92,31 +106,33 @@ export default function HeaderNav({
 
   const hoverOpen = (id: string) => {
     if (!window.matchMedia('(hover: hover)').matches) return
+    if (openId === SUCHE) return // Suche bleibt offen, bis man sie schließt
     clearTimers()
     openTimer.current = setTimeout(() => open(id), openId ? 60 : 150)
   }
 
   const toggle = (id: string) => (openId === id ? close() : open(id))
+  const setTrigger = (id: string) => (el: HTMLButtonElement | null) => {
+    triggerRefs.current[id] = el
+  }
 
   const chevron = (id: string, label: string) => (
     <button
       type="button"
-      ref={(el) => {
-        triggerRefs.current[id] = el
-      }}
+      ref={setTrigger(id)}
       onClick={() => toggle(id)}
       aria-expanded={openId === id}
       aria-controls="mega-menu"
       aria-label={`Menü ${label} ${openId === id ? 'schließen' : 'öffnen'}`}
-      className="-ml-2 flex h-11 w-7 items-center justify-center rounded-md text-white transition-colors hover:text-hdr-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      className="-ml-1.5 flex h-11 w-6 items-center justify-center rounded-md text-white transition-colors hover:text-hdr-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
     >
       <ChevronDown className={`h-4 w-4 transition-transform ${openId === id ? 'rotate-180' : ''}`} strokeWidth={2} aria-hidden="true" />
     </button>
   )
 
   const itemCls = (aktiv: boolean) =>
-    `relative flex h-11 items-center whitespace-nowrap rounded-md px-2.5 text-[15px] text-white transition-colors hover:text-hdr-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-      aktiv ? 'after:absolute after:inset-x-2.5 after:-bottom-[10px] after:h-[3px] after:rounded-full after:bg-hdr-red' : ''
+    `relative flex h-11 items-center whitespace-nowrap rounded-md px-2 text-sm text-white transition-colors hover:text-hdr-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white xl:px-2.5 xl:text-[15px] ${
+      aktiv ? 'after:absolute after:inset-x-2 after:-bottom-[18px] after:h-[3px] after:rounded-full after:bg-hdr-red' : ''
     }`
 
   const onServiceRoute = pathname?.startsWith(`${FM}/service`) ?? false
@@ -125,10 +141,10 @@ export default function HeaderNav({
     <>
       <div
         ref={wrapRef}
-        className="hidden lg:block"
+        className="hidden border-b border-hdr-line lg:block"
         onMouseLeave={() => {
           if (openTimer.current) clearTimeout(openTimer.current)
-          if (!openId) return
+          if (!openId || openId === SUCHE) return
           closeTimer.current = setTimeout(close, 220)
         }}
         onMouseEnter={() => {
@@ -136,10 +152,12 @@ export default function HeaderNav({
         }}
       >
         <div className="content-container relative">
-          <div ref={rowRef} className="flex h-[64px] items-center justify-between gap-4">
+          <div ref={rowRef} className="flex h-[80px] items-center gap-6 xl:gap-8">
+            <HeaderLogo />
+
             {bereich === 'shop' ? (
-              <nav aria-label="Hauptnavigation">
-                <ul className="flex items-center gap-1">
+              <nav aria-label="Hauptnavigation" className="min-w-0 flex-1">
+                <ul className="flex items-center gap-0.5 xl:gap-1">
                   {MEGA_NAV.map((item) => (
                     <li
                       key={item.id}
@@ -150,7 +168,14 @@ export default function HeaderNav({
                     >
                       <span className="flex items-center">
                         <Link href={item.href} onClick={close} className={itemCls(openId === item.id)}>
-                          {item.label}
+                          {item.id === 'verlegen' ? (
+                            <>
+                              <span className="xl:hidden">Verlegen</span>
+                              <span className="hidden xl:inline">{item.label}</span>
+                            </>
+                          ) : (
+                            item.label
+                          )}
                         </Link>
                         {chevron(item.id, item.label)}
                       </span>
@@ -160,7 +185,7 @@ export default function HeaderNav({
                     <Link href={angeboteHref(promoActive)} className={itemCls(false)}>
                       Angebote
                       {promoActive && (
-                        <span className="ml-2 rounded-md bg-hdr-red px-2 py-0.5 text-[11px] font-[family-name:var(--font-poppins-bold)] text-white">
+                        <span className="ml-2 hidden rounded-md bg-hdr-red px-2 py-0.5 text-[11px] font-[family-name:var(--font-poppins-bold)] text-white 2xl:inline">
                           Black Weeks
                         </span>
                       )}
@@ -169,10 +194,10 @@ export default function HeaderNav({
                 </ul>
               </nav>
             ) : (
-              <nav aria-label="Fachmarkt">
-                <ul className="flex items-center gap-1">
+              <nav aria-label="Fachmarkt" className="min-w-0 flex-1">
+                <ul className="flex items-center gap-0.5 xl:gap-1">
                   {/* Übersicht und Bewertungen erst ab xl, sonst passt die Zeile
-                      mit dem Button rechts zwischen 1024 und 1280px nicht. */}
+                      zwischen 1024 und 1280px nicht. */}
                   <li className="hidden xl:block">
                     <Link href={FM} className={itemCls(pathname === FM)}>
                       Übersicht
@@ -200,31 +225,41 @@ export default function HeaderNav({
               </nav>
             )}
 
-            {bereich === 'shop' ? (
-              <div className="flex items-center" onMouseEnter={() => hoverOpen('fachmarkt')}>
-                <Link
-                  href={FM}
-                  onClick={close}
-                  className={`${itemCls(openId === 'fachmarkt')} gap-2`}
-                >
-                  <Store className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={1.75} aria-hidden="true" />
-                  <span className="xl:hidden">Fachmarkt</span>
-                  <span className="hidden xl:inline">Fachmarkt Hückelhoven</span>
-                </Link>
-                {chevron('fachmarkt', 'Fachmarkt')}
-              </div>
-            ) : (
-              <CtaButton cta={primaryNavCta(pathname ?? FM)} size="md" className="min-h-11! rounded-lg! py-2.5! text-sm!" />
-            )}
+            <div className="flex flex-shrink-0 items-center gap-1">
+              <button
+                type="button"
+                ref={setTrigger(SUCHE)}
+                onClick={() => toggle(SUCHE)}
+                aria-expanded={openId === SUCHE}
+                aria-controls="kopf-suche"
+                aria-label={openId === SUCHE ? 'Suche schließen' : 'Suche öffnen'}
+                title="Suche"
+                className={`flex h-11 w-11 items-center justify-center rounded-md text-white transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                  openId === SUCHE ? 'bg-white/10' : ''
+                }`}
+              >
+                <Search className="h-6 w-6" strokeWidth={1.75} aria-hidden="true" />
+              </button>
+              {actions}
+            </div>
           </div>
 
-          {openId && (
+          {openId === SUCHE && (
+            <div id="kopf-suche" className="absolute inset-x-4 top-full z-10 mt-2 rounded-xl bg-hdr-bg p-5 shadow-[0_24px_60px_rgba(0,0,0,0.28)] ring-1 ring-hdr-line sm:inset-x-6">
+              <div className="mx-auto flex max-w-[860px] items-center gap-3">
+                <LiveSearch size="lg" className="min-w-0 flex-1" autoFocus />
+                <SchliessenButton onClick={closeAndFocus} label="Suche schließen" />
+              </div>
+            </div>
+          )}
+
+          {openId && openId !== SUCHE && (
             <div
               id="mega-menu"
               className="absolute inset-x-4 top-full z-10 mt-2 overflow-y-auto overscroll-contain rounded-xl bg-white text-dark shadow-[0_24px_60px_rgba(0,0,0,0.28)] [scrollbar-width:none] sm:inset-x-6 [&::-webkit-scrollbar]:hidden"
               style={{ maxHeight: `calc(100vh - ${Math.round(backdropTop)}px - 24px)` }}
             >
-              <MegaMenu id={openId} onNavigate={close} status={status} promoActive={promoActive} />
+              <MegaMenu id={openId} onNavigate={close} onClose={closeAndFocus} promoActive={promoActive} />
             </div>
           )}
         </div>

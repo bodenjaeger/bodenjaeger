@@ -1,5 +1,6 @@
 'use client';
 
+import { FensterKopf } from '@/components/shared/SchliessenButton';
 import { useEffect } from 'react';
 import Link from 'next/link';
 
@@ -61,30 +62,7 @@ export default function ContactDrawer({ isOpen, onClose }: ContactDrawerProps) {
         aria-labelledby="contact-drawer-title"
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-          <h2 id="contact-drawer-title" className="text-2xl font-bold text-dark">
-            Kontakt
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:text-brand transition-colors rounded-full hover:bg-gray-100"
-            aria-label="Kontakt schließen"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+        <FensterKopf titel="Kontakt" titelId="contact-drawer-title" onClose={onClose} schliessenLabel="Kontakt schließen" className="sticky top-0 z-10" />
 
         {/* Content */}
         <div className="p-6 space-y-6">

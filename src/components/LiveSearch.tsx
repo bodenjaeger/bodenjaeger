@@ -31,16 +31,18 @@ interface LiveSearchProps {
   size?: 'md' | 'lg';
   /** Breite/Sichtbarkeit steuert die aufrufende Header-Zeile. */
   className?: string;
+  /** Beim Aufklappen der Suche (Header) direkt ins Feld springen. */
+  autoFocus?: boolean;
 }
 
 /**
  * Suchfeld des Shop-Headers mit Live-Ergebnissen.
  *
  * Aufbau nach Mockup: dunkles Eingabefeld (#0C0C0C) und direkt anschließend
- * rechts ein roter Button mit weißer Lupe. Auf Mobile steht das Feld dauerhaft
- * in einer eigenen Header-Zeile — das frühere Such-Overlay entfällt.
+ * rechts ein roter Button mit weißer Lupe. Im Header klappt die Suche über das
+ * Lupen-Symbol auf (Desktop als Leiste unter der Hauptzeile, mobil als Fenster).
  */
-export default function LiveSearch({ size = 'lg', className = '' }: LiveSearchProps) {
+export default function LiveSearch({ size = 'lg', className = '', autoFocus = false }: LiveSearchProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -144,6 +146,7 @@ export default function LiveSearch({ size = 'lg', className = '' }: LiveSearchPr
       <form onSubmit={handleSubmit} className={`flex w-full items-stretch ${heightClass}`}>
         <input
           ref={inputRef}
+          autoFocus={autoFocus}
           type="search"
           placeholder={SEARCH_PLACEHOLDER}
           value={searchQuery}

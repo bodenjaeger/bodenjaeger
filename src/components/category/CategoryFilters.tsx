@@ -1,5 +1,6 @@
 'use client';
 
+import { FensterKopf } from '@/components/shared/SchliessenButton';
 import { useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
@@ -191,8 +192,11 @@ export function CategoryFilterButton(props: FilterProps) {
       {sheetOpen && createPortal(
         <div className="fixed inset-0 z-[100] lg:hidden" role="dialog" aria-modal="true" aria-label="Filter">
           <button type="button" aria-label="Filter schließen" onClick={() => setSheetOpen(false)} className="absolute inset-0 cursor-pointer bg-dark/50" />
-          <div className="absolute inset-x-0 bottom-0 max-h-[86%] overflow-y-auto rounded-t-2xl bg-white px-[18px] shadow-[0_-6px_30px_rgba(0,0,0,0.2)]">
-            <FilterPanel {...props} onClose={() => setSheetOpen(false)} />
+          <div className="absolute inset-x-0 bottom-0 flex max-h-[86%] flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-6px_30px_rgba(0,0,0,0.2)]">
+            <FensterKopf titel="Filter" onClose={() => setSheetOpen(false)} schliessenLabel="Filter schließen" />
+            <div className="min-h-0 flex-1 overflow-y-auto px-[18px]">
+              <FilterPanel {...props} onClose={() => setSheetOpen(false)} />
+            </div>
           </div>
         </div>,
         document.body

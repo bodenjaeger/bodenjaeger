@@ -24,7 +24,7 @@ import {
   STANDORT,
   TEAM,
 } from '@/content/fachmarkt'
-import type { Oeffnungsstatus } from '@/lib/oeffnungsstatus'
+import SchliessenButton from '@/components/shared/SchliessenButton'
 
 /**
  * Inhalte der Mega-Menüs im Desktop-Header (HeaderNav.tsx).
@@ -76,18 +76,6 @@ function TeaserKarte({ teaser, onNavigate }: { teaser: Teaser; onNavigate: () =>
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={2.25} aria-hidden="true" />
       </span>
     </Link>
-  )
-}
-
-function Fusszeile({ label, href, text, onNavigate }: { label: string; href: string; text: string; onNavigate: () => void }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-ash px-8 py-3.5 text-[13px]">
-      <Link href={href} onClick={onNavigate} className={`inline-flex items-center gap-1.5 text-dark hover:text-brand ${BOLD}`}>
-        {label}
-        <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden="true" />
-      </Link>
-      <span className="text-mid">{text}</span>
-    </div>
   )
 }
 
@@ -327,7 +315,7 @@ function Finder({ finder, onNavigate }: { finder: BodenFinder; onNavigate: () =>
 function KategoriePanel({ panel, onNavigate }: { panel: MegaPanel } & PanelProps) {
   return (
     <>
-      <div className="flex gap-8 p-7">
+      <div className="flex gap-8 px-7 pt-3 pb-7">
         {/* Links: Kategorien */}
         <div className="flex w-[290px] flex-none flex-col gap-2.5">
           <p className={KICKER}>{panel.linksTitel}</p>
@@ -401,18 +389,17 @@ function KategoriePanel({ panel, onNavigate }: { panel: MegaPanel } & PanelProps
           ))}
         </div>
       </div>
-      <Fusszeile {...panel.fuss} onNavigate={onNavigate} />
     </>
   )
 }
 
 const FM = '/fachmarkt-hueckelhoven'
 
-function FachmarktPanel({ onNavigate, status, promoActive }: PanelProps & { status: Oeffnungsstatus | null; promoActive: boolean }) {
+function FachmarktPanel({ onNavigate, promoActive }: PanelProps & { promoActive: boolean }) {
   const leistungen = LEISTUNGEN_DROPDOWN.filter((l) => l.href !== `${FM}/service`)
   return (
     <>
-      <div className="flex gap-8 p-7">
+      <div className="flex gap-8 px-7 pt-3 pb-7">
         <div className="flex w-[330px] flex-none flex-col gap-3">
           <div className="relative h-[170px] w-full overflow-hidden rounded-xl bg-pale">
             <Image
@@ -430,7 +417,6 @@ function FachmarktPanel({ onNavigate, status, promoActive }: PanelProps & { stat
                 {STANDORT.plz} {STANDORT.ort}
               </p>
             </div>
-            {status && <p className={`max-w-[170px] text-right text-xs text-dark ${BOLD}`}>{status.text}</p>}
           </div>
           <dl className="grid gap-1 text-xs text-mid">
             {OEFFNUNGSZEITEN.map((z) => (
@@ -508,29 +494,57 @@ function FachmarktPanel({ onNavigate, status, promoActive }: PanelProps & { stat
           </div>
         </div>
       </div>
-      <Fusszeile
-        label="Zur Fachmarkt-Seite"
-        href={FM}
-        text="Was du online bestellst, kannst du auch im Fachmarkt abholen."
-        onNavigate={onNavigate}
-      />
     </>
   )
 }
 
+const TITEL: Record<string, string> = {
+  vinyl: 'Vinyl',
+  laminat: 'Laminat',
+  parkett: 'Parkett',
+  zubehoer: 'Zubehör',
+  verlegen: 'Verlegen & Pflegen',
+  fachmarkt: 'Fachmarkt Hückelhoven',
+}
+
+/**
+ * Ein Mega-Menü mit Kopfzeile: Titel, Link auf die ganze Kategorie und das
+ * einheitliche X zum Schließen (SchliessenButton), wie in allen Fenstern.
+ */
 export default function MegaMenu({
   id,
   onNavigate,
-  status,
+  onClose,
   promoActive,
 }: {
   id: string
+  /** Nach Klick auf einen Link */
   onNavigate: () => void
-  status: Oeffnungsstatus | null
+  /** X oben rechts */
+  onClose: () => void
   promoActive: boolean
 }) {
-  if (id === 'fachmarkt') return <FachmarktPanel onNavigate={onNavigate} status={status} promoActive={promoActive} />
   const panel = MEGA_PANELS[id]
-  if (!panel) return null
-  return <KategoriePanel panel={panel} onNavigate={onNavigate} />
+  if (id !== 'fachmarkt' && !panel) return null
+  const alle = id === 'fachmarkt' ? { label: 'Zur Fachmarkt-Seite', href: '/fachmarkt-hueckelhoven' } : panel.fuss
+
+  return (
+    <>
+      <div className="flex items-center justify-between gap-4 px-7 pt-5 pb-2">
+        <div className="flex min-w-0 items-baseline gap-5">
+          <p className={`text-xl text-dark ${BOLD}`}>{TITEL[id]}</p>
+          <Link href={alle.href} onClick={onNavigate} className={`inline-flex items-center gap-1.5 text-[13px] text-dark hover:text-brand ${BOLD}`}>
+            {alle.label}
+            <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden="true" />
+          </Link>
+        </div>
+        <SchliessenButton onClick={onClose} label={`Menü ${TITEL[id]} schließen`} />
+      </div>
+      {id === 'fachmarkt' ? (
+        <FachmarktPanel onNavigate={onNavigate} promoActive={promoActive} />
+      ) : (
+        <KategoriePanel panel={panel} onNavigate={onNavigate} />
+      )}
+    </>
+  )
 }
