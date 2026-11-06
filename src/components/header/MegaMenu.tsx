@@ -2,13 +2,17 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
-import { ArrowRight, Check } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrowRight, Bath, Building2, Check, CookingPot, Droplets, Layers, Sofa, type LucideIcon } from 'lucide-react'
+import { filterSlug } from '@/lib/category-filters'
 import {
   MEGA_PANELS,
   VERLEGEN_PFLEGEN,
+  finderFilter,
   finderHref,
   type BodenFinder,
+  type FinderIcon,
+  type FinderSchritt,
   type MegaChip,
   type MegaPanel,
   type Teaser,
@@ -96,84 +100,224 @@ function ListenLink({ label, href, text, onNavigate }: { label: string; href: st
   )
 }
 
-/** Boden-Finder: Auswahl in Schritten, daraus wird die gefilterte Kategorie-Adresse. */
+type FilterIndex = Array<Record<string, string[]>>
+
+/** Filterdaten je Kategorie nur einmal pro Besuch laden. */
+const indexCache = new Map<string, Promise<FilterIndex | null>>()
+
+function ladeIndex(kategorie: string): Promise<FilterIndex | null> {
+  let laden = indexCache.get(kategorie)
+  if (!laden) {
+    laden = fetch(`/api/menu-filter?kategorie=${kategorie}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { produkte?: FilterIndex } | null) => d?.produkte ?? null)
+      .catch(() => null)
+    indexCache.set(kategorie, laden)
+    // Fehlgeschlagen: beim nächsten Öffnen neu versuchen
+    laden.then((ergebnis) => ergebnis === null && indexCache.delete(kategorie))
+  }
+  return laden
+}
+
+function passt(produkt: Record<string, string[]>, filter: Record<string, string[]>): boolean {
+  return Object.entries(filter).every(([key, slugs]) => (produkt[key] ?? []).some((wert) => slugs.includes(filterSlug(wert))))
+}
+
+const ICONS: Record<FinderIcon, LucideIcon> = {
+  wohnen: Sofa,
+  kueche: CookingPot,
+  bad: Bath,
+  buero: Building2,
+  klick: Layers,
+  klebe: Droplets,
+}
+
+function anzahlText(n: number | null): string {
+  if (n === null) return ''
+  return n === 1 ? '1 Boden' : `${n} Böden`
+}
+
+/**
+ * Boden-Finder: wenige, eindeutige Fragen. Jede Antwort zeigt vorher, wie viele
+ * Böden übrig bleiben; Antworten ohne Treffer sind ausgegraut. Der Button
+ * nennt die Trefferzahl und führt auf die gefilterte Kategorie.
+ */
 function Finder({ finder, onNavigate }: { finder: BodenFinder; onNavigate: () => void }) {
   const [auswahl, setAuswahl] = useState<Record<string, string[]>>({})
+  const [index, setIndex] = useState<FilterIndex | null>(null)
 
-  const umschalten = (schrittId: string, optionId: string) => {
+  useEffect(() => {
+    let aktiv = true
+    ladeIndex(finder.kategorie).then((daten) => aktiv && setIndex(daten))
+    return () => {
+      aktiv = false
+    }
+  }, [finder.kategorie])
+
+  const zaehlen = useCallback(
+    (sel: Record<string, string[]>): number | null =>
+      index ? index.filter((produkt) => passt(produkt, finderFilter(finder, sel))).length : null,
+    [index, finder]
+  )
+
+  const mitOption = (schritt: FinderSchritt, optionId: string): Record<string, string[]> => {
+    const aktuell = auswahl[schritt.id] ?? []
+    if (aktuell.includes(optionId)) return auswahl
+    return { ...auswahl, [schritt.id]: schritt.einzeln ? [optionId] : [...aktuell, optionId] }
+  }
+
+  const umschalten = (schritt: FinderSchritt, optionId: string) => {
     setAuswahl((alt) => {
-      const aktuell = alt[schrittId] ?? []
-      const neu = aktuell.includes(optionId) ? aktuell.filter((id) => id !== optionId) : [...aktuell, optionId]
-      return { ...alt, [schrittId]: neu }
+      const aktuell = alt[schritt.id] ?? []
+      if (aktuell.includes(optionId)) return { ...alt, [schritt.id]: aktuell.filter((id) => id !== optionId) }
+      return { ...alt, [schritt.id]: schritt.einzeln ? [optionId] : [...aktuell, optionId] }
     })
   }
 
-  const { href, zusammenfassung, hinweis } = useMemo(() => {
-    const namen: string[] = []
-    const hinweise = new Set<string>()
-    for (const schritt of finder.schritte) {
-      for (const id of auswahl[schritt.id] ?? []) {
-        const option = schritt.optionen.find((o) => o.id === id)
-        if (!option) continue
-        namen.push(option.label)
-        if (option.hinweis) hinweise.add(option.hinweis)
-      }
-    }
-    return {
-      href: finderHref(finder, auswahl),
-      zusammenfassung: namen.length ? namen.join(' · ') : 'Noch nichts gewählt',
-      hinweis: hinweise.size
-        ? `Wir zeigen ${[...hinweise].join(' mit ').replace(/ mit nur /g, ' mit ')}.`
-        : 'Wähle, was dir wichtig ist – wir setzen die passenden Filter.',
-    }
-  }, [auswahl, finder])
+  const gesamt = useMemo(() => zaehlen(auswahl), [zaehlen, auswahl])
+  const href = finderHref(finder, auswahl)
+  const gewaehltIrgendwas = Object.values(auswahl).some((ids) => ids.length > 0)
+  const hinweise = [
+    ...new Set(
+      finder.schritte.flatMap((schritt) =>
+        (auswahl[schritt.id] ?? []).map((id) => schritt.optionen.find((o) => o.id === id)?.hinweis).filter(Boolean)
+      )
+    ),
+  ] as string[]
 
   return (
-    <div className="flex h-full flex-col gap-[18px] rounded-xl bg-pale p-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
+    <div className="flex h-full flex-col gap-5 rounded-xl bg-pale p-6">
+      <div className="flex items-center justify-between gap-3">
         <span className={`text-xl text-dark ${BOLD}`}>{finder.titel}</span>
-        <span className="text-xs text-mid">{finder.unterzeile}</span>
+        {gewaehltIrgendwas && (
+          <button
+            type="button"
+            onClick={() => setAuswahl({})}
+            className={`cursor-pointer text-[13px] text-mid underline underline-offset-2 hover:text-dark ${REGULAR}`}
+          >
+            Zurücksetzen
+          </button>
+        )}
       </div>
 
-      {finder.schritte.map((schritt) => (
-        <fieldset key={schritt.id}>
-          <legend className={KICKER}>{schritt.titel}</legend>
-          <div className="flex flex-wrap gap-2">
-            {schritt.optionen.map((option) => {
-              const gewaehlt = (auswahl[schritt.id] ?? []).includes(option.id)
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  aria-pressed={gewaehlt}
-                  onClick={() => umschalten(schritt.id, option.id)}
-                  className={`inline-flex min-h-9 cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-3.5 text-[13px] transition-colors ${REGULAR} ${
-                    gewaehlt ? 'border-[#d11820] bg-[#d11820] text-white' : 'border-ash bg-white text-dark hover:border-mid'
-                  }`}
-                >
-                  {option.swatch && (
-                    <span aria-hidden="true" className="h-3.5 w-3.5 flex-none rounded-full border border-black/15" style={{ background: option.swatch }} />
-                  )}
-                  {option.label}
-                </button>
-              )
-            })}
-          </div>
-        </fieldset>
-      ))}
+      <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+        {finder.schritte.map((schritt) => {
+          const halb = schritt.darstellung === 'kacheln' && schritt.optionen.length <= 2
+          return (
+            <fieldset key={schritt.id} className={halb ? 'col-span-1 min-w-0' : 'col-span-2 min-w-0'}>
+              <legend className={KICKER}>{schritt.titel}</legend>
 
-      <div className="mt-auto flex flex-wrap items-center gap-4 border-t border-ash pt-4">
-        <div className="flex min-w-0 flex-[1_1_220px] flex-col gap-0.5">
-          <span className={`text-[13px] text-dark ${BOLD}`}>{zusammenfassung}</span>
-          <span className="text-xs text-mid">{hinweis}</span>
-        </div>
+              {schritt.darstellung === 'kacheln' && (
+                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${schritt.optionen.length}, minmax(0, 1fr))` }}>
+                  {schritt.optionen.map((option) => {
+                    const gewaehlt = (auswahl[schritt.id] ?? []).includes(option.id)
+                    const n = zaehlen(mitOption(schritt, option.id))
+                    const leer = n === 0 && !gewaehlt
+                    const Icon = option.icon ? ICONS[option.icon] : null
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        aria-pressed={gewaehlt}
+                        disabled={leer}
+                        onClick={() => umschalten(schritt, option.id)}
+                        className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border px-2 py-3 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                          gewaehlt ? 'border-[#d11820] bg-[#d11820] text-white' : 'border-ash bg-white text-dark hover:border-mid'
+                        }`}
+                      >
+                        {Icon && <Icon className="h-6 w-6" strokeWidth={1.6} aria-hidden="true" />}
+                        <span className="text-[13px] leading-tight">{option.label}</span>
+                        <span className={`min-h-4 text-[11px] leading-none ${REGULAR} ${gewaehlt ? 'text-white/85' : 'text-mid'}`}>{anzahlText(n)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {schritt.darstellung === 'farben' && (
+                <div className="flex flex-wrap gap-5">
+                  {schritt.optionen.map((option) => {
+                    const gewaehlt = (auswahl[schritt.id] ?? []).includes(option.id)
+                    const n = zaehlen(mitOption(schritt, option.id))
+                    const leer = n === 0 && !gewaehlt
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        aria-pressed={gewaehlt}
+                        disabled={leer}
+                        onClick={() => umschalten(schritt, option.id)}
+                        className={`group flex cursor-pointer items-center gap-2.5 disabled:cursor-not-allowed disabled:opacity-40 ${REGULAR}`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-10 w-10 items-center justify-center rounded-full border border-black/15 transition-shadow ${
+                            gewaehlt ? 'ring-2 ring-[#d11820] ring-offset-2 ring-offset-pale' : 'group-hover:ring-2 group-hover:ring-mid/40 group-hover:ring-offset-2 group-hover:ring-offset-pale'
+                          }`}
+                          style={{ background: option.swatch }}
+                        >
+                          {gewaehlt && <Check className={`h-5 w-5 ${option.id === 'hell' ? 'text-dark' : 'text-white'}`} strokeWidth={3} />}
+                        </span>
+                        <span className="flex flex-col items-start leading-tight">
+                          <span className={`text-[13px] text-dark ${gewaehlt ? BOLD : ''}`}>{option.label}</span>
+                          <span className="text-[11px] text-mid">{anzahlText(n)}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {schritt.darstellung === 'chips' && (
+                <div className="flex flex-wrap gap-2">
+                  {schritt.optionen.map((option) => {
+                    const gewaehlt = (auswahl[schritt.id] ?? []).includes(option.id)
+                    const n = zaehlen(mitOption(schritt, option.id))
+                    const leer = n === 0 && !gewaehlt
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        aria-pressed={gewaehlt}
+                        disabled={leer}
+                        onClick={() => umschalten(schritt, option.id)}
+                        className={`inline-flex min-h-9 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-[13px] transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${REGULAR} ${
+                          gewaehlt ? 'border-[#d11820] bg-[#d11820] text-white' : 'border-ash bg-white text-dark hover:border-mid'
+                        }`}
+                      >
+                        {option.label}
+                        {n !== null && <span className={gewaehlt ? 'text-white/80' : 'text-mid'}>{n}</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </fieldset>
+          )
+        })}
+      </div>
+
+      <div className="mt-auto flex flex-col gap-2.5">
+        {hinweise.length > 0 && (
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-mid">
+            {hinweise.map((h) => (
+              <span key={h} className="inline-flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-brand" strokeWidth={2.5} aria-hidden="true" />
+                {h}
+              </span>
+            ))}
+          </p>
+        )}
         <Link
           href={href}
           onClick={onNavigate}
-          className={`inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-lg bg-brand px-5 text-sm text-white transition-colors hover:bg-[#d11820] ${BOLD}`}
+          aria-disabled={gesamt === 0}
+          className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg px-5 text-[15px] text-white transition-colors ${BOLD} ${
+            gesamt === 0 ? 'pointer-events-none bg-mid' : 'bg-brand hover:bg-[#d11820]'
+          }`}
         >
-          Passende Böden anzeigen
-          <ArrowRight className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
+          {gesamt === null ? 'Passende Böden anzeigen' : gesamt === 0 ? 'Keine Treffer – Auswahl ändern' : `${anzahlText(gesamt)} anzeigen`}
+          {gesamt !== 0 && <ArrowRight className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />}
         </Link>
       </div>
     </div>
@@ -251,7 +395,8 @@ function KategoriePanel({ panel, onNavigate }: { panel: MegaPanel } & PanelProps
 
         {/* Rechts: Teaser */}
         <div className="hidden w-[270px] flex-none flex-col gap-3 xl:flex">
-          {panel.teaser.map((teaser) => (
+          {/* Neben dem Finder nur ein Teaser, damit das Menü ruhig bleibt */}
+          {(panel.finder ? panel.teaser.slice(0, 1) : panel.teaser).map((teaser) => (
             <TeaserKarte key={teaser.titel} teaser={teaser} onNavigate={onNavigate} />
           ))}
         </div>

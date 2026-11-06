@@ -42,12 +42,20 @@ export interface MegaLink {
   text?: string
 }
 
-/** Eine Wahlmöglichkeit im Boden-Finder: setzt einen oder mehrere Filter. */
+export type FinderIcon = 'wohnen' | 'kueche' | 'bad' | 'buero' | 'klick' | 'klebe'
+
+/**
+ * Eine Wahlmöglichkeit im Boden-Finder: setzt einen oder mehrere Filter.
+ * Mehrere Werte eines Filters gelten als „oder“ (23/33 oder 23/34).
+ * Werte = Slug des VOLLEN WooCommerce-Werts, z. B. „23/33 | starke gewerbliche
+ * Nutzung“ → `23-33-starke-gewerbliche-nutzung` (nicht nur `23-33`).
+ */
 export interface FinderOption {
   id: string
   label: string
   swatch?: string
-  filter: Record<string, string>
+  icon?: FinderIcon
+  filter: Record<string, string[]>
   /** Kurzer Satz, was die Auswahl im Shop bewirkt. */
   hinweis?: string
 }
@@ -55,12 +63,17 @@ export interface FinderOption {
 export interface FinderSchritt {
   id: string
   titel: string
+  /** kacheln = große Felder mit Symbol, farben = Farbkreise, chips = kleine Chips */
+  darstellung: 'kacheln' | 'farben' | 'chips'
+  /** Nur eine Wahl je Schritt (Raum, Verlegung) – sonst mehrere möglich. */
+  einzeln?: boolean
   optionen: FinderOption[]
 }
 
 export interface BodenFinder {
   titel: string
-  unterzeile: string
+  /** Kategorie-Slug für die Trefferzahlen (/api/menu-filter) */
+  kategorie: string
   basis: string
   schritte: FinderSchritt[]
 }
@@ -91,7 +104,7 @@ const farbton = (basis: string) =>
     id: wert,
     label: wert.charAt(0).toUpperCase() + wert.slice(1),
     swatch: FARBTON_SWATCH[wert],
-    filter: { farbgebung: wert },
+    filter: { farbgebung: [wert] },
     href: `${basis}?farbgebung=${wert}`,
   }))
 
@@ -123,26 +136,45 @@ export const MEGA_PANELS: Record<string, MegaPanel> = {
       { label: 'primeCORE', href: '/category/primecore' },
     ],
     finder: {
-      titel: 'Boden-Finder',
-      unterzeile: 'In 3 Klicks zum passenden Vinyl',
+      titel: 'Vinyl-Finder',
+      kategorie: 'vinylboden',
       basis: '/category/vinylboden',
       schritte: [
         {
-          id: 'bodenart',
-          titel: '1 · Welche Verlegung?',
+          id: 'nutzung',
+          titel: 'Wofür?',
+          darstellung: 'kacheln',
+          einzeln: true,
           optionen: [
-            { id: 'klick', label: 'Klick-Vinyl', filter: { bodenart: 'klick-vinyl' } },
-            { id: 'klebe', label: 'Klebe-Vinyl', filter: { bodenart: 'klebe-vinyl' } },
+            { id: 'wohnen', label: 'Zuhause', icon: 'wohnen', filter: {} },
+            {
+              id: 'buero',
+              label: 'Büro & Gewerbe',
+              icon: 'buero',
+              filter: { nutzungsklasse: ['23-33-starke-gewerbliche-nutzung', '23-34-sehr-starke-gewerbliche-nutzung'] },
+              hinweis: 'Nur Nutzungsklasse 23/33 und 23/34',
+            },
           ],
         },
-        { id: 'farbton', titel: '2 · Welcher Farbton?', optionen: farbton('/category/vinylboden') },
+        {
+          id: 'bodenart',
+          titel: 'Verlegung',
+          darstellung: 'kacheln',
+          einzeln: true,
+          optionen: [
+            { id: 'klick', label: 'Klick-Vinyl', icon: 'klick', filter: { bodenart: ['klick-vinyl'] }, hinweis: 'Schwimmend, ohne Kleben' },
+            { id: 'klebe', label: 'Klebe-Vinyl', icon: 'klebe', filter: { bodenart: ['klebe-vinyl'] }, hinweis: 'Fest verklebt' },
+          ],
+        },
+        { id: 'farbton', titel: 'Farbton', darstellung: 'farben', optionen: farbton('/category/vinylboden') },
         {
           id: 'optik',
-          titel: '3 · Welche Optik?',
+          titel: 'Optik',
+          darstellung: 'chips',
           optionen: [
-            { id: 'landhausdiele', label: 'Landhausdiele', filter: { optik: 'landhausdiele' } },
-            { id: 'fliese', label: 'Fliese', filter: { optik: 'fliese' } },
-            { id: 'fischgraet', label: 'Fischgrät', filter: { optik: 'fischgraet' } },
+            { id: 'landhausdiele', label: 'Landhausdiele', filter: { optik: ['landhausdiele'] } },
+            { id: 'fliese', label: 'Fliese', filter: { optik: ['fliese'] } },
+            { id: 'fischgraet', label: 'Fischgrät', filter: { optik: ['fischgraet'] } },
           ],
         },
       ],
@@ -166,28 +198,31 @@ export const MEGA_PANELS: Record<string, MegaPanel> = {
     ],
     finder: {
       titel: 'Laminat-Finder',
-      unterzeile: 'Wir übersetzen deinen Raum in die richtigen Filter',
+      kategorie: 'laminat',
       basis: '/category/laminat',
       schritte: [
         {
           id: 'raum',
-          titel: '1 · Wo wird verlegt?',
+          titel: 'Wo wird verlegt?',
+          darstellung: 'kacheln',
+          einzeln: true,
           optionen: [
-            { id: 'wohnen', label: 'Wohnen & Schlafen', filter: {} },
-            { id: 'kueche', label: 'Küche', filter: { feuchtraumgeeignet: 'ja' }, hinweis: 'nur feuchtraumgeeignetes Laminat' },
-            { id: 'bad', label: 'Bad', filter: { feuchtraumgeeignet: 'ja' }, hinweis: 'nur feuchtraumgeeignetes Laminat' },
-            { id: 'buero', label: 'Büro & Gewerbe', filter: { nutzungsklasse: '23-33' }, hinweis: 'nur Nutzungsklasse 23/33' },
+            { id: 'wohnen', label: 'Wohnen', icon: 'wohnen', filter: {} },
+            { id: 'kueche', label: 'Küche', icon: 'kueche', filter: { feuchtraumgeeignet: ['ja'] }, hinweis: 'Nur feuchtraumgeeignetes Laminat' },
+            { id: 'bad', label: 'Bad', icon: 'bad', filter: { feuchtraumgeeignet: ['ja'] }, hinweis: 'Nur feuchtraumgeeignetes Laminat' },
+            { id: 'buero', label: 'Büro & Gewerbe', icon: 'buero', filter: { nutzungsklasse: ['23-33-starke-gewerbliche-nutzung'] }, hinweis: 'Nur Nutzungsklasse 23/33' },
           ],
         },
-        { id: 'farbton', titel: '2 · Welcher Farbton?', optionen: farbton('/category/laminat') },
+        { id: 'farbton', titel: 'Farbton', darstellung: 'farben', optionen: farbton('/category/laminat') },
         {
           id: 'optik',
-          titel: '3 · Welche Optik?',
+          titel: 'Optik',
+          darstellung: 'chips',
           optionen: [
-            { id: 'landhausdiele', label: 'Landhausdiele', filter: { optik: 'landhausdiele' } },
-            { id: 'xl', label: 'XL-Landhausdiele', filter: { optik: 'xl-landhausdiele' } },
-            { id: 'fliese', label: 'Fliese', filter: { optik: 'fliese' } },
-            { id: 'endlos', label: 'Endlosdiele', filter: { optik: 'endlosdiele' } },
+            { id: 'landhausdiele', label: 'Landhausdiele', filter: { optik: ['landhausdiele'] } },
+            { id: 'xl', label: 'XL-Landhausdiele', filter: { optik: ['xl-landhausdiele'] } },
+            { id: 'fliese', label: 'Fliese', filter: { optik: ['fliese'] } },
+            { id: 'endlos', label: 'Endlosdiele', filter: { optik: ['endlosdiele'] } },
           ],
         },
       ],
@@ -316,7 +351,7 @@ export const MOBILE_SCHNELLFILTER: Record<string, MegaChip[]> = {
   ],
   laminat: [
     { label: 'Küche & Bad', href: '/category/laminat?feuchtraumgeeignet=ja' },
-    { label: 'Büro', href: '/category/laminat?nutzungsklasse=23-33' },
+    { label: 'Büro & Gewerbe', href: '/category/laminat?nutzungsklasse=23-33-starke-gewerbliche-nutzung' },
     ...farbton('/category/laminat').map(({ label, href, swatch }) => ({ label, href, swatch })),
     { label: 'XL-Landhausdiele', href: '/category/laminat?optik=xl-landhausdiele' },
   ],
@@ -338,21 +373,27 @@ export function angeboteHref(promoActive: boolean): string {
   return promoActive ? PROMO_PATH : '/sale'
 }
 
-/** Baut die Kategorie-Adresse aus der Auswahl im Boden-Finder. */
-export function finderHref(finder: BodenFinder, auswahl: Record<string, string[]>): string {
+/** Gewählte Filter des Boden-Finders: Filtername → Wert-Slugs („oder“ innerhalb eines Filters). */
+export function finderFilter(finder: BodenFinder, auswahl: Record<string, string[]>): Record<string, string[]> {
   const werte: Record<string, Set<string>> = {}
   for (const schritt of finder.schritte) {
     for (const optionId of auswahl[schritt.id] ?? []) {
       const option = schritt.optionen.find((o) => o.id === optionId)
       if (!option) continue
-      for (const [key, value] of Object.entries(option.filter)) {
+      for (const [key, slugs] of Object.entries(option.filter)) {
         if (!werte[key]) werte[key] = new Set()
-        werte[key].add(value)
+        slugs.forEach((slug) => werte[key].add(slug))
       }
     }
   }
+  return Object.fromEntries(Object.entries(werte).map(([key, set]) => [key, [...set]]))
+}
+
+/** Baut die Kategorie-Adresse aus der Auswahl im Boden-Finder. */
+export function finderHref(finder: BodenFinder, auswahl: Record<string, string[]>): string {
+  const werte = finderFilter(finder, auswahl)
   const params = new URLSearchParams()
-  for (const key of Object.keys(werte).sort()) params.set(key, [...werte[key]].join(','))
+  for (const key of Object.keys(werte).sort()) params.set(key, werte[key].join(','))
   const query = params.toString().replace(/%2C/g, ',')
   return query ? `${finder.basis}?${query}` : finder.basis
 }

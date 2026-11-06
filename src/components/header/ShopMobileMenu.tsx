@@ -125,7 +125,9 @@ export default function ShopMobileMenu({ isOpen, onClose, promoActive = false, b
                         onClick={() => setExpandedId(isExpanded ? null : item.id)}
                         aria-expanded={isExpanded}
                         aria-controls={`mobile-sub-${item.id}`}
-                        className="flex min-h-14 w-full items-center justify-between gap-2 px-4 text-left text-[15px] text-white"
+                        className={`flex min-h-14 w-full items-center justify-between gap-2 px-4 text-left text-[15px] text-white ${
+                          isExpanded ? 'font-[family-name:var(--font-poppins-bold)]' : 'font-[family-name:var(--font-poppins-regular)] font-normal'
+                        }`}
                       >
                         {item.label}
                         {/* Geschlossen zeigt der Pfeil nach rechts, aufgeklappt
@@ -172,8 +174,8 @@ export default function ShopMobileMenu({ isOpen, onClose, promoActive = false, b
                             <p className="px-4 pb-2 text-[11px] font-[family-name:var(--font-poppins-bold)] tracking-wider text-hdr-muted uppercase">
                               Schnell filtern
                             </p>
-                            {/* Waagerecht wischbar, ohne sichtbaren Scrollbalken */}
-                            <div className="flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            {/* Umbrechend statt wischbar: alle Filter auf einen Blick */}
+                            <div className="flex flex-wrap gap-2 px-4">
                               {MOBILE_SCHNELLFILTER[item.id].map((chip) => (
                                 <Link
                                   key={chip.href}
