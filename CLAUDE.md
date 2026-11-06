@@ -263,4 +263,4 @@ Vorbild ist die Karriereseite. Neue und geänderte Seiten nutzen diese Werte, da
 - **Schrift:** Es gibt nur Poppins Regular und Bold. Kein `font-medium` oder `font-semibold`, sonst rechnet der Browser einen unscharfen Schnitt hoch.
 - **Akzentpunkte:** weiß statt gelb.
 
-- **Kategorietexte im Backend:** WordPress entfernt in Kategoriebeschreibungen Listen-Tags. Zwischenüberschrift = ganze Zeile `<strong>…</strong>`, Listenpunkt = Zeile mit `- `. `fetteZeilenAlsUeberschrift()` in `src/lib/klick-vinyl.ts` macht daraus H3 und Liste.
+- **Kategorietexte im Backend:** WordPress entfernt in Kategoriebeschreibungen Listen-Tags. Zwischenüberschrift = ganze Zeile `<strong>…</strong>`, Listenpunkt = Zeile mit `- ` (WordPress speichert daraus `– `). `fetteZeilenAlsUeberschrift()` in `src/lib/klick-vinyl.ts` macht daraus H3 und Liste.
