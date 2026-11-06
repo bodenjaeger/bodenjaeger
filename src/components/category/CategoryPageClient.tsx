@@ -78,7 +78,7 @@ export default function CategoryPageClient({
   const [shownProducts, setShownProducts] = useState<StoreApiProduct[]>(products);
   const [firstShownPage, setFirstShownPage] = useState(currentPage);
   const appendNext = useRef(false);
-  const listKey = `liste:${pathname}:${sortBy}:${filterQuery}`;
+  const listKey = `liste:${pathname}:${sortBy}:${filterState ? filtersToQuery(filterState.active) : ''}`;
   useEffect(() => {
     if (appendNext.current) {
       appendNext.current = false;
