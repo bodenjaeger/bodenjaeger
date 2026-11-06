@@ -5,13 +5,12 @@ import { usePathname } from 'next/navigation';
 import { Menu, Search } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import CartDrawer from './cart/CartDrawer';
-import LiveSearch from './LiveSearch';
 import HeaderActions from './header/HeaderActions';
 import HeaderLogo from './header/HeaderLogo';
 import HeaderNav from './header/HeaderNav';
 import ShopMobileMenu from './header/ShopMobileMenu';
 import UspBar, { type HeaderBereich } from './header/UspBar';
-import { FensterKopf } from './shared/SchliessenButton';
+import KopfSuche from './header/KopfSuche';
 import SaleBanner from './SaleBanner';
 import BlackWeeksBanner, { type BlackWeeksBannerProps } from './black-weeks/BlackWeeksBanner';
 
@@ -32,8 +31,9 @@ import BlackWeeksBanner, { type BlackWeeksBannerProps } from './black-weeks/Blac
  * Zeile würde am Rand des Headers enden und mit ihm wegscrollen. Der Offset
  * muss exakt der USP-Höhe in UspBar.tsx entsprechen.
  *
- * Mobile-Menü und mobile Suche öffnen als Vollbild-Fenster mit Titel und dem
- * einheitlichen X (FensterKopf), wie alle Fenster im Shop.
+ * Die Suche schiebt sich auf Desktop und Mobil gleich in der Kopfzeile auf
+ * (KopfSuche). Das Mobile-Menü öffnet als Vollbild-Fenster mit Titel und dem
+ * einheitlichen X (FensterKopf), oben darin ebenfalls die Suche.
  *
  * Z-Index: Der Header liegt auf z-50, innerhalb davon Backdrop z-[1],
  * Panel z-[2], Header-Zeilen z-[3]. Vollständige Staffelung ist in
@@ -65,7 +65,8 @@ export default function Header({
     searchButtonRef.current?.focus();
   }, []);
 
-  const overlayOpen = isMenuOpen || isSearchOpen;
+  // Nur das Menü sperrt das Scrollen; die Suche bleibt Teil der Kopfzeile.
+  const overlayOpen = isMenuOpen;
 
   // Seitenwechsel (z. B. Suchtreffer angetippt) schließt Menü und Suche.
   const pathname = usePathname();
@@ -94,13 +95,11 @@ export default function Header({
     if (!overlayOpen) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      if (isMenuOpen) closeMenu();
-      else closeSearch();
+      if (e.key === 'Escape') closeMenu();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [overlayOpen, isMenuOpen, closeMenu, closeSearch]);
+  }, [overlayOpen, closeMenu]);
 
   // Fokus-Falle über den gesamten Header: Die Header-Zeile bleibt bei offenem
   // Menü bedienbar und gehört deshalb mit in den Zyklus. Ausgeblendete Zeilen
@@ -189,7 +188,9 @@ export default function Header({
               <Menu className="h-6 w-6" strokeWidth={2} aria-hidden="true" />
             </button>
 
-            <HeaderLogo />
+            {/* Logo und Symbole; darüber schiebt sich die Suche auf */}
+            <div className="relative flex h-full min-w-0 flex-1 items-center gap-2">
+            <HeaderLogo href={bereich === 'fachmarkt' ? '/fachmarkt-hueckelhoven' : '/'} />
 
             <div className="ml-auto flex items-center gap-0.5">
               <button
@@ -205,19 +206,15 @@ export default function Header({
               </button>
               <HeaderActions variant="mobile" />
             </div>
+
+            <div id="mobile-suche" className="contents">
+              <KopfSuche offen={isSearchOpen} onClose={closeSearch} size="md" />
+            </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile Suche als Vollbild-Fenster */}
-      {isSearchOpen && (
-        <div id="mobile-suche" role="dialog" aria-modal="true" aria-labelledby="mobile-suche-titel" className="fixed inset-0 z-[4] flex flex-col bg-white lg:hidden">
-          <FensterKopf titel="Suche" titelId="mobile-suche-titel" onClose={closeSearch} schliessenLabel="Suche schließen" />
-          <div className="bg-hdr-bg p-4">
-            <LiveSearch size="md" className="w-full" autoFocus />
-          </div>
-        </div>
-      )}
 
       <ShopMobileMenu isOpen={isMenuOpen} onClose={closeMenu} promoActive={Boolean(promoBanner)} bereich={bereich} />
 

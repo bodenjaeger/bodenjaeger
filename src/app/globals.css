@@ -36,6 +36,34 @@ input[type="number"] {
   .karriere-laufband { animation: none; }
 }
 
+/* Vorteile im Kopf (UspBar): laufen langsam und ohne Pause durch. Zwei gleiche
+   Listen nebeneinander, verschoben um eine halbe Breite = nahtlos. Beim
+   Überfahren hält das Band an, damit man in Ruhe lesen kann. */
+@keyframes usp-laufband {
+  to { transform: translateX(-50%); }
+}
+.usp-laufband {
+  animation: usp-laufband 45s linear infinite;
+}
+.usp-laufband:hover {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .usp-laufband { animation: none; }
+}
+
+/* Suche im Kopf (KopfSuche): schiebt sich aus der Mitte nach links und rechts auf. */
+@keyframes kopf-suche-auf {
+  from { clip-path: inset(0 50% 0 50%); opacity: 0.4; }
+  to { clip-path: inset(0 0 0 0); opacity: 1; }
+}
+.kopf-suche-auf {
+  animation: kopf-suche-auf 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .kopf-suche-auf { animation: none; }
+}
+
 :root {
   /* Brand Colors */
   --color-primary: #ed1b24;        /* Bodenjäger Rot */

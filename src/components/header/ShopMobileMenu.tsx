@@ -7,6 +7,7 @@ import { FACHMARKT_LINK, MUSTER_LINK, SHOP_NAV, getNavHref } from '@/content/sho
 import { MOBILE_SCHNELLFILTER } from '@/content/megaMenu'
 import { LANDING_NAV, LEISTUNGEN_DROPDOWN } from '@/content/fachmarkt'
 import { FensterKopf } from '@/components/shared/SchliessenButton'
+import LiveSearch from '@/components/LiveSearch'
 import { BereichUmschalter, type HeaderBereich } from './UspBar'
 
 const FM = '/fachmarkt-hueckelhoven'
@@ -29,7 +30,7 @@ const KICKER = 'text-xs font-[family-name:var(--font-poppins-bold)] uppercase tr
  * Mobiles Menü des Shop-Headers als Vollbild-Fenster (helle Fläche, volle
  * Breite) mit Titel und dem einheitlichen X oben rechts (FensterKopf).
  *
- * Aufbau: Umschalter Onlineshop/Fachmarkt · (im Fachmarkt-Bereich dessen
+ * Aufbau: Suche · Umschalter Onlineshop/Fachmarkt · (im Fachmarkt-Bereich dessen
  * Menü) · Sortiment als Akkordeon · Muster-Button · Wunschliste · Fachmarkt.
  *
  * Drei Schriftstufen: Hauptpunkte 17px fett, Unterpunkte 16px normal,
@@ -65,7 +66,9 @@ export default function ShopMobileMenu({ isOpen, onClose, promoActive = false, b
       <FensterKopf titel="Menü" titelId="shop-mobile-menu-titel" onClose={onClose} schliessenLabel="Menü schließen" />
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(24px+env(safe-area-inset-bottom,0px))]">
-        <div className="px-4 pt-4 pb-2">
+        <div className="flex flex-col gap-3 px-4 pt-4 pb-2">
+          {/* Nur im offenen Menü rendern: geschlossen bleibt nichts im Tab-Zyklus */}
+          {isOpen && <LiveSearch size="md" className="w-full" />}
           <BereichUmschalter bereich={bereich} hell kurz />
         </div>
 

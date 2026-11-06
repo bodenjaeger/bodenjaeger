@@ -6,10 +6,9 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown, Search } from 'lucide-react'
 import { MEGA_NAV, angeboteHref } from '@/content/megaMenu'
 import { LANDING_NAV } from '@/content/fachmarkt'
-import LiveSearch from '@/components/LiveSearch'
-import SchliessenButton from '@/components/shared/SchliessenButton'
 import MegaMenu from './MegaMenu'
 import HeaderLogo from './HeaderLogo'
+import KopfSuche from './KopfSuche'
 import type { HeaderBereich } from './UspBar'
 
 const FM = '/fachmarkt-hueckelhoven'
@@ -23,9 +22,9 @@ const SUCHE = 'suche'
  * Fachmarkt-Seiten: dieselbe Zeile zeigt das Fachmarkt-Menü, „Leistungen“ öffnet
  * das Fachmarkt-Panel. Zum Wechseln dient der Umschalter in der Zeile darüber.
  *
- * Die Suche steht als Symbol neben den Aktionen und klappt darunter als Leiste
- * auf. Mega-Menüs und Suche teilen sich denselben Platz unter der Zeile; es ist
- * immer nur eines offen. Schließen: X, Escape, Klick daneben oder Seitenwechsel.
+ * Die Suche steht als Symbol neben den Aktionen und schiebt sich beim Klick
+ * über Reiter und Symbole auf (KopfSuche, wie mobil). Es ist immer nur Suche
+ * oder ein Mega-Menü offen. Schließen: X, Escape, Klick daneben oder Seitenwechsel.
  *
  * Mega-Menüs öffnen per Hover (kurze Verzögerung gegen Flackern) oder per Klick
  * auf den Pfeil; das Label bleibt ein Link auf die Kategorie.
@@ -76,6 +75,7 @@ export default function HeaderNav({
   // Escape, Klick außerhalb und Größenänderung.
   useEffect(() => {
     if (!openId) return
+    if (openId === SUCHE) return // KopfSuche kümmert sich selbst um Escape und Klick daneben
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeAndFocus()
     }
@@ -153,8 +153,10 @@ export default function HeaderNav({
       >
         <div className="content-container relative">
           <div ref={rowRef} className="flex h-[80px] items-center gap-6 xl:gap-8">
-            <HeaderLogo />
+            <HeaderLogo href={bereich === 'fachmarkt' ? FM : '/'} />
 
+            {/* Reiter und Symbole; darüber schiebt sich die Suche auf */}
+            <div className="relative flex h-full min-w-0 flex-1 items-center gap-6 xl:gap-8">
             {bereich === 'shop' ? (
               <nav aria-label="Hauptnavigation" className="min-w-0 flex-1">
                 <ul className="flex items-center gap-0.5 xl:gap-1">
@@ -242,16 +244,12 @@ export default function HeaderNav({
               </button>
               {actions}
             </div>
-          </div>
 
-          {openId === SUCHE && (
-            <div id="kopf-suche" className="absolute inset-x-4 top-full z-10 mt-2 rounded-xl bg-hdr-bg p-5 shadow-[0_24px_60px_rgba(0,0,0,0.28)] ring-1 ring-hdr-line sm:inset-x-6">
-              <div className="mx-auto flex max-w-[860px] items-center gap-3">
-                <LiveSearch size="lg" className="min-w-0 flex-1" autoFocus />
-                <SchliessenButton onClick={closeAndFocus} label="Suche schließen" />
-              </div>
+            <div id="kopf-suche" className="contents">
+              <KopfSuche offen={openId === SUCHE} onClose={closeAndFocus} size="lg" />
             </div>
-          )}
+            </div>
+          </div>
 
           {openId && openId !== SUCHE && (
             <div
@@ -265,7 +263,7 @@ export default function HeaderNav({
         </div>
       </div>
 
-      {openId && (
+      {openId && openId !== SUCHE && (
         <div
           aria-hidden="true"
           onClick={close}

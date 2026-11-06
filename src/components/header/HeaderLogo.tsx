@@ -17,12 +17,14 @@ import Link from 'next/link'
  * Inline statt `<Image>`: kein zusätzlicher Request, scharf in jeder Größe und
  * die Markenfarbe kommt aus `fill-brand`.
  */
-export default function HeaderLogo() {
+export default function HeaderLogo({ href = '/' }: { href?: string }) {
+  // Auf Fachmarkt-Seiten führt das Logo zur Fachmarkt-Startseite, sonst zum Shop.
+  const zumFachmarkt = href !== '/'
   return (
     <Link
-      href="/"
+      href={href}
       className="flex flex-shrink-0 items-center"
-      aria-label="Bodenjäger — zur Startseite"
+      aria-label={zumFachmarkt ? 'Bodenjäger — zur Startseite des Fachmarkts' : 'Bodenjäger — zur Startseite'}
     >
       <svg
         viewBox="0 0 311.85 60.96"
