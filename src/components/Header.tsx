@@ -9,7 +9,7 @@ import HeaderActions from './header/HeaderActions';
 import HeaderLogo from './header/HeaderLogo';
 import HeaderNav from './header/HeaderNav';
 import ShopMobileMenu from './header/ShopMobileMenu';
-import UspBar from './header/UspBar';
+import UspBar, { type HeaderBereich } from './header/UspBar';
 import SaleBanner from './SaleBanner';
 import BlackWeeksBanner, { type BlackWeeksBannerProps } from './black-weeks/BlackWeeksBanner';
 
@@ -38,9 +38,12 @@ import BlackWeeksBanner, { type BlackWeeksBannerProps } from './black-weeks/Blac
  */
 export default function Header({
   promoBanner = null,
+  bereich = 'shop',
 }: {
   /** Black-Weeks-Leiste — vom Server entschieden (layout.tsx), `null` = aus. */
   promoBanner?: BlackWeeksBannerProps | null;
+  /** `fachmarkt` = gleicher Kopf, Zeile 3 zeigt das Fachmarkt-Menü. */
+  bereich?: HeaderBereich;
 }) {
   const { isCartDrawerOpen, closeCartDrawer } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -143,7 +146,7 @@ export default function Header({
 
         {/* Zeile 1 — USP-Leiste (Desktop statisch, mobil Ticker) */}
         <div className={isMenuOpen ? 'hidden lg:block' : undefined}>
-          <UspBar />
+          <UspBar bereich={bereich} />
         </div>
 
         {/* Zeile 2 — Hauptzeile Desktop: Logo, Suche, Aktionen */}
@@ -185,7 +188,7 @@ export default function Header({
         </div>
 
         {/* Zeile 3 — Navigation (nur Desktop) */}
-        <HeaderNav promoActive={Boolean(promoBanner)} />
+        <HeaderNav promoActive={Boolean(promoBanner)} bereich={bereich} />
 
         {/* Zeile 3 — Suchzeile Mobile, dauerhaft sichtbar außer bei offenem Menü */}
         <div className={`px-4 pb-3 lg:hidden ${isMenuOpen ? 'hidden' : ''}`}>
@@ -193,7 +196,7 @@ export default function Header({
         </div>
       </div>
 
-      <ShopMobileMenu isOpen={isMenuOpen} onClose={closeMenu} promoActive={Boolean(promoBanner)} />
+      <ShopMobileMenu isOpen={isMenuOpen} onClose={closeMenu} promoActive={Boolean(promoBanner)} bereich={bereich} />
 
       <CartDrawer isOpen={isCartDrawerOpen} onClose={closeCartDrawer} />
     </header>

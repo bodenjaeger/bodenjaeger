@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { Heart, ShoppingCart, User } from 'lucide-react'
+import { Heart, Package, ShoppingCart, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCart } from '@/contexts/CartContext'
 import { useWishlist } from '@/contexts/WishlistContext'
@@ -26,7 +26,10 @@ function Badge({ value, label }: { value: number; label: string }) {
 }
 
 /**
- * Konto / Wunschliste / Warenkorb rechts in der Header-Hauptzeile.
+ * Muster / Konto / Wunschliste / Warenkorb rechts in der Header-Hauptzeile.
+ *
+ * Muster: zählt die Muster im Warenkorb. Ohne Muster führt das Symbol zur
+ * Musterbox, mit Mustern öffnet es den Warenkorb, in dem sie liegen.
  *
  * Alle Ziele sind mindestens 44×44px groß. Der Warenkorb-Badge wird immer
  * gerendert (Default „0"), damit beim Nachladen des localStorage-Warenkorbs
@@ -34,7 +37,7 @@ function Badge({ value, label }: { value: number; label: string }) {
  */
 export default function HeaderActions({ variant }: HeaderActionsProps) {
   const { wishlistCount } = useWishlist()
-  const { itemCount, openCartDrawer } = useCart()
+  const { itemCount, openCartDrawer, cartItems } = useCart()
   const { user, isLoggedIn, logout } = useAuth()
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -58,6 +61,7 @@ export default function HeaderActions({ variant }: HeaderActionsProps) {
   // localStorage und wären sonst nicht hydrations-sicher.
   const cartCount = mounted ? itemCount : 0
   const favCount = mounted ? wishlistCount : 0
+  const musterCount = mounted ? cartItems.filter((item) => item.isSample).length : 0
 
   // Gemeinsames Layout für alle drei Aktionen.
   const itemClass = isDesktop
@@ -69,6 +73,22 @@ export default function HeaderActions({ variant }: HeaderActionsProps) {
 
   return (
     <div className={`flex flex-shrink-0 items-center ${isDesktop ? 'gap-2' : 'gap-0.5'}`}>
+      {/* Muster */}
+      {musterCount > 0 ? (
+        <button type="button" onClick={openCartDrawer} className={`${itemClass} max-[379px]:hidden`} aria-label="Muster im Warenkorb ansehen">
+          <span className="relative">
+            <Package className={iconClass} strokeWidth={1.75} aria-hidden="true" />
+            <Badge value={musterCount} label="Muster im Warenkorb" />
+          </span>
+          {isDesktop && <span className={labelClass}>Muster</span>}
+        </button>
+      ) : (
+        <Link href="/category/musterbox" className={`${itemClass} max-[379px]:hidden`} aria-label="Kostenlose Bodenmuster bestellen">
+          <Package className={iconClass} strokeWidth={1.75} aria-hidden="true" />
+          {isDesktop && <span className={labelClass}>Muster</span>}
+        </Link>
+      )}
+
       {/* Konto */}
       <div className="relative" ref={accountMenuRef}>
         {isLoggedIn ? (

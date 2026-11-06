@@ -1,8 +1,69 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { CalendarDays, Gift, Package, Truck, type LucideIcon } from 'lucide-react'
 import { USP_INTERVAL_MS, USP_ITEMS, type NavIcon } from '@/content/shopNav'
+import { STANDORT } from '@/content/fachmarkt'
+import { oeffnungsstatus, type Oeffnungsstatus } from '@/lib/oeffnungsstatus'
+
+export type HeaderBereich = 'shop' | 'fachmarkt'
+
+/**
+ * Öffnungsstatus erst nach dem Laden berechnen: Server und Browser hätten sonst
+ * unterschiedliche Uhrzeiten und React meldet einen Hydration-Fehler. Danach
+ * jede Minute neu.
+ */
+export function useOeffnungsstatus(): Oeffnungsstatus | null {
+  const [status, setStatus] = useState<Oeffnungsstatus | null>(null)
+  useEffect(() => {
+    const update = () => setStatus(oeffnungsstatus())
+    update()
+    const timer = setInterval(update, 60_000)
+    return () => clearInterval(timer)
+  }, [])
+  return status
+}
+
+/** Umschalter Onlineshop / Fachmarkt Hückelhoven. Beide Seiten nutzen denselben Kopf. */
+export function BereichUmschalter({ bereich, kurz = false }: { bereich: HeaderBereich; kurz?: boolean }) {
+  const pill = (aktiv: boolean) =>
+    `flex h-7 items-center whitespace-nowrap rounded-full px-3 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+      aktiv
+        ? 'bg-white font-[family-name:var(--font-poppins-bold)] text-dark'
+        : 'text-white/85 hover:text-white'
+    }`
+  return (
+    <nav aria-label="Bereich wählen" className="flex items-center gap-1">
+      <Link href="/" aria-current={bereich === 'shop' ? 'page' : undefined} className={pill(bereich === 'shop')}>
+        Onlineshop
+      </Link>
+      <Link
+        href="/fachmarkt-hueckelhoven"
+        aria-current={bereich === 'fachmarkt' ? 'page' : undefined}
+        className={pill(bereich === 'fachmarkt')}
+      >
+        {kurz ? 'Fachmarkt' : 'Fachmarkt Hückelhoven'}
+      </Link>
+    </nav>
+  )
+}
+
+/** Weißer Punkt + Status. Geschlossen: nur Ring statt Punkt. */
+export function StatusAnzeige({ status, kurz = false }: { status: Oeffnungsstatus | null; kurz?: boolean }) {
+  return (
+    <span className="flex items-center gap-2 whitespace-nowrap text-xs text-white/85">
+      <span
+        aria-hidden="true"
+        className={`h-2 w-2 flex-shrink-0 rounded-full ${status?.offen ? 'bg-white' : 'ring-[1.5px] ring-white/70 ring-inset'}`}
+      />
+      {/* Platzhalter in gleicher Breite verhindert ein Springen nach dem Laden. */}
+      <span className={status ? undefined : 'invisible'}>
+        {status ? (kurz ? status.kurz : status.text) : kurz ? 'Offen bis 18:30' : 'Jetzt geöffnet · bis 18:30 Uhr'}
+      </span>
+    </span>
+  )
+}
 
 const ICONS: Record<NavIcon, LucideIcon> = {
   package: Package,
@@ -14,8 +75,8 @@ const ICONS: Record<NavIcon, LucideIcon> = {
 /**
  * Zeile 1 des Shop-Headers.
  *
- * Desktop (ab lg): alle vier USP statisch, gleichmäßig verteilt, mit vertikalen
- * Trennstrichen. Höhe fest 48px — der Header schiebt die Leiste ab lg per
+ * Desktop (ab lg): Umschalter Onlineshop/Fachmarkt, USP (ab xl) und rechts der
+ * Öffnungsstatus mit Telefon. Höhe fest 48px — der Header schiebt die Leiste ab lg per
  * `lg:top-[-48px]` aus dem Bild (Header.tsx). Höhe hier ändern heißt Offset
  * dort mitändern.
  *
@@ -30,8 +91,9 @@ const ICONS: Record<NavIcon, LucideIcon> = {
  *
  * Bei `prefers-reduced-motion: reduce` bleibt der erste USP stehen.
  */
-export default function UspBar() {
+export default function UspBar({ bereich = 'shop' }: { bereich?: HeaderBereich }) {
   const [index, setIndex] = useState(0)
+  const status = useOeffnungsstatus()
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -47,29 +109,42 @@ export default function UspBar() {
 
   return (
     <div className="w-full bg-hdr-bg">
-      {/* Desktop: vier Punkte statisch */}
+      {/* Desktop: links Umschalter Shop/Fachmarkt, Mitte USP (ab xl),
+          rechts Öffnungsstatus und Telefon. Höhe bleibt fest 48px. */}
       <div className="hidden border-b border-hdr-line lg:block">
         <div className="content-container">
-          <ul className="flex h-[48px] items-center">
-            {USP_ITEMS.map((item, i) => {
-              const Icon = ICONS[item.icon]
-              return (
-                <li
-                  key={item.id}
-                  className={`flex flex-1 items-center justify-center gap-2.5 px-4 ${
-                    i > 0 ? 'border-l border-hdr-line' : ''
-                  }`}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0 text-white" strokeWidth={1.75} />
-                  {/* Bewusst kleiner als die Hauptnavigation: die USP-Zeile ist
-                      Beiwerk und soll die Marke darunter nicht überstimmen. */}
-                  <span className="text-xs leading-tight text-white xl:text-[13px]">
-                    {item.label}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
+          <div className="flex h-[48px] items-center justify-between gap-6">
+            <BereichUmschalter bereich={bereich} />
+
+            {/* Neben Umschalter und Öffnungsstatus reicht der Platz ab xl für zwei,
+                ab 1400px für drei Punkte. Der vierte steht im mobilen Ticker. */}
+            <ul className="hidden min-w-0 items-center gap-6 xl:flex">
+              {USP_ITEMS.map((item, i) => {
+                const Icon = ICONS[item.icon]
+                const sichtbar = i < 2 ? 'flex' : i === 2 ? 'hidden min-[1400px]:flex' : 'hidden'
+                return (
+                  <li key={item.id} className={`${sichtbar} items-center gap-2 whitespace-nowrap`}>
+                    <Icon className="h-4 w-4 flex-shrink-0 text-white" strokeWidth={1.75} aria-hidden="true" />
+                    {/* Bewusst kleiner als die Hauptnavigation: die USP-Zeile ist
+                        Beiwerk und soll die Marke darunter nicht überstimmen. */}
+                    <span className="text-xs leading-tight text-white">{item.label}</span>
+                  </li>
+                )
+              })}
+            </ul>
+
+            <div className="flex items-center gap-5">
+              <Link href="/fachmarkt-hueckelhoven#kontakt" className="rounded-md hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                <StatusAnzeige status={status} />
+              </Link>
+              <a
+                href={STANDORT.telefonLink}
+                className="whitespace-nowrap text-xs text-white/85 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                Telefon <span className="font-[family-name:var(--font-poppins-bold)] text-white">{STANDORT.telefonAnzeige}</span>
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 

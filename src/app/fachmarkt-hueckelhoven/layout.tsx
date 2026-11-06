@@ -1,14 +1,14 @@
-import FachmarktLandingNav from '@/components/fachmarkt/FachmarktLandingNav'
 import StickyBottomBar from '@/components/fachmarkt/StickyBottomBar'
 
 /**
- * Layout für den Fachmarkt-Bereich. Rendert die reduzierte Fachmarkt-Navigation.
+ * Layout für den Fachmarkt-Bereich.
  *
- * Die Navigation ist im gesamten Bereich sichtbar: auf der Landingpage UND
- * allen Unterseiten unter `/fachmarkt-hueckelhoven` (Prefix-Match via
- * `isFachmarktRoute`). Die Shop-Navigation wird dort über den HeaderWrapper
- * ausgeblendet, sodass der Fachmarkt navigatorisch ein geschlossener Bereich
- * ist (Kundenvorgabe).
+ * Der Kopf kommt wie im Shop aus HeaderWrapper (Header mit `bereich="fachmarkt"`):
+ * gleiche Zeilen für Logo, Suche, Muster und Warenkorb, Zeile 3 zeigt das
+ * Fachmarkt-Menü. `FachmarktLandingNav` wird deshalb hier nicht mehr gerendert.
+ *
+ * `fachmarkt-bereich` sorgt dafür, dass Sprungziele (#team, #kontakt …) nicht
+ * unter dem höheren Kopf verschwinden (globals.css).
  */
 export default function FachmarktLayout({
   children,
@@ -16,12 +16,11 @@ export default function FachmarktLayout({
   children: React.ReactNode
 }) {
   return (
-    <>
-      <FachmarktLandingNav />
+    <div className="fachmarkt-bereich">
       {children}
       {/* Platz für die fixierte mobile Aktionsleiste (verhindert Überdecken) */}
       <div aria-hidden className="h-14 md:hidden" />
       <StickyBottomBar />
-    </>
+    </div>
   )
 }

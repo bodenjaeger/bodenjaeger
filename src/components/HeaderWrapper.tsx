@@ -7,8 +7,7 @@ import { isFachmarktRoute } from '@/lib/landingRoutes';
 
 export default function HeaderWrapper({ promoBanner = null }: { promoBanner?: BlackWeeksBannerProps | null }) {
   const pathname = usePathname();
-  // Im gesamten Fachmarkt-Bereich (Landingpage + alle Unterseiten) übernimmt
-  // die reduzierte Fachmarkt-Navigation; die Shop-Navigation wird ausgeblendet.
-  if (isFachmarktRoute(pathname)) return null;
-  return <Header promoBanner={promoBanner} />;
+  // Shop und Fachmarkt teilen sich einen Kopf. Im Fachmarkt-Bereich
+  // (Landingpage + alle Unterseiten) zeigt Zeile 3 das Fachmarkt-Menü.
+  return <Header promoBanner={promoBanner} bereich={isFachmarktRoute(pathname) ? 'fachmarkt' : 'shop'} />;
 }

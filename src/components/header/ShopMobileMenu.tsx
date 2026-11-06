@@ -4,12 +4,19 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { ChevronRight, MapPin } from 'lucide-react'
 import { FACHMARKT_LINK, MUSTER_LINK, SHOP_NAV, getNavHref } from '@/content/shopNav'
+import { MOBILE_SCHNELLFILTER } from '@/content/megaMenu'
+import { LANDING_NAV, LEISTUNGEN_DROPDOWN } from '@/content/fachmarkt'
+import { BereichUmschalter, StatusAnzeige, useOeffnungsstatus, type HeaderBereich } from './UspBar'
+
+const FM = '/fachmarkt-hueckelhoven'
 
 interface ShopMobileMenuProps {
   isOpen: boolean
   onClose: () => void
   /** Black Weeks aktiv? „Angebote“ führt dann auf die Aktionsseite. */
   promoActive?: boolean
+  /** Im Fachmarkt-Bereich stehen dessen Menüpunkte oben. */
+  bereich?: HeaderBereich
 }
 
 /**
@@ -34,8 +41,9 @@ interface ShopMobileMenuProps {
  * das erlaubt die Slide-Animation und nimmt die Inhalte gleichzeitig aus
  * Tab-Reihenfolge und Screenreader-Baum.
  */
-export default function ShopMobileMenu({ isOpen, onClose, promoActive = false }: ShopMobileMenuProps) {
+export default function ShopMobileMenu({ isOpen, onClose, promoActive = false, bereich = 'shop' }: ShopMobileMenuProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const status = useOeffnungsstatus()
 
   // Aufgeklappte Unterliste beim Schließen zurücksetzen.
   useEffect(() => {
@@ -63,6 +71,42 @@ export default function ShopMobileMenu({ isOpen, onClose, promoActive = false }:
           isOpen ? 'visible translate-x-0' : 'invisible -translate-x-full'
         }`}
       >
+        {/* Umschalter Shop/Fachmarkt und Öffnungsstatus, wie oben im Desktop-Kopf */}
+        <div className="flex items-center justify-between gap-3 border-b border-hdr-line px-4 py-3">
+          <BereichUmschalter bereich={bereich} kurz />
+          <StatusAnzeige status={status} kurz />
+        </div>
+
+        {bereich === 'fachmarkt' && (
+          <nav aria-label="Fachmarkt" className="border-b border-hdr-line pb-2">
+            <p className="px-4 pt-4 pb-1 text-[11px] font-[family-name:var(--font-poppins-bold)] tracking-wider text-hdr-muted uppercase">
+              Fachmarkt Hückelhoven
+            </p>
+            <ul>
+              {LANDING_NAV.items.map((item) =>
+                item.kind === 'leistungen' ? (
+                  LEISTUNGEN_DROPDOWN.map((l) => (
+                    <li key={l.href}>
+                      <Link href={l.href} onClick={onClose} className="flex min-h-11 items-center px-4 text-sm text-white/90">
+                        {l.label}
+                      </Link>
+                    </li>
+                  ))
+                ) : (
+                  <li key={item.href}>
+                    <Link href={`${FM}${item.href}`} onClick={onClose} className="flex min-h-11 items-center px-4 text-sm text-white/90">
+                      {item.label}
+                    </Link>
+                  </li>
+                )
+              )}
+            </ul>
+            <p className="px-4 pt-4 pb-1 text-[11px] font-[family-name:var(--font-poppins-bold)] tracking-wider text-hdr-muted uppercase">
+              Onlineshop
+            </p>
+          </nav>
+        )}
+
         <nav aria-label="Kategorien">
           <ul>
             {SHOP_NAV.map((item) => {
@@ -122,6 +166,29 @@ export default function ShopMobileMenu({ isOpen, onClose, promoActive = false }:
                               </Link>
                             </li>
                           )
+                        )}
+                        {MOBILE_SCHNELLFILTER[item.id] && (
+                          <li className="pt-3 pb-4">
+                            <p className="px-4 pb-2 text-[11px] font-[family-name:var(--font-poppins-bold)] tracking-wider text-hdr-muted uppercase">
+                              Schnell filtern
+                            </p>
+                            {/* Waagerecht wischbar, ohne sichtbaren Scrollbalken */}
+                            <div className="flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                              {MOBILE_SCHNELLFILTER[item.id].map((chip) => (
+                                <Link
+                                  key={chip.href}
+                                  href={chip.href}
+                                  onClick={onClose}
+                                  className="inline-flex min-h-9 flex-none items-center gap-2 whitespace-nowrap rounded-full bg-white/10 px-3.5 text-[13px] text-white"
+                                >
+                                  {chip.swatch && (
+                                    <span aria-hidden="true" className="h-3 w-3 flex-none rounded-full border border-white/30" style={{ background: chip.swatch }} />
+                                  )}
+                                  {chip.label}
+                                </Link>
+                              ))}
+                            </div>
+                          </li>
                         )}
                       </ul>
                     </>

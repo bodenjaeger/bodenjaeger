@@ -146,4 +146,4 @@ export const FACHMARKT_LINK = {
   href: '/fachmarkt-hueckelhoven',
 } as const
 
-export const SEARCH_PLACEHOLDER = 'Suche'
+export const SEARCH_PLACEHOLDER = 'Boden, Dekor oder Marke suchen'

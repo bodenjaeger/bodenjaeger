@@ -190,6 +190,18 @@ button, .button, .btn {
    (Fremd-Widget mit eigenem, sehr hohen z-index) bei offenem Menü über die
    Body-Klasse `nav-menu-open` ausgeblendet. */
 
+/* Fachmarkt-Seiten nutzen den Shop-Kopf (sichtbar mobil ca. 116px, ab lg 160px,
+   plus Aktionsleiste). Sprungziele bekommen deshalb mehr Abstand nach oben als
+   die `scroll-mt-24` der Sektionen. */
+.fachmarkt-bereich [id] {
+  scroll-margin-top: 10rem;
+}
+@media (min-width: 1024px) {
+  .fachmarkt-bereich [id] {
+    scroll-margin-top: 13rem;
+  }
+}
+
 body.nav-menu-open [data-floating-actions],
 body.nav-menu-open [id^='trustbadge-container-'] {
   opacity: 0 !important;
