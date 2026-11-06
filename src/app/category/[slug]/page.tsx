@@ -11,6 +11,7 @@ import { getPromoTileListing } from '@/lib/black-weeks';
 import { filterAttributesFor, filtersToQuery, hasActiveFilters, parseActiveFilters, type FilterState } from '@/lib/category-filters';
 import { loadFilteredListing } from '@/lib/category-filters-server';
 import { permanentRedirect, notFound } from 'next/navigation';
+import { klickVinylKategorietext, klickVinylName } from '@/lib/klick-vinyl';
 
 // Interne Muster-Kategorie: nicht indexieren (steht auch nicht in der Sitemap)
 const NOINDEX_CATEGORIES = new Set(['muster']);
@@ -53,7 +54,7 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/cat
   // Gefilterte Seiten sind Varianten der Kategorie und gehören nicht in den Google-Index
   const isFiltered = filterAttributes ? hasActiveFilters(parseActiveFilters(resolvedParams, filterAttributes)) : false;
   const categoryData = await wooCommerceClient.getCategoryBySlug(slug).catch(() => null);
-  const name = categoryData?.name || categoryNames[slug] || slug;
+  const name = klickVinylName(categoryData?.name || categoryNames[slug] || slug);
 
   return buildMetadata({
     // Ab Seite 2 „– Seite N“, damit Title/Description nicht Seite 1 doppeln
@@ -118,8 +119,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps<'
     : await loadListingPage(basePath, slug, resolvedParams, perPage);
 
   // Use WordPress name if available, otherwise use fallback
-  const categoryName = categoryData?.name || categoryNames[slug] || slug;
-  const categoryDescription = categoryData?.description || null;
+  const categoryName = klickVinylName(categoryData?.name || categoryNames[slug] || slug);
+  const categoryDescription = klickVinylKategorietext(slug, categoryData?.description || null);
   const categoryImage = categoryData?.image || null;
 
   const breadcrumb = buildBreadcrumbSchema([

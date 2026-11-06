@@ -141,33 +141,15 @@ export default function CategoryPageClient({
             <h1 className="text-3xl font-bold text-gray-900 mb-8">{categoryName}</h1>
           )}
 
-          {/* Category Image & Description - Two Column Layout */}
+          {/* Kopf im Karriere-Stil: Auf dem Handy nur Titel und Kurztext, damit die Produkte schnell sichtbar sind */}
           {(categoryImage || categoryDescription) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {/* Left: Category Image */}
-              {categoryImage && categoryImage.src && (
-                <div className="relative aspect-video bg-gray-100 rounded-md overflow-hidden">
-                  <Image
-                    src={categoryImage.src}
-                    alt={categoryImage.alt || categoryName}
-                    fill
-                    className="object-cover"
-                    priority
-                    quality={85}
-                  />
-                </div>
-              )}
-
-              {/* Right: Category Name & Description */}
+            <div className={`mb-8 overflow-hidden rounded-[28px] bg-dark text-white ${categoryDescription && categoryImage?.src ? 'md:grid md:grid-cols-2' : ''}`}>
               {categoryDescription && (
-                <div className="bg-gray-100 rounded-md p-6 flex flex-col">
-                  {/* Category Name as Heading */}
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{categoryName}</h1>
+                <div className="flex flex-col p-5 md:p-10 lg:p-12">
+                  <h1 className="text-3xl font-bold tracking-[-0.035em] text-white md:text-5xl">{categoryName}</h1>
 
-                  {/* Category Description */}
-                  <div className="text-gray-900 text-base md:text-lg leading-relaxed md:leading-loose flex-grow">
+                  <div className="mt-3 flex-grow text-sm leading-relaxed text-white md:mt-5 md:text-base">
                     {(() => {
-                      // Remove HTML tags and get first 200 characters (mobile) or 400 (desktop)
                       const plainText = categoryDescription
                         .replace(/<[^>]+>/g, '')
                         .replace(/&nbsp;/g, ' ')
@@ -176,13 +158,12 @@ export default function CategoryPageClient({
                         .replace(/&gt;/g, '>')
                         .trim();
 
-                      // Mobile: 200 chars, Desktop: 400 chars (we show both, CSS handles display)
-                      const mobilePreview = plainText.length > 200
-                        ? plainText.substring(0, 200) + '...'
+                      const mobilePreview = plainText.length > 110
+                        ? plainText.substring(0, 110) + '...'
                         : plainText;
 
-                      const desktopPreview = plainText.length > 400
-                        ? plainText.substring(0, 400) + '...'
+                      const desktopPreview = plainText.length > 320
+                        ? plainText.substring(0, 320) + '...'
                         : plainText;
 
                       return (
@@ -194,15 +175,28 @@ export default function CategoryPageClient({
                     })()}
                   </div>
 
-                  {/* Weiterlesen Link */}
-                  {categoryDescription.replace(/<[^>]+>/g, '').trim().length > 200 && (
+                  {categoryDescription.replace(/<[^>]+>/g, '').trim().length > 110 && (
                     <a
                       href="#category-full-description"
-                      className="text-gray-900 font-medium mt-4 inline-block hover:underline"
+                      className="mt-3 inline-block font-medium text-white underline underline-offset-4 md:mt-5"
                     >
                       Weiterlesen →
                     </a>
                   )}
+                </div>
+              )}
+
+              {categoryImage && categoryImage.src && (
+                <div className={`relative min-h-[280px] ${categoryDescription ? 'hidden md:block' : 'aspect-video'}`}>
+                  <Image
+                    src={categoryImage.src}
+                    alt={categoryImage.alt || categoryName}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover"
+                    priority
+                    quality={85}
+                  />
                 </div>
               )}
             </div>
@@ -365,7 +359,7 @@ export default function CategoryPageClient({
         </div>
 
         {/* Full Category Description at bottom */}
-        {categoryDescription && categoryDescription.replace(/<[^>]+>/g, '').trim().length > 200 && (
+        {categoryDescription && categoryDescription.replace(/<[^>]+>/g, '').trim().length > 110 && (
           <div id="category-full-description" className="mt-16 bg-gray-100 rounded-md p-8">
             <h2 className="text-2xl font-bold text-dark mb-6">
               Über {categoryName}

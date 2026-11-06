@@ -16,6 +16,7 @@ import {
 import { useSparpaketStreichpreisProM2, sparpaketRabattProzent } from '@/hooks/useSparpaketStreichpreisProM2';
 import { usePromoActive } from '@/contexts/PromoContext';
 import { PROMO_RED, isPromoProduct } from '@/lib/black-weeks';
+import { klickVinylName } from '@/lib/klick-vinyl';
 
 interface UnifiedProductCardProps {
   product: StoreApiProduct;
@@ -153,7 +154,7 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
           {product.images && product.images.length > 0 ? (
             <Image
               src={product.images[0]?.src || ''}
-              alt={product.images[0]?.alt || product.name}
+              alt={klickVinylName(product.images[0]?.alt || product.name)}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="object-cover"
@@ -168,8 +169,8 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
 
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
-            {/* Sale Badge - on_sale aus Backend als Trigger, Prozent aus discount_percent oder setangebot_ersparnis_prozent */}
-            {product.on_sale && (() => {
+            {/* Prozent nur bei Aktionsböden: Im Backend sind derzeit fast alle Böden als Angebot gepflegt. */}
+            {showPromoLabel && product.on_sale && (() => {
               const percent = sparpaketRabattProzent(
                 sparpaketStreichpreisProM2,
                 product.price || 0,
@@ -333,7 +334,7 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
         <div className="bg-gray-100 p-4">
           {/* Produktname */}
           <h3 className="text-gray-900 font-medium text-base mb-3 line-clamp-2 min-h-[3rem]">
-            {product.name}
+            {klickVinylName(product.name)}
           </h3>
 
           {/* Produktbeschreibung als Liste mit Haken — gleiche Logik wie ProductInfo.tsx */}
