@@ -205,10 +205,10 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
                 : 0;
               return (
                 <div
-                  className="w-fit whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-bold text-white"
+                  className="w-fit whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] font-medium leading-none tracking-[0.01em] text-white shadow-md antialiased"
                   style={{ backgroundColor: '#140809', border: `1px solid ${PROMO_RED}` }}
                 >
-                  Black Weeks{percent > 0 ? ` -${Math.round(percent)} %` : ''}
+                  Black Weeks{percent > 0 && <span className="font-semibold">{` −${Math.round(percent)} %`}</span>}
                 </div>
               );
             })()}

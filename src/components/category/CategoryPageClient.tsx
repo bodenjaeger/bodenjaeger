@@ -51,7 +51,6 @@ interface CategoryPageClientProps {
   filterState?: FilterState | null;
 }
 
-const FLOOR_CATEGORIES = new Set(['vinylboden', 'klebe-vinyl', 'rigid-vinyl', 'luxus-vinyl', 'coretec', 'primecore', 'o-r-c-a', 'laminat', 'parkett', 'teppichboden']);
 const SET_CATEGORIES = new Set(['vinylboden', 'klebe-vinyl', 'rigid-vinyl', 'luxus-vinyl', 'coretec', 'primecore', 'o-r-c-a', 'laminat', 'parkett']);
 const VINYL_BRAND_CATEGORIES = new Set(['vinylboden', 'rigid-vinyl']);
 
@@ -164,15 +163,13 @@ export default function CategoryPageClient({
                       <span className="hidden md:inline">{desktopIntro}</span>
                     </p>
                   )}
-                  {FLOOR_CATEGORIES.has(slug) && (
-                    <ul className="mt-6 hidden flex-wrap gap-x-5 gap-y-2 text-[13px] font-medium md:flex">
-                      {[`${totalProducts} Böden`, 'Lieferung frei ab 999 €', '12 Monate kostenfrei einlagern'].map((punkt) => (
-                        <li key={punkt} className="flex items-center gap-2">
-                          <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden="true" />
-                          {punkt}
-                        </li>
-                      ))}
-                    </ul>
+                  {categoryDescription && categoryDescription.replace(/<[^>]+>/g, '').trim().length > 110 && (
+                    <a
+                      href="#category-full-description"
+                      className="mt-4 inline-flex min-h-11 w-fit items-center gap-1 text-sm font-semibold text-white underline underline-offset-4 hover:text-[#ff3b41] md:mt-6 md:text-base"
+                    >
+                      Weiterlesen <span aria-hidden="true">→</span>
+                    </a>
                   )}
                 </div>
                 {categoryImage?.src && (
