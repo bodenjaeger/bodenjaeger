@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu, Search } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
@@ -32,8 +32,10 @@ import BlackWeeksBanner, { type BlackWeeksBannerProps } from './black-weeks/Blac
  * muss exakt der USP-Höhe in UspBar.tsx entsprechen.
  *
  * Die Suche schiebt sich auf Desktop und Mobil gleich in der Kopfzeile auf
- * (KopfSuche). Das Mobile-Menü öffnet als Vollbild-Fenster mit Titel und dem
- * einheitlichen X (FensterKopf), oben darin ebenfalls die Suche.
+ * (KopfSuche). Mobile-Menü und Warenkorb (mobil) öffnen unter der Kopfzeile
+ * mit Titel und dem einheitlichen X (FensterKopf); Logo und Lupe bleiben sichtbar.
+ * Die Aktionsleiste darüber ist eine eigene klebende Zeile (z-[51]); der
+ * Warenkorb beginnt auf Desktop deshalb unter ihr (`desktopTop`).
  *
  * Z-Index: Der Header liegt auf z-50, innerhalb davon Backdrop z-[1],
  * Panel z-[2], Header-Zeilen z-[3]. Vollständige Staffelung ist in
@@ -52,6 +54,18 @@ export default function Header({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
+  // Höhe der Aktionsleiste: Der Kopfbereich klebt so weit oben, dass die USP-Zeile darunter verschwindet
+  const leisteRef = useRef<HTMLDivElement>(null);
+  const [leisteHoehe, setLeisteHoehe] = useState(36);
+  useEffect(() => {
+    const leiste = leisteRef.current;
+    if (!leiste) return;
+    const update = () => setLeisteHoehe(leiste.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(leiste);
+    return () => observer.disconnect();
+  }, []);
   const burgerRef = useRef<HTMLButtonElement>(null);
   const searchButtonRef = useRef<HTMLButtonElement>(null);
   const mobileRowRef = useRef<HTMLDivElement>(null);
@@ -185,20 +199,21 @@ export default function Header({
   }, []);
 
   return (
+    <>
+    {/* Zeile 0 — Aktionsleiste. Eigene, oben klebende Zeile vor dem Kopfbereich:
+        Verschachteltes sticky (Leiste im mitlaufenden Header) setzt Safari auf
+        dem iPhone beim schnellen Scrollen nicht zuverlässig um, dann blitzte die
+        USP-Zeile statt der Aktionsleiste auf. Bleibt auch bei offenem Menü
+        stehen: Menü und Warenkorb öffnen unter der Kopfzeile. */}
+    <div ref={leisteRef} className="sticky top-0 z-[51]">
+      {promoBanner ? <BlackWeeksBanner {...promoBanner} /> : <SaleBanner />}
+    </div>
     <header
       ref={headerRef}
-      className="sticky top-[-40px] z-50 w-full bg-hdr-bg lg:top-[-48px]"
+      style={{ '--aktionsleiste-h': `${leisteHoehe}px` } as CSSProperties}
+      className="sticky top-[calc(var(--aktionsleiste-h)-40px)] z-50 w-full bg-hdr-bg lg:top-[calc(var(--aktionsleiste-h)-48px)]"
     >
       <div className="relative z-[3] bg-hdr-bg">
-        {/* Zeile 0 — Aktionsleiste (SaleBanner). Eigenes `sticky top-0`: Beim
-            Scrollen rutscht der Header um die USP-Höhe nach oben, die Leiste
-            bleibt am Viewport-Rand stehen und deckt die ausgeblendete
-            USP-Zeile ab (z-[1], USP ist nicht positioniert). Funktioniert
-            unabhängig von der Leistenhöhe. Bei offenem Mobile-Menü aus. */}
-        <div className="sticky top-0 z-[1]">
-          {promoBanner ? <BlackWeeksBanner {...promoBanner} /> : <SaleBanner />}
-        </div>
-
         {/* Zeile 1 — USP-Leiste (Desktop statisch, mobil Ticker) */}
         <UspBar bereich={bereich} />
 
@@ -267,7 +282,8 @@ export default function Header({
         }}
       />
 
-      <CartDrawer isOpen={isCartDrawerOpen} onClose={closeCartDrawer} mobileTop={menuTop} />
+      <CartDrawer isOpen={isCartDrawerOpen} onClose={closeCartDrawer} mobileTop={menuTop} desktopTop={leisteHoehe} />
     </header>
+    </>
   );
 }

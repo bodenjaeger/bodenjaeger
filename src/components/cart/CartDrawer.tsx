@@ -28,9 +28,11 @@ interface CartDrawerProps {
    * sichtbar. Ab lg bleibt er eine Seitenleiste über die volle Höhe.
    */
   mobileTop?: number;
+  /** Ab lg: Oberkante unter der klebenden Aktionsleiste (liegt sonst darüber). */
+  desktopTop?: number;
 }
 
-export default function CartDrawer({ isOpen, onClose, mobileTop = 0 }: CartDrawerProps) {
+export default function CartDrawer({ isOpen, onClose, mobileTop = 0, desktopTop = 0 }: CartDrawerProps) {
   const { cartItems, totalPrice, updateQuantity, removeFromCart, removeSet, customerNote, setCustomerNote, deliveryNote, setDeliveryNote } = useCart();
   const [drawerItems, setDrawerItems] = useState<CartDrawerItem[]>([]);
 
@@ -279,8 +281,8 @@ export default function CartDrawer({ isOpen, onClose, mobileTop = 0 }: CartDrawe
     <>
       {/* Backdrop */}
       <div
-        style={{ '--cart-top': `${mobileTop}px` } as React.CSSProperties}
-        className={`fixed inset-x-0 bottom-0 top-[var(--cart-top)] bg-black transition-opacity duration-300 z-40 lg:top-0 ${
+        style={{ '--cart-top': `${mobileTop}px`, '--cart-top-lg': `${desktopTop}px` } as React.CSSProperties}
+        className={`fixed inset-x-0 bottom-0 top-[var(--cart-top)] bg-black transition-opacity duration-300 z-40 lg:top-[var(--cart-top-lg)] ${
           isOpen ? 'opacity-50' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
@@ -288,8 +290,8 @@ export default function CartDrawer({ isOpen, onClose, mobileTop = 0 }: CartDrawe
 
       {/* Drawer */}
       <div
-        style={{ '--cart-top': `${mobileTop}px` } as React.CSSProperties}
-        className={`fixed top-[var(--cart-top)] bottom-0 right-0 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col lg:top-0
+        style={{ '--cart-top': `${mobileTop}px`, '--cart-top-lg': `${desktopTop}px` } as React.CSSProperties}
+        className={`fixed top-[var(--cart-top)] bottom-0 right-0 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col lg:top-[var(--cart-top-lg)]
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
           w-full md:w-[450px]
         `}

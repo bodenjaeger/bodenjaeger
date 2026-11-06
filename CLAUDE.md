@@ -265,3 +265,4 @@ Vorbild ist die Karriereseite. Neue und geänderte Seiten nutzen diese Werte, da
 
 - **Kategorietexte im Backend:** WordPress entfernt in Kategoriebeschreibungen Listen-Tags. Zwischenüberschrift = ganze Zeile `<strong>…</strong>`, Listenpunkt = Zeile mit `- ` (WordPress speichert daraus `– `). `fetteZeilenAlsUeberschrift()` in `src/lib/klick-vinyl.ts` macht daraus H3 und Liste.
 - **Sockelleisten-Filter:** Farbe (Weiß/Farbig) und Profil kommen aus dem Produktnamen: St = Standard, WM = Weimarer, HB = Hamburger, PWM = Premium Weimarer (Nadelholz), AD = Abdeckleiste. Reihenfolge: Standard, Hamburger, Weimarer, Premium Weimarer.
+- **SEO-Titel der Kategorien:** `src/content/category-seo.ts` (Titel je Slug, Beschreibung automatisch aus dem ersten Absatz des Kategorietexts). Später auf Backend-Felder umstellen (Rank Math aktivieren, Term-Meta über die API bereitstellen).
