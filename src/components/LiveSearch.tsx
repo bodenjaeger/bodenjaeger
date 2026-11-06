@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { Search } from 'lucide-react';
 import { SEARCH_PLACEHOLDER } from '@/content/shopNav';
 import { formatPrice } from '@/lib/cart-utils';
+import BrandLoader from '@/components/BrandLoader';
 
 interface SearchResult {
   id: number;
@@ -177,7 +178,7 @@ export default function LiveSearch({ size = 'lg', className = '', autoFocus = fa
           className={`flex flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${buttonWidthClass}`}
         >
           {loading ? (
-            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />
+            <BrandLoader className="h-7 w-7" label="Suche läuft" />
           ) : (
             <Search className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
           )}
@@ -261,7 +262,7 @@ export default function LiveSearch({ size = 'lg', className = '', autoFocus = fa
 
           {loading && results.length === 0 && (
             <div className="flex justify-center px-5 py-6">
-              <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-ash border-t-brand" aria-hidden="true" />
+              <BrandLoader className="h-12 w-12" label="Suche läuft" />
             </div>
           )}
         </div>
