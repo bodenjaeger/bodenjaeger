@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import { Check, Heart } from 'lucide-react';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { Check, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { StoreApiProduct } from '@/lib/woocommerce';
@@ -20,6 +20,7 @@ import { useSparpaketStreichpreisProM2, sparpaketRabattProzent } from '@/hooks/u
 import { usePromoActive } from '@/contexts/PromoContext';
 import { PROMO_RED, isPromoProduct } from '@/lib/black-weeks';
 import { klickVinylName } from '@/lib/klick-vinyl';
+import { KLEBEVINYL_SPARPAKET } from '@/content/klebevinyl-sparpaket';
 
 interface UnifiedProductCardProps {
   product: StoreApiProduct;
@@ -41,6 +42,26 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
 
   // Klebe-Vinyl: Streichpreis = Boden + Standard-Sockelleiste + Bauchemie (wie Produktseite in Grundeinstellung)
   const sparpaketStreichpreisProM2 = useSparpaketStreichpreisProM2(product, sockelleisteProduct);
+
+  const images = (product.images ?? []).filter((image) => image?.src).slice(0, 6);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const [galleryActive, setGalleryActive] = useState(false);
+  const [activeImage, setActiveImage] = useState(0);
+
+  const handleGalleryScroll = () => {
+    const gallery = galleryRef.current;
+    if (gallery?.clientWidth) setActiveImage(Math.round(gallery.scrollLeft / gallery.clientWidth));
+  };
+
+  const showImage = (e: React.MouseEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setGalleryActive(true);
+    const next = (index + images.length) % images.length;
+    const gallery = galleryRef.current;
+    if (gallery) gallery.scrollTo({ left: next * gallery.clientWidth, behavior: 'smooth' });
+    setActiveImage(next);
+  };
 
   const wishlisted = isInWishlist(product.id);
   const sampleSlugs = sampleSlugsFor(product.slug);
@@ -109,24 +130,66 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
     }
   };
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl bg-white transition-shadow duration-300 hover:shadow-lg">
+    <article className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white transition-shadow duration-300 hover:shadow-lg">
       <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
         {/* Bildbereich */}
         <div className="relative aspect-[4/3] bg-white">
-          {product.images && product.images.length > 0 ? (
-            <Image
-              src={product.images[0]?.src || ''}
-              alt={klickVinylName(product.images[0]?.alt || product.name)}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              className="object-cover"
-              loading="lazy"
-              quality={80}
-            />
+          {images.length > 0 ? (
+            <div
+              ref={galleryRef}
+              onScroll={handleGalleryScroll}
+              onPointerEnter={() => setGalleryActive(true)}
+              onTouchStart={() => setGalleryActive(true)}
+              className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {(galleryActive ? images : images.slice(0, 1)).map((image, index) => (
+                <div key={image.src} className="relative h-full w-full shrink-0 snap-center">
+                  <Image
+                    src={image.src}
+                    alt={klickVinylName(image.alt || product.name)}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover"
+                    loading="lazy"
+                    quality={80}
+                    draggable={false}
+                    aria-hidden={index !== activeImage}
+                  />
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-100">
               <span className="text-gray-400 text-sm">Kein Bild</span>
             </div>
+          )}
+
+          {images.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => showImage(e, activeImage - 1)}
+                onPointerEnter={() => setGalleryActive(true)}
+                aria-label="Vorheriges Bild"
+                className="absolute left-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-dark opacity-0 shadow-md transition-opacity group-hover:opacity-100 focus-visible:opacity-100 md:flex"
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => showImage(e, activeImage + 1)}
+                onPointerEnter={() => setGalleryActive(true)}
+                aria-label="Nächstes Bild"
+                className="absolute right-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-dark opacity-0 shadow-md transition-opacity group-hover:opacity-100 focus-visible:opacity-100 md:flex"
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <div className="pointer-events-none absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/40 px-2 py-1" aria-hidden="true">
+                {images.map((image, index) => (
+                  <span key={image.src} className={`h-1.5 w-1.5 rounded-full ${index === activeImage ? 'bg-white' : 'bg-white/50'}`} />
+                ))}
+              </div>
+            </>
           )}
 
           {/* Badges */}
@@ -346,7 +409,11 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
                   </span>
                 </div>
                 {setInhalt && isSetProduct && isFloorProduct && (
-                  <p className="text-xs text-gray-700">Set inkl. {setInhalt}</p>
+                  <p className="text-xs text-gray-700">
+                    Set inkl. {setInhalt}
+                    {product.categories?.some((c) => c.slug === KLEBEVINYL_SPARPAKET.kategorie) &&
+                      ` · ab ${KLEBEVINYL_SPARPAKET.mindestPakete} Paketen inkl. Kleber, Grundierung & Spachtelmasse`}
+                  </p>
                 )}
               </div>
             );
@@ -354,30 +421,37 @@ export default function UnifiedProductCard({ product, sockelleisteProduct }: Uni
         </div>
       </Link>
       {isFloorProduct && (
-        <div className="px-4 pb-4">
-          {/* Gleicher Button wie auf der Produktseite. Kein Alt-Text „Musterbox“: Daran erkennt Roomvo die Produktseite. */}
+        <div className="grid grid-cols-2 gap-2 px-4 pb-4">
+          {/* Funktion wie auf der Produktseite. Kein Alt-Text „Musterbox“: Daran erkennt Roomvo die Produktseite. */}
           <button
             type="button"
             onClick={sampleInCart ? openCartDrawer : handleOrderSample}
             disabled={isOrderingSample}
             aria-label={sampleInCart ? `Muster von ${klickVinylName(product.name)} im Warenkorb ansehen` : `Muster von ${klickVinylName(product.name)} bestellen`}
-            className={`flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 text-[13px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
               sampleInCart ? 'border-2 border-cta bg-white text-cta hover:bg-cta/5' : 'bg-cta text-white hover:bg-cta-dark'
             }`}
           >
             {sampleInCart ? (
-              <Check className="h-5 w-5" aria-hidden="true" />
+              <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
             ) : (
-              <Image src="/images/Icons/musterbox-weiss.png" alt="" width={20} height={20} className="h-5 w-5 object-contain" />
+              <Image src="/images/Icons/musterbox-weiss.png" alt="" width={16} height={16} className="h-4 w-4 shrink-0 object-contain" />
             )}
             {sampleInCart
-              ? 'Muster im Warenkorb – ansehen'
+              ? 'Im Warenkorb'
               : isOrderingSample
                 ? 'Lädt …'
                 : freeSamplesRemaining > 0
-                  ? 'Kostenlose Muster bestellen'
-                  : `Muster bestellen (${SAMPLE_SHIPPING_SURCHARGE.toFixed(2).replace('.', ',')} € Fracht)`}
+                  ? 'Gratis-Muster'
+                  : `Muster +${SAMPLE_SHIPPING_SURCHARGE.toFixed(2).replace('.', ',')} €`}
           </button>
+          <Link
+            href={`/products/${product.slug}`}
+            className="flex min-h-11 items-center justify-center rounded-lg bg-dark px-2 text-[13px] font-bold text-white transition-colors hover:bg-[#d11820]"
+            aria-label={`${klickVinylName(product.name)} ansehen`}
+          >
+            Zum Boden
+          </Link>
         </div>
       )}
     </article>

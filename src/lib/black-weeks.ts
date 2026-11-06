@@ -74,7 +74,7 @@ export const PROMO_DISCOUNT_LABEL = `${PROMO_MAX_DISCOUNT} %`;
 export const PROMO_IMAGES = {
   heroDesktop: '/promo/black-weeks-hero-desktop.webp',
   heroMobile: '/promo/black-weeks-hero-mobile.webp',
-  tile: '/promo/black-weeks-tile.webp',
+  tile: '/promo/black-weeks-tile-statisch.webp',
 } as const;
 
 export const PROMO_TILE_ALT = `Black Weeks: bis zu ${PROMO_DISCOUNT_LABEL} auf Laminat, Vinyl und Parkett`;

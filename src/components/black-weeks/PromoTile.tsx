@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import PromoImage from './PromoImage';
 import {
@@ -17,13 +18,21 @@ import {
 export default function PromoTile() {
   return (
     <article className="relative aspect-[600/857] overflow-hidden rounded-2xl bg-black transition-shadow duration-300 hover:shadow-lg md:aspect-auto md:h-full md:min-h-full">
-      {/* Die ganze Grafik bleibt sichtbar; Höhenunterschiede fängt der schwarze Hintergrund auf. */}
+      {/* Die Grafik bleibt ganz sichtbar; dieselbe Grafik füllt unscharf die Restfläche. */}
+      <Image
+        src={PROMO_IMAGES.tile}
+        alt=""
+        fill
+        sizes="25vw"
+        unoptimized
+        className="z-[1] scale-110 object-cover blur-xl"
+      />
       <PromoImage
         src={PROMO_IMAGES.tile}
         alt={PROMO_TILE_ALT}
         sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
         unoptimized
-        imageClassName="object-contain"
+        imageClassName="z-[2] object-contain"
         fallback={
           <div
             aria-hidden="true"
@@ -40,7 +49,7 @@ export default function PromoTile() {
         }
       />
 
-      <Link href={PROMO_PATH} aria-label={PROMO_TILE_ALT} className="absolute inset-0" />
+      <Link href={PROMO_PATH} aria-label={PROMO_TILE_ALT} className="absolute inset-0 z-[3]" />
     </article>
   );
 }
