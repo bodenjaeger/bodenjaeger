@@ -72,9 +72,9 @@ export default function BodenWahl({ promoActive }: { promoActive: boolean }) {
           <li key={z.titel}>
             <Link
               href={z.href}
-              className="group flex items-center gap-4 rounded-xl border border-ash bg-white p-3 pr-4 transition-colors hover:border-mid"
+              className="group flex items-center gap-3 rounded-xl border border-ash bg-white p-3 transition-colors hover:border-mid sm:gap-4 sm:pr-4"
             >
-              <span className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-ash text-3xl font-bold text-dark">
+              <span className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-ash text-2xl font-bold text-dark sm:h-16 sm:w-16 sm:text-3xl">
                 {z.bild ? (
                   <Image src={z.bild} alt="" fill sizes="64px" className="object-cover" />
                 ) : (
@@ -83,7 +83,7 @@ export default function BodenWahl({ promoActive }: { promoActive: boolean }) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="text-lg font-bold text-dark">{z.titel}</span>
+                  <span className="text-base font-bold text-dark sm:text-lg">{z.titel}</span>
                   {z.label && (
                     <span
                       className={`rounded-md px-2 py-1 text-xs font-bold leading-none text-white ${
@@ -96,7 +96,7 @@ export default function BodenWahl({ promoActive }: { promoActive: boolean }) {
                 </span>
                 <span className="mt-0.5 block text-sm text-mid">{z.text}</span>
               </span>
-              <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-brand transition-transform group-hover:translate-x-1">
+              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-brand sm:h-11 sm:w-11 transition-transform group-hover:translate-x-1">
                 <ArrowRight className="h-5 w-5 text-white" strokeWidth={2.5} aria-hidden="true" />
               </span>
             </Link>

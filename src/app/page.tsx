@@ -10,6 +10,7 @@ import { buildMetadata } from "@/lib/seo";
 import { klickVinylName } from "@/lib/klick-vinyl";
 import { angeboteHref } from "@/content/megaMenu";
 import { getTrustedShopsRating } from "@/lib/trusted-shops";
+import { getGoogleReviews } from "@/lib/google-reviews";
 import {
   PROMO_CATEGORY_SLUG,
   formatPromoEnd,
@@ -138,7 +139,7 @@ export default async function Home() {
     console.error('❌ Startseite: Zubehör konnte nicht geladen werden:', error);
   }
 
-  const trustedShops = await getTrustedShopsRating();
+  const [trustedShops, google] = await Promise.all([getTrustedShopsRating(), getGoogleReviews(3)]);
 
   const pool = [...angebote, ...bestseller.filter((b) => !angebote.some((a) => a.id === b.id))];
   const promoEnde = promoActive ? getPromoEnd()?.toISOString() ?? null : null;
@@ -163,7 +164,7 @@ export default async function Home() {
       />
       <VorteilBloecke />
       <Bodenfinder empfehlungen={bodenfinderEmpfehlungen(pool)} />
-      <BeratungTeam trustedShops={trustedShops} />
+      <BeratungTeam trustedShops={trustedShops} google={google} />
       <FachmarktVerlegt />
       <StartseiteFaq promoEndeLabel={promoEndeLabel} />
     </div>

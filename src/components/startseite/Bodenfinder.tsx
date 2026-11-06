@@ -86,8 +86,8 @@ export default function Bodenfinder({ empfehlungen }: { empfehlungen: Record<Bod
     : null;
 
   return (
-    <section id="bodenfinder" className="content-container scroll-mt-32 pt-20 lg:pt-24">
-      <div className="grid gap-10 rounded-2xl border border-ash bg-white p-6 sm:p-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:p-11">
+    <section id="bodenfinder" className="content-container scroll-mt-28 pt-20 lg:scroll-mt-48 lg:pt-24">
+      <div className="grid gap-8 rounded-2xl border border-ash bg-white p-5 sm:gap-10 sm:p-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:p-11">
         <div className="flex flex-col gap-6">
           <div>
             <p className="mb-2.5 text-sm font-bold uppercase tracking-[0.2em] text-brand">Bodenfinder · 30 Sekunden</p>
@@ -123,7 +123,7 @@ export default function Bodenfinder({ empfehlungen }: { empfehlungen: Record<Bod
           ))}
         </div>
 
-        <div className="min-h-[400px] rounded-xl bg-pale p-6" aria-live="polite">
+        <div className="rounded-xl bg-pale p-5 sm:p-6 lg:min-h-[400px]" aria-live="polite">
           {!ergebnis ? (
             <div className="flex flex-col gap-3.5">
               <p className="text-[13px] font-bold uppercase tracking-wider text-mid">Frage {Math.min(anzahl + 1, 3)} von 3</p>

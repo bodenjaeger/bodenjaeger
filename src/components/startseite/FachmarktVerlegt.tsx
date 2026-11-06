@@ -3,10 +3,10 @@ import Link from 'next/link';
 import { STANDORT, TRUST_STATS } from '@/content/fachmarkt';
 
 const PROJEKTE = [
-  { src: '/images/fachmarkt-hueckelhoven/verlegeservice/projekt-klick-vinyl-wohnzimmer.webp', label: 'Klick-Vinyl · Wohnzimmer', alt: 'Von Bodenjäger verlegtes Klick-Vinyl im Wohnzimmer' },
-  { src: '/images/fachmarkt-hueckelhoven/verlegeservice/projekt-klebe-vinyl-kinderzimmer.webp', label: 'Klebe-Vinyl · Kinderzimmer', alt: 'Von Bodenjäger verlegtes Klebe-Vinyl im Kinderzimmer' },
-  { src: '/images/fachmarkt-hueckelhoven/verlegeservice/projekt-klick-vinyl-bad.webp', label: 'Klick-Vinyl · Bad', alt: 'Von Bodenjäger verlegtes Klick-Vinyl im Bad' },
-  { src: '/images/fachmarkt-hueckelhoven/verlegeservice/projekt-parkett-flur-treppe.webp', label: 'Parkett · Flur & Treppe', alt: 'Von Bodenjäger verlegtes Parkett in Flur und Treppe' },
+  { src: '/images/fachmarkt-hueckelhoven/verlegeservice/projekt-klick-vinyl-wohnzimmer.webp', boden: 'Klick-Vinyl', raum: 'Wohnzimmer', alt: 'Von Bodenjäger verlegtes Klick-Vinyl im Wohnzimmer' },
+  { src: '/images/fachmarkt-hueckelhoven/verlegeservice/projekt-klebe-vinyl-kinderzimmer.webp', boden: 'Klebe-Vinyl', raum: 'Kinderzimmer', alt: 'Von Bodenjäger verlegtes Klebe-Vinyl im Kinderzimmer' },
+  { src: '/images/fachmarkt-hueckelhoven/verlegeservice/projekt-klick-vinyl-bad.webp', boden: 'Klick-Vinyl', raum: 'Bad', alt: 'Von Bodenjäger verlegtes Klick-Vinyl im Bad' },
+  { src: '/images/fachmarkt-hueckelhoven/verlegeservice/projekt-parkett-flur-treppe.webp', boden: 'Parkett', raum: 'Flur & Treppe', alt: 'Von Bodenjäger verlegtes Parkett in Flur und Treppe' },
 ];
 
 /* Kennzahlen kommen aus TRUST_STATS (dieselben wie auf der Fachmarktseite). */
@@ -65,7 +65,11 @@ export default function FachmarktVerlegt() {
         {PROJEKTE.map((p) => (
           <li key={p.src} className="relative aspect-square overflow-hidden rounded-xl">
             <Image src={p.src} alt={p.alt} fill sizes="(max-width: 1024px) 50vw, 340px" className="object-cover" />
-            <span className="absolute bottom-3 left-3 rounded-md bg-white px-2.5 py-1.5 text-[13px] font-bold text-dark">{p.label}</span>
+            {/* Beschriftung als Verlauf unten im Bild statt Kasten: verdeckt auf dem Handy nicht das halbe Foto */}
+            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent px-3 pb-2.5 pt-10 text-white sm:px-4 sm:pb-3.5">
+              <span className="block text-[13px] font-bold leading-tight sm:text-[15px]">{p.boden}</span>
+              <span className="block text-xs leading-tight text-white/90 sm:text-sm">{p.raum}</span>
+            </span>
           </li>
         ))}
       </ul>

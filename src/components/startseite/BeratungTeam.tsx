@@ -5,21 +5,11 @@ import Image from 'next/image';
 import { MessageCircle, Phone } from 'lucide-react';
 import { TEAM_REIHEN } from '@/content/karriere';
 import { STANDORT } from '@/content/fachmarkt';
-import reviewsData from '@/data/google-reviews.json';
 import type { TrustedShopsRating } from '@/lib/trusted-shops';
+import type { GoogleReviewSummary } from '@/lib/google-reviews';
 
 /* +49 15567 017510 – öffnet direkt den Chat in WhatsApp (Handy) bzw. WhatsApp Web, mit vorausgefülltem Text */
 const WHATSAPP_HREF = `https://wa.me/4915567017510?text=${encodeURIComponent('Hallo Bodenjäger, ich habe eine Frage zu meinem neuen Boden:')}`;
-
-/* Echte Google-Bewertungen aus data/google-reviews.json, nach Autor ausgewählt:
-   Beratung, Lieferung deutschlandweit, Musterbox. */
-const BEWERTUNG_AUTOREN = ['Ralf Sieke', 'Melanie Kunz', 'Ka Ro'];
-
-interface Review {
-  author: string;
-  rating: number;
-  text: string;
-}
 
 function kurzName(name: string) {
   const teile = name.trim().split(/\s+/);
@@ -49,7 +39,13 @@ function erreichbarkeit(datum: Date): { offen: boolean; text: string } {
   return { offen, text: `Gerade geschlossen – wieder erreichbar ${naechstes}` };
 }
 
-export default function BeratungTeam({ trustedShops }: { trustedShops: TrustedShopsRating | null }) {
+export default function BeratungTeam({
+  trustedShops,
+  google,
+}: {
+  trustedShops: TrustedShopsRating | null;
+  google: GoogleReviewSummary;
+}) {
   const [status, setStatus] = useState<{ offen: boolean; text: string } | null>(null);
 
   useEffect(() => {
@@ -59,11 +55,8 @@ export default function BeratungTeam({ trustedShops }: { trustedShops: TrustedSh
     return () => clearInterval(timer);
   }, []);
 
-  const { business, reviews } = reviewsData as { business: { rating: number; reviewCount: number }; reviews: Review[] };
-  const auswahl = BEWERTUNG_AUTOREN.map((name) => reviews.find((r) => r.author === name)).filter(
-    (r): r is Review => Boolean(r)
-  );
-  const note = business.rating.toLocaleString('de-DE', { minimumFractionDigits: 1 });
+  const auswahl = google.reviews;
+  const note = google.rating.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
   return (
     <section className="content-container pt-20 lg:pt-24">
@@ -107,7 +100,7 @@ export default function BeratungTeam({ trustedShops }: { trustedShops: TrustedSh
               </span>
               <span>
                 <span className="block text-[13px] text-mid">Anrufen</span>
-                <span className="block text-lg font-bold leading-tight">{STANDORT.telefonAnzeige}</span>
+                <span className="block text-base font-bold leading-tight sm:text-lg">{STANDORT.telefonAnzeige}</span>
               </span>
             </a>
             <a href={WHATSAPP_HREF} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3.5 rounded-xl bg-white p-4 text-dark transition-transform hover:-translate-y-0.5">
@@ -116,7 +109,7 @@ export default function BeratungTeam({ trustedShops }: { trustedShops: TrustedSh
               </span>
               <span>
                 <span className="block text-[13px] text-mid">WhatsApp</span>
-                <span className="block text-lg font-bold leading-tight">Foto vom Raum schicken</span>
+                <span className="block text-base font-bold leading-tight sm:text-lg">Foto vom Raum schicken</span>
               </span>
             </a>
           </div>
@@ -128,7 +121,9 @@ export default function BeratungTeam({ trustedShops }: { trustedShops: TrustedSh
         <div className="rounded-xl bg-white p-6">
           <p className="text-6xl font-bold leading-none tracking-tight text-dark">{note}</p>
           <p className="mt-2.5 text-xl tracking-widest text-[#e8a600]" aria-label={`${note} von 5 Sternen`}>★★★★★</p>
-          <p className="mt-1.5 text-sm text-mid">aus {business.reviewCount} Google-Bewertungen</p>
+          <p className="mt-1.5 text-sm text-mid">
+            {google.reviewCount ? `aus ${google.reviewCount.toLocaleString('de-DE')} Google-Bewertungen` : 'Google-Bewertung'}
+          </p>
           {trustedShops && (
             <p className="mt-4 flex items-center gap-2.5 border-t border-ash pt-4 text-sm text-dark">
               <Image src="/images/trusted-shops/Trustmark-RGB.png" alt="" width={1250} height={1250} className="h-8 w-8 object-contain" />
