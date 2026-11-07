@@ -344,6 +344,18 @@ interface WcOrderMitMeta extends WooCommerceOrder {
  * Lädt eine Aufmaß-Bestellung. `null`, wenn sie nicht existiert, der Schlüssel
  * nicht passt oder es keine Aufmaß-Bestellung ist.
  */
+/**
+ * Aufmaß-Bestellung nur über die Nummer laden (für den WooCommerce-Webhook,
+ * der per Signatur geprüft ist). null = keine Aufmaß-Bestellung.
+ */
+export async function ladeAufmassBestellungPerId(orderId: number): Promise<AufmassBestellung | null> {
+  if (!WP_URL || !Number.isInteger(orderId) || orderId <= 0) return null
+  const res = await fetch(`${WP_URL}/wp-json/wc/v3/orders/${orderId}`, { headers: getWCAuthHeaders(), cache: 'no-store' })
+  if (!res.ok) return null
+  const o = (await res.json()) as { order_key?: string }
+  return o.order_key ? ladeAufmassBestellung(orderId, o.order_key) : null
+}
+
 export async function ladeAufmassBestellung(
   orderId: number,
   orderKey: string,
@@ -457,10 +469,8 @@ export async function aufmassNachZahlungAbschliessen(
   const karte = b.meta[AUFMASS_META.trelloKarte]
   if (karte) {
     const zeilen = [
-      `${test ? '⚠️ TEST – ' : ''}✅ Aufmaß bezahlt: ${formatEuro(b.total)} (${b.meta[AUFMASS_META.kreis] ?? ''})`,
-      `Bestellung #${b.id} · ${b.zahlart}`,
-      `Adresse: ${b.strasse}, ${b.plz} ${b.ort}`,
-      '→ Bitte Termin für das Aufmaß vereinbaren.',
+      `${test ? '⚠️ TEST · ' : ''}✅ **Bezahlt** · ${formatEuro(b.total)} · Bestellung #${b.id}`,
+      '➡️ Jetzt anrufen und Aufmaßtermin vereinbaren',
     ]
     await aufmassBezahltNachTrello(karte, zeilen.join('\n')).catch((e) =>
       console.error('[aufmass] Trello nach Zahlung fehlgeschlagen:', b.id, e),
