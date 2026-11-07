@@ -1,18 +1,41 @@
 'use client';
 
-import { Fragment, useEffect, useState, type CSSProperties } from 'react';
+import { Fragment, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import type { AktionsGrafik, Klickflaeche, StartseitenAktion } from '@/content/startseite-aktion';
+import type { StartseitenAktion } from '@/content/startseite-aktion';
 
-/* Aktionsbanner als Vorlage für alle Geräte (Inhalt: src/content/startseite-aktion.ts).
-   Optik wie das Black-Weeks-Motiv: schwarzer Grund mit rotem Schein,
-   Leuchtschild, große Rabattzahl, Bodenart-Kacheln, weißer Button.
-   Alles echter Text, nur die Dielen sind ein Bild. Bewegung wie im Motiv
-   per CSS (globals.css, „Aktionsbanner“): Schild flackert an, Rabatt leuchtet
-   auf, Kacheln blinken nacheinander rot, Glanz über den Button. 7 s Schleife.
-   Ab lg drei Spalten wie im Motiv, darunter gestapelt und kompakt. */
+/* Aktionsbanner im Look des Black-Weeks-Motivs (Inhalt: src/content/startseite-aktion.ts).
+
+   Die Szene (Raum, Dielen, Licht) ist ein Bild ohne Schrift. Alles andere ist
+   echter Text und sitzt an denselben Stellen wie im gestalteten Motiv. Die
+   Maße stehen unten in Pixeln des Originals (Desktop 2576 px, mobil 1803 px
+   breit) und werden in Prozent bzw. `cqw` umgerechnet: Das Banner skaliert
+   dadurch wie ein Bild, bleibt aber scharf und für Google lesbar.
+
+   Bewegung wie im Motiv per CSS (globals.css, „Aktionsbanner“): Schild
+   flackert an, Rabatt leuchtet auf, Kacheln blinken nacheinander rot, Glanz
+   über den Button. Bei „Bewegung reduzieren“ alles ruhig. */
+
+interface Raster {
+  breite: number;
+  hoehe: number;
+}
+
+/** Position und Größe aus Original-Pixeln */
+function platz(r: Raster, x: number, y: number, extra: { w?: number; h?: number; schrift?: number } = {}): CSSProperties {
+  return {
+    left: `${(x / r.breite) * 100}%`,
+    top: `${(y / r.hoehe) * 100}%`,
+    ...(extra.w !== undefined && { width: `${(extra.w / r.breite) * 100}%` }),
+    ...(extra.h !== undefined && { height: `${(extra.h / r.hoehe) * 100}%` }),
+    ...(extra.schrift !== undefined && { fontSize: `${(extra.schrift / r.breite) * 100}cqw` }),
+  };
+}
+
+const DESKTOP: Raster = { breite: 2576, hoehe: 1244 };
+const MOBIL: Raster = { breite: 1803, hoehe: 1995 };
 
 function zweistellig(n: number) {
   return n < 10 ? `0${n}` : String(n);
@@ -30,9 +53,9 @@ function Restzeit({ ende }: { ende: string }) {
   const rest = Math.max(0, new Date(ende).getTime() - jetzt);
   const tage = Math.floor(rest / 864e5);
   return (
-    <span className="block text-sm text-white/70" role="timer">
-      Endet in{' '}
-      <span className="font-bold tabular-nums text-white">
+    <span className="block text-[13px] leading-tight text-white/70" role="timer">
+      Endet in
+      <span className="block font-bold tabular-nums text-white">
         {tage} {tage === 1 ? 'Tag' : 'Tagen'} · {zweistellig(Math.floor((rest % 864e5) / 36e5))}:
         {zweistellig(Math.floor((rest % 36e5) / 6e4))}:{zweistellig(Math.floor((rest % 6e4) / 1e3))}
       </span>
@@ -40,223 +63,204 @@ function Restzeit({ ende }: { ende: string }) {
   );
 }
 
-function Punkt({ farbe }: { farbe: string }) {
-  return <span style={{ color: farbe }}>.</span>;
+/* Leuchtschild: zwei versetzte Klammern wie im Motiv, Schrift mit leichter Tiefe */
+function Schild({ r, text, klammerL, klammerR, textBox, schrift, akzent }: {
+  r: Raster;
+  text: string;
+  klammerL: [number, number, number, number];
+  klammerR: [number, number, number, number];
+  textBox: [number, number, number, number];
+  schrift: number;
+  akzent: string;
+}) {
+  const strich = `${(9 / r.breite) * 100}cqw`;
+  const leuchten = `0 0 ${(26 / r.breite) * 100}cqw ${akzent}, inset 0 0 ${(16 / r.breite) * 100}cqw ${akzent}99`;
+  return (
+    <div className="aktion-schild pointer-events-none absolute inset-0" aria-hidden="true">
+      <span
+        className="absolute"
+        style={{ ...platz(r, klammerL[0], klammerL[1], { w: klammerL[2], h: klammerL[3] }), borderStyle: 'solid', borderColor: akzent, borderWidth: `${strich} 0 ${strich} ${strich}`, boxShadow: leuchten }}
+      />
+      <span
+        className="absolute"
+        style={{ ...platz(r, klammerR[0], klammerR[1], { w: klammerR[2], h: klammerR[3] }), borderStyle: 'solid', borderColor: akzent, borderWidth: `${strich} ${strich} ${strich} 0`, boxShadow: leuchten }}
+      />
+      <span
+        className="absolute flex items-center justify-center whitespace-nowrap font-bold uppercase leading-none tracking-[-0.03em] text-white"
+        style={{
+          ...platz(r, textBox[0], textBox[1], { w: textBox[2], h: textBox[3], schrift }),
+          transform: 'scaleY(1.22)',
+          textShadow: '0 0.03em 0 #c9c9c9, 0 0.055em 0 #8a8a8a, 0 0.08em 0.04em rgba(0,0,0,.7), 0 0 0.25em rgba(255,255,255,.25)',
+        }}
+      >
+        {text}
+      </span>
+    </div>
+  );
 }
 
-function Klickflaechen({ flaechen }: { flaechen: Klickflaeche[] }) {
+const ZAHL_SCHATTEN = (akzent: string) =>
+  `0 0.012em 0 #dcdcdc, 0 0.024em 0 #bdbdbd, 0 0.036em 0 #9a9a9a, 0 0.05em 0.02em rgba(0,0,0,.65), 0 0 0.1em ${akzent}e6, 0 0 0.28em ${akzent}99`;
+
+function Kachel({ r, x, y, w, h, schrift, href, label, akzent }: {
+  r: Raster; x: number; y: number; w: number; h: number; schrift: number; href: string; label: string; akzent: string;
+}) {
+  return (
+    <div className="aktion-kachel absolute" style={platz(r, x, y, { w, h })}>
+      <Link
+        href={href}
+        aria-label={`${label}-Angebote`}
+        className="flex h-full w-full -skew-x-[8deg] items-center justify-center gap-[0.3em] border border-white/25 bg-[#141414]/95 font-bold uppercase text-white transition-colors hover:border-white"
+        style={{ fontSize: `${(schrift / r.breite) * 100}cqw`, borderRadius: `${(6 / r.breite) * 100}cqw` }}
+      >
+        <span className="skew-x-[8deg]">{label}</span>
+        <ChevronRight className="h-[1em] w-[1em] shrink-0 skew-x-[8deg]" style={{ color: akzent }} strokeWidth={3.5} aria-hidden="true" />
+      </Link>
+    </div>
+  );
+}
+
+function Titel({ zeilen, akzent }: { zeilen: string[]; akzent: string }) {
   return (
     <>
-      {flaechen.map((f) => (
-        <Link
-          key={f.label}
-          href={f.href}
-          aria-label={f.label}
-          className="absolute rounded-md transition-shadow hover:shadow-[0_0_0_2px_#fff,0_0_18px_rgba(255,42,42,.7)] focus-visible:shadow-[0_0_0_3px_#fff]"
-          style={{ left: `${f.links}%`, top: `${f.oben}%`, width: `${f.breite}%`, height: `${f.hoehe}%` }}
-        />
+      {zeilen.map((zeile) => (
+        <span key={zeile} className="block">
+          {zeile.split(' ').map((wort, i, alle) => (
+            <Fragment key={i}>
+              <span className="whitespace-nowrap">
+                {wort}
+                {i === alle.length - 1 && <span style={{ color: akzent }}>.</span>}
+              </span>
+              {i < alle.length - 1 && ' '}
+            </Fragment>
+          ))}
+        </span>
       ))}
     </>
   );
 }
 
-/* Fertige Grafik exakt wie gestaltet, inkl. Animation. Desktop vollständig,
-   mobil oben/unten angeschnitten (niedriger), darunter Countdown und Button. */
-function GrafikBanner({ grafik, button, ende }: { grafik: AktionsGrafik; button: StartseitenAktion['button']; ende: string | null }) {
-  const { desktop, mobil } = grafik;
-  const verschiebung = (mobil.ausschnittOben / (mobil.hoehe - mobil.ausschnittHoehe)) * 100;
+function Glanzbutton({ href, children, className, style }: { href: string; children: ReactNode; className: string; style: CSSProperties }) {
   return (
-    <section aria-label="Aktuelle Aktion" className="content-container pt-4 lg:pt-6">
-      <div className="overflow-hidden rounded-2xl bg-black">
-        <div className="relative hidden md:block" style={{ aspectRatio: `${desktop.breite} / ${desktop.hoehe}` }}>
-          <Link href={button.href} aria-label={button.label} className="absolute inset-0">
-            <Image src={desktop.src} alt={grafik.alt} fill priority unoptimized={grafik.animiert} sizes="1400px" className="object-cover" />
-          </Link>
-          <Klickflaechen flaechen={desktop.klickflaechen} />
-        </div>
-        <div className="relative md:hidden" style={{ aspectRatio: `${mobil.breite} / ${mobil.ausschnittHoehe}` }}>
-          <Link href={button.href} aria-label={button.label} className="absolute inset-0">
-            <Image
-              src={mobil.src}
-              alt={grafik.alt}
-              fill
-              priority
-              unoptimized={grafik.animiert}
-              sizes="100vw"
-              className="object-cover"
-              style={{ objectPosition: `50% ${verschiebung}%` }}
-            />
-          </Link>
-          <Klickflaechen flaechen={mobil.klickflaechen} />
-        </div>
-        <div className="flex items-center justify-between gap-3 px-4 py-3 text-white md:hidden">
-          {ende ? <Restzeit ende={ende} /> : <span />}
-          <Link href={button.href} className="flex min-h-11 flex-shrink-0 items-center gap-1 rounded-lg bg-white px-4 text-sm font-bold text-dark">
-            Angebote
-            <ChevronRight className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
-          </Link>
-        </div>
-      </div>
-    </section>
+    <Link href={href} className={`relative flex items-center justify-center gap-[0.4em] overflow-hidden bg-white font-bold text-dark transition-colors hover:bg-ash ${className}`} style={style}>
+      <span className="aktion-glanz pointer-events-none absolute inset-y-0 left-0 w-1/3" aria-hidden="true" />
+      <span className="relative">{children}</span>
+      <ChevronRight className="relative h-[1em] w-[1em]" strokeWidth={3.5} aria-hidden="true" />
+    </Link>
   );
 }
 
 export default function AktionsBanner({ aktion, ende }: { aktion: StartseitenAktion; ende: string | null }) {
-  if (aktion.grafik) return <GrafikBanner grafik={aktion.grafik} button={aktion.button} ende={ende} />;
   const a = aktion.akzent;
-  const schild: CSSProperties = {
-    borderColor: a,
-    boxShadow: `0 0 22px ${a}b3, inset 0 0 16px ${a}73`,
-    textShadow: '0 0 14px rgba(255,255,255,.35)',
-  };
-  const leuchtZahl: CSSProperties = { textShadow: `0 0 28px ${a}cc, 0 4px 0 rgba(0,0,0,.35)` };
-
-  const schildElement = (klasse: string) => (
-    <p className={`aktion-schild inline-block rounded-md border-[3px] font-bold uppercase leading-none tracking-tight ${klasse}`} style={schild}>
-      {aktion.marke}
+  const rahmen = { '--akzent': a, containerType: 'inline-size' } as CSSProperties;
+  const r = aktion.rabatt;
+  const zahl = (rr: Raster, x: number, y: number, s: number) => (
+    <p className="absolute whitespace-nowrap font-bold leading-none tracking-[-0.03em] text-white" style={{ ...platz(rr, x, y, { schrift: s }), textShadow: ZAHL_SCHATTEN(a) }}>
+      {r.gross}
+      <span className="relative top-[-0.36em] ml-[0.02em] text-[0.55em]">{r.zeichen}</span>
     </p>
-  );
-
-  const rabattElement = (klasse: { oben: string; gross: string; unten: string }) =>
-    aktion.rabatt && (
-      <p className="aktion-rabatt font-bold leading-none">
-        <span className={`block ${klasse.oben}`}>{aktion.rabatt.oben}</span>
-        <span className={`block tracking-tight ${klasse.gross}`} style={leuchtZahl}>
-          {aktion.rabatt.gross}
-        </span>
-        <span className={`block ${klasse.unten}`}>{aktion.rabatt.unten}</span>
-      </p>
-    );
-
-  const kacheln = (klasse: string) => (
-    <ul className={`flex gap-2 ${klasse}`}>
-      {aktion.links.map((l) => (
-        <li key={l.label} className="aktion-kachel min-w-0 flex-1 lg:flex-none">
-          <Link
-            href={l.href}
-            className="flex h-10 -skew-x-6 items-center justify-center gap-1 rounded-md border border-white/20 bg-white/[0.06] px-3 text-sm font-bold uppercase transition-colors hover:border-white lg:h-12 lg:px-5 lg:text-base"
-          >
-            <span className="skew-x-6">{l.label}</span>
-            <ChevronRight className="h-4 w-4 shrink-0 skew-x-6" style={{ color: a }} strokeWidth={3} aria-hidden="true" />
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-
-  const button = (
-    <Link
-      href={aktion.button.href}
-      className="relative flex min-h-12 items-center justify-center gap-2 overflow-hidden rounded-lg bg-white px-6 text-base font-bold text-dark transition-colors hover:bg-ash lg:inline-flex lg:min-h-14 lg:text-lg"
-      style={{ boxShadow: `0 0 26px ${a}80` }}
-    >
-      {/* Lichtstreifen, der regelmäßig über den Button läuft */}
-      <span className="aktion-glanz pointer-events-none absolute inset-y-0 left-0 w-1/3" aria-hidden="true" />
-      <span className="relative">{aktion.button.label}</span>
-      <ChevronRight className="relative h-5 w-5" strokeWidth={3} aria-hidden="true" />
-    </Link>
   );
 
   return (
     <section aria-label="Aktuelle Aktion" className="content-container pt-4 lg:pt-6">
-      <div
-        className="aktion-banner relative overflow-hidden rounded-2xl text-white"
-        style={
-          {
-            '--akzent': a,
-            backgroundColor: aktion.hintergrund,
-            backgroundImage: `radial-gradient(ellipse 60% 70% at 58% 45%, ${a}40 0%, transparent 70%)`,
-          } as CSSProperties
-        }
-      >
-        {/* ── Mobil und Tablet ── */}
-        <div className="flex flex-col items-center gap-3 px-4 py-5 text-center sm:px-8 lg:hidden">
-          <h2 className="sr-only">
-            {aktion.titel.join('. ')}. {aktion.rabatt ? `${aktion.rabatt.oben} ${aktion.rabatt.gross} ${aktion.rabatt.unten}` : ''}
-          </h2>
-          {schildElement('px-4 py-2 text-[clamp(1.9rem,9vw,2.6rem)]')}
-          <div className="grid w-full max-w-[520px] grid-cols-2 items-center gap-3">
-            <div className="relative aspect-[388/395] overflow-hidden rounded-xl">
-              <Image src={aktion.bild.src} alt={aktion.bild.alt} fill sizes="(max-width: 640px) 50vw, 260px" className="object-cover" priority />
-            </div>
-            {rabattElement({
-              oben: 'text-lg',
-              gross: 'text-[clamp(3.6rem,17vw,5.5rem)]',
-              unten: 'text-[clamp(1.6rem,7.5vw,2.4rem)]',
-            })}
-          </div>
-          {kacheln('w-full max-w-[520px]')}
-          <div className="mt-1 w-full max-w-[520px]">{button}</div>
-          {ende ? <Restzeit ende={ende} /> : <span className="text-sm text-white/70">{aktion.zeile}</span>}
+      <h2 className="sr-only">
+        {aktion.titel.join('. ')}. {r.oben} {r.gross} {r.zeichen} {r.unten}
+      </h2>
+
+      {/* ── Desktop und Tablet: Aufbau exakt wie das Querformat-Motiv ── */}
+      <div className="aktion-banner relative hidden overflow-hidden rounded-2xl bg-black text-white md:block" style={{ ...rahmen, aspectRatio: `${DESKTOP.breite} / ${DESKTOP.hoehe}` }}>
+        <Image src={aktion.szene.desktop} alt={aktion.szene.alt} fill priority sizes="(max-width: 1400px) 100vw, 1352px" className="object-cover" />
+        <Link href={aktion.button.href} tabIndex={-1} aria-hidden="true" className="absolute inset-0" />
+
+        <p className="pointer-events-none absolute flex items-center whitespace-nowrap font-bold uppercase leading-none tracking-[0.32em] text-white/90" style={platz(DESKTOP, 73, 204, { schrift: 26 })}>
+          <span className="mr-[1.6em] inline-block h-[0.16em] w-[3.1em]" style={{ backgroundColor: a }} aria-hidden="true" />
+          {aktion.kicker}
+          {aktion.kickerAkzent && <span className="ml-[0.5em]" style={{ color: a }}>{aktion.kickerAkzent}</span>}
+        </p>
+        <p className="pointer-events-none absolute font-bold leading-[1.02] tracking-[-0.025em]" style={{ ...platz(DESKTOP, 74, 272, { w: 960, schrift: 89 }) }}>
+          <Titel zeilen={aktion.titel} akzent={a} />
+        </p>
+        <p className="pointer-events-none absolute flex items-center gap-[0.45em] whitespace-nowrap leading-none" style={platz(DESKTOP, 76, 648, { schrift: 63 })}>
+          {aktion.links.map((l, i) => (
+            <Fragment key={l.label}>
+              {i > 0 && <span className="inline-block h-[0.2em] w-[0.2em] rounded-full" style={{ backgroundColor: a }} aria-hidden="true" />}
+              {l.label}
+            </Fragment>
+          ))}
+        </p>
+        <span className="pointer-events-none absolute" style={{ ...platz(DESKTOP, 82, 774, { w: 104, h: 5 }), backgroundColor: a }} aria-hidden="true" />
+        <p className="pointer-events-none absolute whitespace-nowrap leading-none text-white/85" style={platz(DESKTOP, 84, 822, { schrift: 36 })}>
+          {aktion.zeile}
+        </p>
+        <Glanzbutton
+          href={aktion.button.href}
+          className="absolute"
+          style={{ ...platz(DESKTOP, 82, 950, { w: 772, h: 105, schrift: 43 }), borderRadius: `${(16 / DESKTOP.breite) * 100}cqw`, boxShadow: `0 0 ${(40 / DESKTOP.breite) * 100}cqw ${a}a6` }}
+        >
+          {aktion.button.label}
+        </Glanzbutton>
+
+        <Schild r={DESKTOP} text={aktion.marke} klammerL={[1280, 150, 440, 222]} klammerR={[2070, 114, 430, 218]} textBox={[1320, 140, 1170, 210]} schrift={170} akzent={a} />
+
+        <div className="aktion-rabatt pointer-events-none absolute inset-0">
+          <p className="absolute whitespace-nowrap font-bold leading-none" style={platz(DESKTOP, 1663, 414, { schrift: 68 })}>{r.oben}</p>
+          {zahl(DESKTOP, 1636, 420, 452)}
+          <p className="absolute whitespace-nowrap font-bold leading-none tracking-[-0.01em]" style={{ ...platz(DESKTOP, 1772, 778, { schrift: 158 }), textShadow: '0 0.03em 0 #9a9a9a, 0 0 0.25em rgba(255,42,42,.55)' }}>
+            {r.unten}
+          </p>
         </div>
 
-        {/* ── Desktop: Aufbau wie das Motiv ── */}
-        <div className="hidden min-h-[480px] grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)_minmax(0,1.2fr)] items-center gap-6 px-10 py-12 lg:grid xl:px-14">
-          <div className="flex flex-col gap-5">
-            <p className="flex items-center gap-4 text-sm font-bold uppercase tracking-[0.3em] text-white/85">
-              <span className="h-0.5 w-12" style={{ backgroundColor: a }} aria-hidden="true" />
-              {aktion.kicker}
-              {aktion.kickerAkzent && <span style={{ color: a }}>{aktion.kickerAkzent}</span>}
+        <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">
+          {aktion.links.map((l, i) => {
+            const spalten = [[1494, 330], [1826, 320], [2169, 335]][i] ?? [1494, 330];
+            return <Kachel key={l.label} r={DESKTOP} x={spalten[0]} y={979} w={spalten[1]} h={101} schrift={42} href={l.href} label={l.label} akzent={a} />;
+          })}
+        </div>
+      </div>
+
+      {/* ── Handy: Hochformat-Motiv, unten gekürzt; Button und Countdown darunter ── */}
+      <div className="overflow-hidden rounded-2xl bg-black text-white md:hidden">
+        <div className="aktion-banner relative" style={{ ...rahmen, aspectRatio: `${MOBIL.breite} / ${MOBIL.hoehe}` }}>
+          <Image src={aktion.szene.mobil} alt={aktion.szene.alt} fill priority sizes="100vw" className="object-cover" />
+          <Link href={aktion.button.href} tabIndex={-1} aria-hidden="true" className="absolute inset-0" />
+
+          <p className="pointer-events-none absolute inset-x-0 flex items-center justify-center whitespace-nowrap font-bold uppercase leading-none tracking-[0.3em] text-white/90" style={{ top: `${(146 / MOBIL.hoehe) * 100}%`, fontSize: `${(38 / MOBIL.breite) * 100}cqw` }}>
+            <span className="mr-[1.4em] inline-block h-[0.14em] w-[3em]" style={{ backgroundColor: a }} aria-hidden="true" />
+            {aktion.kicker}
+            {aktion.kickerAkzent && <span className="ml-[0.5em]" style={{ color: a }}>{aktion.kickerAkzent}</span>}
+          </p>
+
+          <Schild r={MOBIL} text={aktion.marke} klammerL={[340, 220, 720, 300]} klammerR={[1020, 188, 700, 300]} textBox={[330, 262, 1400, 200]} schrift={176} akzent={a} />
+
+          <p className="pointer-events-none absolute inset-x-0 text-center font-bold leading-[1.14] tracking-[-0.02em]" style={{ top: `${(572 / MOBIL.hoehe) * 100}%`, fontSize: `${(105 / MOBIL.breite) * 100}cqw` }}>
+            <Titel zeilen={aktion.titel} akzent={a} />
+          </p>
+
+          <div className="aktion-rabatt pointer-events-none absolute inset-0">
+            <p className="absolute whitespace-nowrap font-bold leading-none" style={platz(MOBIL, 894, 950, { schrift: 66 })}>{r.oben}</p>
+            {zahl(MOBIL, 872, 960, 514)}
+            <p className="absolute whitespace-nowrap font-bold leading-none" style={{ ...platz(MOBIL, 914, 1385, { schrift: 203 }), textShadow: '0 0.03em 0 #9a9a9a, 0 0 0.25em rgba(255,42,42,.55)' }}>
+              {r.unten}
             </p>
-            <h2 className="text-[clamp(1.9rem,2.7vw,2.9rem)] font-bold leading-[1.08] tracking-tight">
-              {/* Wörter nie trennen: „Black-Weeks-Preis“ bleibt wie im Motiv zusammen */}
-              {aktion.titel.map((zeile) => (
-                <span key={zeile} className="block">
-                  {zeile.split(' ').map((wort, i, alle) => (
-                    <Fragment key={i}>
-                      <span className="whitespace-nowrap">
-                        {wort}
-                        {i === alle.length - 1 && <Punkt farbe={a} />}
-                      </span>
-                      {i < alle.length - 1 && ' '}
-                    </Fragment>
-                  ))}
-                </span>
-              ))}
-            </h2>
-            <p className="flex flex-wrap items-center gap-x-3 text-[clamp(1.2rem,1.8vw,1.75rem)]">
-              {aktion.links.map((l, i) => (
-                <span key={l.label} className="flex items-center gap-3">
-                  {i > 0 && <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: a }} aria-hidden="true" />}
-                  {l.label}
-                </span>
-              ))}
-            </p>
-            <span className="h-1 w-14 rounded-full" style={{ backgroundColor: a }} aria-hidden="true" />
-            <p className="text-white/80">{aktion.zeile}</p>
-            <div className="flex flex-col items-start gap-3">
-              {button}
-              {ende && <Restzeit ende={ende} />}
-            </div>
           </div>
 
-          <div className="relative aspect-[388/395] self-end">
-            {/* rote Leuchtleiste wie im Motiv */}
-            <span
-              className="absolute -top-12 bottom-0 left-[8%] w-1 rounded-full"
-              style={{ backgroundColor: a, boxShadow: `0 0 18px 4px ${a}` }}
-              aria-hidden="true"
-            />
-            <Image
-              src={aktion.bild.src}
-              alt={aktion.bild.alt}
-              fill
-              sizes="380px"
-              className="object-contain"
-              style={{ maskImage: 'radial-gradient(ellipse 58% 56% at 50% 50%, #000 70%, transparent 100%)' }}
-              priority
-            />
-          </div>
-
-          <div className="flex flex-col items-center gap-5 text-center">
-            {schildElement('px-6 py-3 text-[clamp(2.2rem,3.8vw,3.6rem)]')}
-            {rabattElement({
-              oben: 'text-[clamp(1.4rem,2vw,2rem)]',
-              gross: 'text-[clamp(6rem,10vw,9.5rem)]',
-              unten: 'text-[clamp(2.4rem,4vw,3.8rem)]',
+          <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">
+            {aktion.links.map((l, i) => {
+              const spalten = [[505, 386], [898, 413], [1316, 416]][i] ?? [505, 386];
+              return <Kachel key={l.label} r={MOBIL} x={spalten[0]} y={1775} w={spalten[1]} h={131} schrift={58} href={l.href} label={l.label} akzent={a} />;
             })}
-            {kacheln('flex-wrap justify-center')}
           </div>
+
+          <span className="pointer-events-none absolute rounded-full bg-black/70 px-[0.6em] py-[0.2em] text-white/80" style={{ right: '2%', bottom: '1.5%', fontSize: `${(26 / MOBIL.breite) * 100}cqw` }}>
+            KI-generiert
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 px-4 pb-4 pt-1">
+          {ende ? <Restzeit ende={ende} /> : <span className="text-[13px] text-white/70">{aktion.zeile}</span>}
+          <Glanzbutton href={aktion.button.href} className="min-h-12 flex-shrink-0 rounded-lg px-5 text-[15px]" style={{ boxShadow: `0 0 22px ${a}a6` }}>
+            Angebote entdecken
+          </Glanzbutton>
         </div>
       </div>
     </section>
