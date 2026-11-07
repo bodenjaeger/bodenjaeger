@@ -35,7 +35,8 @@ function platz(r: Raster, x: number, y: number, extra: { w?: number; h?: number;
 }
 
 const DESKTOP: Raster = { breite: 2576, hoehe: 1244 };
-const MOBIL: Raster = { breite: 1803, hoehe: 1995 };
+/* Mobil: Hochformat-Szene ab Bildzeile 470 bis 1995 – ohne Überschrift, dadurch kompakt */
+const MOBIL: Raster = { breite: 1803, hoehe: 1525 };
 
 function zweistellig(n: number) {
   return n < 10 ? `0${n}` : String(n);
@@ -218,28 +219,25 @@ export default function AktionsBanner({ aktion, ende }: { aktion: StartseitenAkt
         </div>
       </div>
 
-      {/* ── Handy: Hochformat-Motiv, unten gekürzt; Button und Countdown darunter ── */}
+      {/* ── Handy: kompakt – Schild, Dielen neben „50%“, Kacheln; Button und Countdown darunter ── */}
       <div className="overflow-hidden rounded-2xl bg-black text-white md:hidden">
         <div className="aktion-banner relative" style={{ ...rahmen, aspectRatio: `${MOBIL.breite} / ${MOBIL.hoehe}` }}>
           <Image src={aktion.szene.mobil} alt={aktion.szene.alt} fill priority sizes="100vw" className="object-cover" />
           <Link href={aktion.button.href} tabIndex={-1} aria-hidden="true" className="absolute inset-0" />
 
-          <p className="pointer-events-none absolute inset-x-0 flex items-center justify-center whitespace-nowrap font-bold uppercase leading-none tracking-[0.3em] text-white/90" style={{ top: `${(146 / MOBIL.hoehe) * 100}%`, fontSize: `${(38 / MOBIL.breite) * 100}cqw` }}>
+          <p className="pointer-events-none absolute inset-x-0 flex items-center justify-center whitespace-nowrap font-bold uppercase leading-none tracking-[0.3em] text-white/90" style={{ top: `${(62 / MOBIL.hoehe) * 100}%`, fontSize: `${(38 / MOBIL.breite) * 100}cqw` }}>
             <span className="mr-[1.4em] inline-block h-[0.14em] w-[3em]" style={{ backgroundColor: a }} aria-hidden="true" />
             {aktion.kicker}
             {aktion.kickerAkzent && <span className="ml-[0.5em]" style={{ color: a }}>{aktion.kickerAkzent}</span>}
           </p>
 
-          <Schild r={MOBIL} text={aktion.marke} klammerL={[340, 220, 720, 300]} klammerR={[1020, 188, 700, 300]} textBox={[330, 262, 1400, 200]} schrift={176} akzent={a} />
+          <Schild r={MOBIL} text={aktion.marke} klammerL={[340, 170, 720, 300]} klammerR={[1020, 138, 700, 300]} textBox={[330, 212, 1400, 200]} schrift={176} akzent={a} />
 
-          <p className="pointer-events-none absolute inset-x-0 text-center font-bold leading-[1.14] tracking-[-0.02em]" style={{ top: `${(572 / MOBIL.hoehe) * 100}%`, fontSize: `${(105 / MOBIL.breite) * 100}cqw` }}>
-            <Titel zeilen={aktion.titel} akzent={a} />
-          </p>
 
           <div className="aktion-rabatt pointer-events-none absolute inset-0">
-            <p className="absolute whitespace-nowrap font-bold leading-none" style={platz(MOBIL, 894, 950, { schrift: 66 })}>{r.oben}</p>
-            {zahl(MOBIL, 872, 960, 514)}
-            <p className="absolute whitespace-nowrap font-bold leading-none" style={{ ...platz(MOBIL, 914, 1385, { schrift: 203 }), textShadow: '0 0.03em 0 #9a9a9a, 0 0 0.25em rgba(255,42,42,.55)' }}>
+            <p className="absolute whitespace-nowrap font-bold leading-none" style={platz(MOBIL, 894, 488, { schrift: 66 })}>{r.oben}</p>
+            {zahl(MOBIL, 872, 498, 514)}
+            <p className="absolute whitespace-nowrap font-bold leading-none" style={{ ...platz(MOBIL, 914, 923, { schrift: 203 }), textShadow: '0 0.03em 0 #9a9a9a, 0 0 0.25em rgba(255,42,42,.55)' }}>
               {r.unten}
             </p>
           </div>
@@ -247,7 +245,7 @@ export default function AktionsBanner({ aktion, ende }: { aktion: StartseitenAkt
           <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">
             {aktion.links.map((l, i) => {
               const spalten = [[505, 386], [898, 413], [1316, 416]][i] ?? [505, 386];
-              return <Kachel key={l.label} r={MOBIL} x={spalten[0]} y={1775} w={spalten[1]} h={131} schrift={58} href={l.href} label={l.label} akzent={a} />;
+              return <Kachel key={l.label} r={MOBIL} x={spalten[0]} y={1305} w={spalten[1]} h={131} schrift={58} href={l.href} label={l.label} akzent={a} />;
             })}
           </div>
 

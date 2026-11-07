@@ -25,7 +25,7 @@ export interface StartseitenAktion {
   /** Bodenart-Kacheln, zugleich die Zeile „Vinyl • Laminat • Parkett“ */
   links: Array<{ label: string; href: string }>;
   button: { label: string; href: string };
-  /** Szene ohne Schrift: Desktop 2576×1244, mobil 1803×1995 */
+  /** Szene ohne Schrift: Desktop 2576×1244, mobil 1803×1525 */
   szene: { desktop: string; mobil: string; alt: string };
   akzent: string;
 }
