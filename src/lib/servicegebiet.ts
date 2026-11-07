@@ -50,6 +50,48 @@ function haversineKm(
 }
 
 /**
+ * GeoNames führt auch Großempfänger-PLZ, die auf Firmen oder Behörden laufen
+ * (z. B. 41833 „QVC eDistribution Inc. & Co.KG“). Als Ort zeigen wir dann den
+ * Namen der nächstgelegenen normalen PLZ.
+ */
+const FIRMA = new RegExp(
+  [
+    String.raw`\b(GmbH|mbH|AG|KG|KGaA|OHG|SE|eG|Inc|Ltd|LLP|S\.A|b\.v)\b`,
+    '&',
+    String.raw`\be\.\s?V\b`,
+    String.raw`\ba\.G\b`,
+    String.raw`\bCo\.`,
+    String.raw`(Bank|Banque|Sparkasse|Versicherung|Versicherer|Vers\.|Verlag|Versand|Finanzamt|Agentur|Amtsgericht|Gericht|Landrat|Bürgermeister|Verwaltung|Bezirksamt|Ministerium|Regierung|Senat|Berufsgenossenschaft|Krankenkasse|Vereinigung|Gesellschaft|Rechtsanw|Anwalt|Kanzlei|Steuerberat|Notar|Inkasso|Reklame|Fabrik|Institut|Stiftung|Holding|Konzern|Group|Service|Marketing|Support|Distribution|Universität|Hochschule|Klinik|Schule|Kaserne|Zentrum|Zentrale|Center|Direktion|Niederlassung|Geschäftsstelle|Jobcenter|Polizei|Studio|Redaktion|Büro|Pharma|Tiernahrung|Lotterie|Abrechnung|Dienst|Landesamt|Landesregierung|Landesbank|StädteRegion|Deutschland|Deutsche[rs]?\b|Rheinische Post|Anstalt|Behörde|\bKasse\b|\bmedia\b|versicherung|kasse\b|verband\b|\bBundes[a-zäöü]|Hospital|Krankenhaus|Krankenversorgung|Rundfunk|Telekom|Logistik|Großannahme|Feldpost|Finance|Samariter|krankenhaus|klinik|Feuerwehr|[Bb]etriebe\b|Stadtwerke|Wissoll)`,
+    String.raw`(Zoll|Versorgungs|Integrations|Tiefbau|Landrats|Streitkräfte|Post|Präsidial|Kriminal|Standes|Gesundheits|Jugend|Sozial|Wohnungs|Vermessungs|Kataster)amt\b`,
+    String.raw`^(Stadt|Kreis|Landkreis|Gemeinde|Erftkreis|Der|Die|Das|Dr\.)\s`,
+    String.raw`\b[A-ZÄÖÜ]{3,}\b`,
+    String.raw`\d`,
+  ].join('|'),
+)
+
+const ortCache = new Map<string, string>()
+
+/** Ortsname zur PLZ; bei Firmen-PLZ der Ort der nächstgelegenen normalen PLZ. */
+function ortName(plz: string, eintrag: [string, number, number]): string {
+  const [name, lat, lon] = eintrag
+  if (!FIRMA.test(name)) return name
+  const gemerkt = ortCache.get(plz)
+  if (gemerkt) return gemerkt
+  let bester = name
+  let abstand = Infinity
+  for (const [andere, [n, la, lo]] of Object.entries(DATEN)) {
+    if (andere === plz || FIRMA.test(n)) continue
+    const d = haversineKm(lat, lon, la, lo)
+    if (d < abstand) {
+      abstand = d
+      bester = n
+    }
+  }
+  ortCache.set(plz, bester)
+  return bester
+}
+
+/**
  * Schlägt die PLZ nach und bestimmt Entfernung und Area-Status.
  * `null` = PLZ nicht im Datensatz (dann kann der Standort nicht geprüft werden).
  */
@@ -60,7 +102,8 @@ export function pruefeServicegebiet(plzEingabe: string): GebietsErgebnis | null 
   const eintrag = DATEN[plz]
   if (!eintrag) return null
 
-  const [ort, lat, lon] = eintrag
+  const [, lat, lon] = eintrag
+  const ort = ortName(plz, eintrag)
   const distanceKm = haversineKm(STANDORT.geo.lat, STANDORT.geo.lng, lat, lon)
 
   return {
@@ -75,7 +118,7 @@ export function pruefeServicegebiet(plzEingabe: string): GebietsErgebnis | null 
 /** Nur der Ort zur PLZ — für die automatische Ergänzung in Schritt 1. */
 export function ortZurPlz(plz: string): string | null {
   const eintrag = DATEN[plz.trim()]
-  return eintrag ? eintrag[0] : null
+  return eintrag ? ortName(plz.trim(), eintrag) : null
 }
 
 /** "24,6 km" in deutscher Schreibweise. */
