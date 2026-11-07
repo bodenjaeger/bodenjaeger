@@ -3,7 +3,8 @@ import dynamic from 'next/dynamic';
 import { wooCommerceClient, type StoreApiProduct } from "@/lib/woocommerce";
 import HeroSlider from "@/components/startseite/HeroSlider";
 import MusterboxLeiste from "@/components/startseite/MusterboxLeiste";
-import BodenWahl from "@/components/startseite/BodenWahl";
+import Schnellauswahl from "@/components/startseite/Schnellauswahl";
+import AktionsBanner from "@/components/startseite/AktionsBanner";
 import AktionsAngebote, { type AngebotsReiter } from "@/components/startseite/AktionsAngebote";
 import type { BodenfinderEmpfehlung, BodenfinderSchluessel } from "@/components/startseite/Bodenfinder";
 import { buildMetadata } from "@/lib/seo";
@@ -150,9 +151,10 @@ export default async function Home() {
       {/* H1 nur für Suchmaschinen/Screenreader — der Hero-Slider trägt keinen Text-Titel */}
       <h1 className="sr-only">Bodenbeläge online kaufen: Vinyl, Laminat &amp; Parkett</h1>
 
-      <HeroSlider showPromo={promoActive} />
+      <Schnellauswahl promoActive={promoActive} />
+      {/* Während einer Aktion nur das eine Banner, sonst der bisherige Slider */}
+      {promoActive ? <AktionsBanner ende={promoEnde} /> : <HeroSlider />}
       <MusterboxLeiste />
-      <BodenWahl promoActive={promoActive} />
       <AktionsAngebote
         gruppen={gruppen}
         zubehoer={zubehoer}
