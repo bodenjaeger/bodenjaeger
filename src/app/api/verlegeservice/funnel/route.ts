@@ -320,7 +320,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   } else if (a.weg === 'beratung') {
     checklisten.push({ name: a.beratung === 'whatsapp' ? 'WhatsApp-Beratung' : 'Telefonat', punkte: [a.beratung === 'whatsapp' ? 'Per WhatsApp melden' : 'Zurückrufen', ...gespraech] })
   } else if (a.weg === 'aufmass') {
-    checklisten.push({ name: 'Aufmaß', punkte: ['Bezahlt (Label wechselt automatisch)', 'Termin vereinbaren', 'Großmuster einpacken (Liste oben)', 'Aufmaß durchführen', 'Angebot in SAP erstellen (Aufmaß gutschreiben)'] })
+    checklisten.push({ name: 'Aufmaß', punkte: ['Bezahlt (wird automatisch abgehakt)', 'Termin vereinbaren', 'Großmuster einpacken (Liste oben)', 'Aufmaß durchführen', 'Angebot in SAP erstellen (Aufmaß gutschreiben)'] })
   } else {
     checklisten.push({
       name: 'Nachfassen Preisrahmen',

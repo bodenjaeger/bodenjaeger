@@ -362,7 +362,7 @@ export async function aufmassBezahltNachTrello(cardId: string, text: string): Pr
   return ok
 }
 
-/** Label „Zahlung offen“ entfernen und „Bezahlt“ (grün) setzen. */
+/** Label „Zahlung offen“ entfernen, „Bezahlt“ (grün) setzen und den Checklistenpunkt abhaken. */
 async function zahlungsLabelUmstellen(cfg: TrelloConfig, cardId: string): Promise<void> {
   const auth = `key=${encodeURIComponent(cfg.key)}&token=${encodeURIComponent(cfg.token)}`
   try {
@@ -388,6 +388,16 @@ async function zahlungsLabelUmstellen(cfg: TrelloConfig, cardId: string): Promis
     }
     if (bezahlt && !karte.idLabels.includes(bezahlt)) {
       await fetch(`${TRELLO_API}/cards/${cardId}/idLabels?value=${bezahlt}&${auth}`, { method: 'POST' })
+    }
+    // Checklistenpunkt „Bezahlt …“ abhaken
+    const cRes = await fetch(`${TRELLO_API}/cards/${cardId}/checklists?checkItems=all&${auth}`)
+    if (cRes.ok) {
+      const listen = (await cRes.json()) as Array<{ checkItems: Array<{ id: string; name: string; state: string }> }>
+      for (const punkt of listen.flatMap((l) => l.checkItems)) {
+        if (punkt.state !== 'complete' && /^bezahlt\b/i.test(punkt.name.trim())) {
+          await fetch(`${TRELLO_API}/cards/${cardId}/checkItem/${punkt.id}?state=complete&${auth}`, { method: 'PUT' })
+        }
+      }
     }
   } catch (e) {
     console.error('[trello] Zahlungs-Label umstellen fehlgeschlagen:', e)
