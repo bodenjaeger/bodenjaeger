@@ -17,7 +17,9 @@ import {
   istGueltigerTermin,
   leadStufe,
   pruefeKontakt,
+  pruefeTelefon,
   pruefeZahlung,
+  telefonAnzeige,
   terminText,
   type FunnelAnfrage,
   type FunnelAntwort,
@@ -149,6 +151,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   }
   if (Object.keys(felder).length) return fehler('Bitte prüfe die markierten Felder.', felder)
 
+  // Telefon einheitlich als E.164 (+49…) weitergeben
+  const tel = pruefeTelefon(a.telefon)
+  a.telefon = tel.ok ? tel.e164 : ''
+
   if (!(await pruefeTurnstile(request, a.turnstileToken))) {
     return fehler('Die Sicherheitsprüfung ist abgelaufen. Bitte versuche es noch einmal.', undefined, 403)
   }
@@ -220,7 +226,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
 
   const z: string[] = []
   z.push(`**KONTAKT** ${name} · Vorgang ${leadId}`)
-  z.push(`Tel: ${a.telefon || '–'} · E-Mail: ${a.email || '–'}`)
+  z.push(`Tel: ${a.telefon ? telefonAnzeige(a.telefon) : '–'} · E-Mail: ${a.email || '–'}`)
+  if (a.telefon) z.push(`WhatsApp: https://wa.me/${a.telefon.slice(1)}`)
   z.push(`${gebiet.plz} ${gebiet.ort}${a.weg === 'aufmass' ? `, ${a.strasse} ${a.hausnummer}` : ''} · ca. ${fahrt} km Fahrweg · ${kreis.name}`)
   z.push('', `**WEG** ${WEG_NAME[a.weg]} · Lead-Stufe ${stufe}`)
   z.push(`Boden schon? ${BESITZ_NAME[a.besitz]}`)

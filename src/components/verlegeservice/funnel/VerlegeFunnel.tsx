@@ -19,12 +19,15 @@ import { formatEuro } from '@/lib/aufmass-kreise'
 import { BODENARTEN, ALTBOEDEN, type AltbodenKey, type BodenartKey } from '@/lib/verlegeservice/montage'
 import {
   RUECKRUF_NAME,
+  TELEFON_START,
   WEG_NAME,
   ZAHLART_NAME,
   datumKey,
   pruefeKontakt,
+  pruefeTelefon,
   pruefeZahlung,
   tagKurz,
+  telefonAnzeige,
   terminSlots,
   terminText,
   termintage,
@@ -107,7 +110,7 @@ const LEER: Zustand = {
   plz: '', weg: null, besitz: null, produkt: null, produktText: '', produktNichtGefunden: false, bodenart: null,
   flaeche: 40, altboden: null, sockelleisten: true, stufen: 0, tueren: 0, klasse: null, zeitraum: null,
   wunschboeden: [], empfehlung: false, beratung: null, rueckruf: null, termin: null, terminTag: null,
-  vorname: '', nachname: '', telefon: '', email: '', strasse: '', strasseGewaehlt: false, hausnummer: '',
+  vorname: '', nachname: '', telefon: TELEFON_START, email: '', strasse: '', strasseGewaehlt: false, hausnummer: '',
   zahlart: null, widerruf: false, datenschutz: false,
 }
 
@@ -180,10 +183,10 @@ function Chip({ aktiv, onClick, children }: { aktiv: boolean; onClick: () => voi
 }
 
 function Feld({
-  id, label, wert, onChange, typ = 'text', auto, optional, fehler, inputMode, placeholder,
+  id, label, wert, onChange, typ = 'text', auto, optional, fehler, inputMode, placeholder, onBlur,
 }: {
   id: string; label: string; wert: string; onChange: (v: string) => void; typ?: string; auto?: string
-  optional?: boolean; fehler?: string; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode']; placeholder?: string
+  optional?: boolean; fehler?: string; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode']; placeholder?: string; onBlur?: () => void
 }) {
   return (
     <div className="grid gap-1.5">
@@ -198,6 +201,7 @@ function Feld({
         inputMode={inputMode}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         className={`min-h-[52px] w-full rounded-lg border-2 bg-white px-3.5 text-base text-dark outline-none focus:ring-[3px] focus:ring-brand/30 ${fehler ? 'border-brand' : 'border-ash'}`}
       />
       {fehler && <p className="text-sm font-bold text-brand">{fehler}</p>}
@@ -241,6 +245,8 @@ export default function VerlegeFunnel() {
   const [sucht, setSucht] = useState(false)
   const [auswahl, setAuswahl] = useState<Boden[]>([])
   const [auswahlSuche, setAuswahlSuche] = useState('')
+  const [auswahlArt, setAuswahlArt] = useState<BodenartKey | null>(null)
+  const [auswahlLaedt, setAuswahlLaedt] = useState(false)
   const [klassen, setKlassen] = useState<Klassen | undefined>(undefined)
   const [strassen, setStrassen] = useState<string[]>([])
   const [ergebnis, setErgebnis] = useState<FunnelErfolg | null>(null)
@@ -250,7 +256,10 @@ export default function VerlegeFunnel() {
   const turnstileRef = useRef<TurnstileInstance | null>(null)
   const startZeit = useRef<string>(new Date().toISOString())
   const kopfRef = useRef<HTMLDivElement>(null)
-  const siteKey = (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '').trim()
+  // In der Vorschau (*.vercel.app) ist das Widget nicht freigegeben, der Server prüft dort nicht.
+  const istVorschau = process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview'
+  const siteKey = istVorschau ? '' : (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '').trim()
+  const [turnstileFehler, setTurnstileFehler] = useState(false)
 
   const id = verlauf[verlauf.length - 1]
   const pfad = useMemo(() => pfadFuer(z), [z])
@@ -357,18 +366,28 @@ export default function VerlegeFunnel() {
     return () => clearTimeout(t)
   }, [z.produktText, id])
 
-  // ── Wunschboden-Auswahl (beliebte Böden der Bodenart + Suche) ─────────────
+  // ── Wunschboden-Auswahl ───────────────────────────────────────────────────
+  // Ohne Suchbegriff: beliebte Böden der gewählten Bodenart (umschaltbar).
+  // Mit Suchbegriff: Suche über alle Bodenarten, damit man auch mischen kann.
+  const auswahlArtAktiv: BodenartKey = auswahlArt ?? z.bodenart ?? 'klick'
   useEffect(() => {
-    if (id !== 'wunschboden' || !z.bodenart) return
+    if (id !== 'wunschboden') return
     const q = auswahlSuche.trim()
+    let aktiv = true
+    setAuswahlLaedt(true)
     const t = setTimeout(() => {
-      fetch(`/api/verlegeservice/boeden?art=${z.bodenart}${q.length >= 2 ? `&q=${encodeURIComponent(q)}` : ''}`)
+      const url = q.length >= 2 ? `/api/verlegeservice/boeden?q=${encodeURIComponent(q)}` : `/api/verlegeservice/boeden?art=${auswahlArtAktiv}`
+      fetch(url)
         .then((r) => r.json())
-        .then((d: { boeden: Boden[] }) => setAuswahl((d.boeden ?? []).filter((b) => b.id !== z.produkt?.id)))
-        .catch(() => setAuswahl([]))
+        .then((d: { boeden: Boden[] }) => aktiv && setAuswahl((d.boeden ?? []).filter((b) => b.id !== z.produkt?.id)))
+        .catch(() => aktiv && setAuswahl([]))
+        .finally(() => aktiv && setAuswahlLaedt(false))
     }, q ? 250 : 0)
-    return () => clearTimeout(t)
-  }, [id, z.bodenart, z.produkt?.id, auswahlSuche])
+    return () => {
+      aktiv = false
+      clearTimeout(t)
+    }
+  }, [id, auswahlArtAktiv, z.produkt?.id, auswahlSuche])
 
   // ── Preisklassen ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -404,7 +423,7 @@ export default function VerlegeFunnel() {
       setFehler(pruefung)
       return
     }
-    if (siteKey && !turnstileToken) {
+    if (siteKey && !turnstileToken && !turnstileFehler) {
       setSendeFehler('Bitte warte kurz, die Sicherheitsprüfung läuft noch.')
       return
     }
@@ -603,7 +622,7 @@ export default function VerlegeFunnel() {
         <>
           <Feld id="vf-produkt" label="Produktname oder Dekor" wert={z.produktText} onChange={(v) => set('produktText', v)} auto="off" placeholder="z. B. Eiche natur" />
           {z.produktText.trim().length >= 2 && (
-            <div className="grid overflow-hidden rounded-lg border border-ash bg-white">
+            <div className="grid max-h-[320px] overflow-y-auto overscroll-contain rounded-lg border border-ash bg-white">
               {sucht && !treffer.length && <p className="px-3.5 py-3 text-sm text-mid">Suche läuft …</p>}
               {!sucht && !treffer.length && <p className="px-3.5 py-3 text-sm text-mid">Nichts gefunden. Probier einen anderen Begriff.</p>}
               {treffer.map((b) => (
@@ -745,10 +764,22 @@ export default function VerlegeFunnel() {
               <span className="text-[13px] text-mid">kommt auf jeden Fall mit</span>
             </div>
           )}
-          <Feld id="vf-auswahl" label={`${z.bodenart ? BODENARTEN[z.bodenart].name : 'Böden'} durchsuchen`} wert={auswahlSuche} onChange={setAuswahlSuche} auto="off" placeholder="z. B. Eiche, grau, Fischgrät" />
+          <Feld id="vf-auswahl" label="Alle Böden durchsuchen" wert={auswahlSuche} onChange={setAuswahlSuche} auto="off" placeholder="z. B. Baja, Eiche grau, Fischgrät" />
+          {auswahlSuche.trim().length < 2 && (
+            <div className="grid gap-1.5">
+              <span className="text-sm text-mid">Noch unentschlossen? Du kannst auch Böden verschiedener Arten mischen.</span>
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                {(Object.keys(BODENARTEN) as BodenartKey[]).map((k) => (
+                  <span key={k} className="flex-shrink-0">
+                    <Chip aktiv={auswahlArtAktiv === k} onClick={() => setAuswahlArt(k)}>{BODENARTEN[k].name}</Chip>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           <p className="text-sm text-mid"><b className="text-dark">{z.wunschboeden.length} von {maxWunsch}</b> {z.produkt ? 'weitere ' : ''}ausgewählt</p>
           {/* Gewählte Böden bleiben sichtbar, auch wenn die Suche sie nicht mehr zeigt */}
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid max-h-[520px] grid-cols-2 gap-2.5 overflow-y-auto overscroll-contain rounded-xl">
             {[...z.wunschboeden, ...auswahl.filter((b) => !z.wunschboeden.some((x) => x.id === b.id))].map((b) => {
               const nr = z.wunschboeden.findIndex((x) => x.id === b.id)
               return (
@@ -758,13 +789,16 @@ export default function VerlegeFunnel() {
                   {nr > -1 && <span className="absolute right-2 top-2 flex h-[26px] w-[26px] items-center justify-center rounded-full bg-brand text-[13px] font-bold text-white">{nr + 1}</span>}
                   <span className="grid gap-0.5 px-2.5 py-2">
                     <span className="text-[13px] font-bold leading-snug text-dark">{b.name}</span>
-                    {b.preis && <span className="text-xs text-mid">{b.preis.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €/m²</span>}
+                    <span className="text-xs text-mid">{BODENARTEN[b.art].name}{b.preis ? ` · ${b.preis.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €/m²` : ''}</span>
                   </span>
                 </button>
               )
             })}
           </div>
-          {!auswahl.length && !z.wunschboeden.length && <p className="text-sm text-mid">Böden werden geladen …</p>}
+          {auswahlLaedt && !auswahl.length && <p className="text-sm text-mid">Böden werden geladen …</p>}
+          {!auswahlLaedt && !auswahl.length && (
+            <p className="text-sm text-mid">{auswahlSuche.trim().length >= 2 ? `Zu „${auswahlSuche.trim()}" haben wir nichts gefunden. Probier einen anderen Begriff.` : 'Gerade keine Böden verfügbar.'}</p>
+          )}
           <label className="flex cursor-pointer items-start gap-2.5 text-sm text-mid">
             <input type="checkbox" checked={z.empfehlung} onChange={(e) => set('empfehlung', e.target.checked)} className="mt-0.5 h-5 w-5 flex-shrink-0 accent-[#ed1b24]" />
             <span>Bringt mir zusätzlich eure Empfehlung mit.</span>
@@ -841,7 +875,14 @@ export default function VerlegeFunnel() {
             <Feld id="vf-email" label="E-Mail" typ="email" wert={z.email} onChange={(v) => set('email', v)} auto="email" fehler={fehler.email} />
           )}
           <Feld id="vf-telefon" label={z.beratung === 'whatsapp' && z.weg === 'beratung' ? 'Handynummer (WhatsApp)' : 'Telefon'} typ="tel" inputMode="tel"
-            wert={z.telefon} onChange={(v) => set('telefon', v)} auto="tel" optional={telefonOptional} fehler={fehler.telefon} />
+            wert={z.telefon} onChange={(v) => set('telefon', v)} auto="tel" optional={telefonOptional} fehler={fehler.telefon}
+            onBlur={() => {
+              const roh = z.telefon.replace(/\s/g, '')
+              if (!roh || roh === '+49') return
+              const t = pruefeTelefon(z.telefon)
+              if (t.ok) set('telefon', telefonAnzeige(t.e164))
+              else setFehler((f) => ({ ...f, telefon: t.fehler }))
+            }} />
           {z.weg === 'beratung' && z.beratung === 'telefon' && (
             <div className="grid gap-1.5">
               <span className="text-sm font-bold text-dark">Wann rufen wir an?</span>
@@ -1027,7 +1068,8 @@ export default function VerlegeFunnel() {
             {zeigeTurnstile && (
               <div className="mt-5">
                 <Turnstile ref={turnstileRef} siteKey={siteKey} options={{ language: 'de', theme: 'light' }}
-                  onSuccess={setTurnstileToken} onExpire={() => setTurnstileToken(null)} onError={() => setTurnstileToken(null)} />
+                  onSuccess={(t) => { setTurnstileToken(t); setTurnstileFehler(false) }} onExpire={() => setTurnstileToken(null)}
+                  onError={() => { setTurnstileToken(null); setTurnstileFehler(true) }} />
               </div>
             )}
             {sendeFehler && <p className="mt-4 text-sm font-bold text-brand">{sendeFehler}</p>}

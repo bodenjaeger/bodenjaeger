@@ -15,6 +15,9 @@ export function clientIp(request: NextRequest): string | undefined {
 }
 
 export async function pruefeTurnstile(request: NextRequest, token?: string): Promise<boolean> {
+  // Vorschau-Adressen (*.vercel.app) sind im Turnstile-Widget nicht freigegeben,
+  // dort lädt die Prüfung nicht. In der Vorschau wird sie deshalb übersprungen.
+  if (process.env.VERCEL_ENV === 'preview') return true
   const secret = process.env.TURNSTILE_SECRET_KEY?.trim()
   if (!secret) {
     console.warn('[verlegeservice] TURNSTILE_SECRET_KEY fehlt — Spam-Schutz übersprungen.')

@@ -140,7 +140,7 @@ export function leadStufe(a: Pick<FunnelAnfrage, 'weg' | 'zeitraum' | 'flaeche' 
   if (a.zeitraum === 'asap' || a.zeitraum === '1-3') p += 2
   else if (a.zeitraum === '3-6') p += 1
   if (a.weg === 'preis' && a.flaeche >= 25) p += 1
-  if (a.telefon.replace(/\D/g, '').length >= 6) p += 1
+  if (istTelefon(a.telefon)) p += 1
   if (a.besitz === 'bj') p += 1
   if (a.beratung === 'fachmarkt') p += 2
   return p >= 5 ? 'A' : p >= 3 ? 'B' : 'C'
@@ -149,14 +149,58 @@ export function leadStufe(a: Pick<FunnelAnfrage, 'weg' | 'zeitraum' | 'flaeche' 
 // ── Prüfung der Kontakt- und Zahlungsdaten ───────────────────────────────────
 
 export const istEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim())
-export const istTelefon = (s: string) => s.replace(/\D/g, '').length >= 6 && /^(\+|0)/.test(s.trim())
+
+// ── Telefonnummern ───────────────────────────────────────────────────────────
+// Eingabe beginnt mit „+49 ". Gespeichert und weitergegeben wird immer E.164
+// (+491701234567), damit Trello, WooCommerce, Meta und WhatsApp dieselbe
+// Nummer bekommen.
+
+export const TELEFON_START = '+49 '
+
+export type TelefonPruefung = { ok: true; e164: string } | { ok: false; fehler: string }
+
+export function pruefeTelefon(eingabe: string): TelefonPruefung {
+  let t = eingabe.trim().replace(/[\s/().\-–]/g, '')
+  if (!t || t === '+49' || t === '+') return { ok: false, fehler: 'Bitte gib deine Telefonnummer ein.' }
+  if (t.startsWith('00')) t = `+${t.slice(2)}`
+  if (!/^\+?\d+$/.test(t)) return { ok: false, fehler: 'Bitte nur Ziffern eingeben.' }
+  let national: string
+  if (t.startsWith('+49')) national = t.slice(3).replace(/^0+/, '')
+  else if (t.startsWith('+')) {
+    // Ausland: 7–15 Ziffern nach E.164
+    const ziffern = t.slice(1)
+    return ziffern.length >= 7 && ziffern.length <= 15
+      ? { ok: true, e164: `+${ziffern}` }
+      : { ok: false, fehler: 'Bitte prüfe die Telefonnummer.' }
+  } else national = t.replace(/^0+/, '')
+  if (!/^[1-9]/.test(national)) return { ok: false, fehler: 'Bitte prüfe die Telefonnummer.' }
+  // Handy (015x, 016x, 017x): 10–11 Ziffern ohne die 0; Festnetz: 7–11
+  const handy = /^1[5-7]/.test(national)
+  const min = handy ? 10 : 7
+  if (national.length < min) return { ok: false, fehler: handy ? 'Die Handynummer ist zu kurz. Bitte prüfe sie.' : 'Die Telefonnummer ist zu kurz. Bitte prüfe sie.' }
+  if (national.length > 11) return { ok: false, fehler: 'Die Telefonnummer ist zu lang. Bitte prüfe sie.' }
+  return { ok: true, e164: `+49${national}` }
+}
+
+export const istTelefon = (s: string) => pruefeTelefon(s).ok
+
+/** Lesbare Form: „+49 170 1234567" (Handy) bzw. „+49 2433938884" (Festnetz) */
+export function telefonAnzeige(e164: string): string {
+  if (!e164.startsWith('+49')) return e164
+  const n = e164.slice(3)
+  return /^1[5-7]/.test(n) ? `+49 ${n.slice(0, 3)} ${n.slice(3)}` : `+49 ${n}`
+}
 
 export function pruefeKontakt(a: Pick<FunnelAnfrage, 'weg' | 'beratung' | 'vorname' | 'nachname' | 'telefon' | 'email' | 'datenschutz'>): Record<string, string> {
   const e: Record<string, string> = {}
   if (a.vorname.trim().length < 2) e.vorname = 'Bitte gib deinen Vornamen ein.'
   if (a.nachname.trim().length < 2) e.nachname = 'Bitte gib deinen Nachnamen ein.'
   const telefonPflicht = a.weg === 'aufmass' || (a.weg === 'beratung' && a.beratung !== 'fachmarkt')
-  if ((telefonPflicht || a.telefon.trim()) && !istTelefon(a.telefon)) e.telefon = 'Bitte prüfe die Telefonnummer (z. B. 0170 1234567).'
+  const telefonLeer = a.telefon.replace(/\s/g, '') === '' || a.telefon.replace(/\s/g, '') === '+49'
+  if (telefonPflicht || !telefonLeer) {
+    const t = pruefeTelefon(a.telefon)
+    if (!t.ok) e.telefon = t.fehler
+  }
   const emailPflicht = a.weg !== 'beratung' || a.beratung === 'fachmarkt'
   if ((emailPflicht || a.email.trim()) && !istEmail(a.email)) e.email = 'Bitte prüfe deine E-Mail-Adresse.'
   if (!a.datenschutz) e.datenschutz = 'Bitte stimme zu, damit wir dich kontaktieren dürfen.'
