@@ -3,7 +3,7 @@
  *
  * Nutzt dieselben Zugangsdaten wie die bisherige Anbindung:
  *   TRELLO_KEY, TRELLO_TOKEN, TRELLO_LIST_ID           (Liste „Neu")
- *   TRELLO_LIST_ID_TERMIN                              (Liste „Termin vereinbart", optional)
+ *   TRELLO_LIST_ID_TERMIN                              (optional, sonst Liste mit „Termin Fachmarkt“ im Namen)
  *   TRELLO_LIST_ID_AUFMASS_BEZAHLT                     (nach Zahlung, siehe lib/aufmass.ts)
  * Labels werden per Name gesucht und bei Bedarf auf dem Board angelegt.
  */
@@ -67,6 +67,34 @@ async function labelIds(z: Zugang, gewuenscht: KartenLabel[]): Promise<string[]>
   }
 }
 
+/**
+ * Liste auf dem Board per Namen finden (ohne Emoji, Groß/klein egal). So muss
+ * keine Listen-ID in Vercel stehen; eine gesetzte Variable hat aber Vorrang.
+ */
+let listenCache: Array<{ id: string; name: string }> | null = null
+async function listeNachName(z: Zugang, teil: string): Promise<string | null> {
+  try {
+    let listen = listenCache
+    if (!listen) {
+      const l = await fetch(`${API}/lists/${z.listeNeu}?fields=idBoard&${auth(z)}`).then((r) => r.json() as Promise<{ idBoard: string }>)
+      listen = await fetch(`${API}/boards/${l.idBoard}/lists?fields=name&filter=open&${auth(z)}`).then(
+        (r) => r.json() as Promise<Array<{ id: string; name: string }>>,
+      )
+      listenCache = listen
+    }
+    const t = teil.toLowerCase()
+    return listen.find((x) => x.name.toLowerCase().includes(t))?.id ?? null
+  } catch (e) {
+    console.error('[verlegeservice/trello] Listen nicht lesbar:', e)
+    return null
+  }
+}
+
+async function zielListe(z: Zugang, art?: 'neu' | 'termin'): Promise<string> {
+  if (art !== 'termin') return z.listeNeu
+  return process.env.TRELLO_LIST_ID_TERMIN?.trim() || (await listeNachName(z, 'termin fachmarkt')) || z.listeNeu
+}
+
 export interface NeueKarte {
   titel: string
   beschreibung: string
@@ -85,7 +113,7 @@ export async function karteAnlegen(k: NeueKarte): Promise<string | null> {
     console.error('[verlegeservice/trello] TRELLO_KEY/TRELLO_TOKEN/TRELLO_LIST_ID fehlt')
     return null
   }
-  const liste = (k.liste === 'termin' && process.env.TRELLO_LIST_ID_TERMIN?.trim()) || z.listeNeu
+  const liste = await zielListe(z, k.liste)
   const idLabels = await labelIds(z, k.labels ?? [])
   try {
     const res = await fetch(`${API}/cards?${auth(z)}`, {
@@ -142,7 +170,7 @@ async function checklistenAnlegen(z: Zugang, cardId: string, checklisten: Array<
 export async function karteAktualisieren(cardId: string, k: NeueKarte, kommentar: string): Promise<boolean> {
   const z = zugang()
   if (!z || !/^[a-f0-9]{24}$/.test(cardId)) return false
-  const liste = (k.liste === 'termin' && process.env.TRELLO_LIST_ID_TERMIN?.trim()) || z.listeNeu
+  const liste = await zielListe(z, k.liste)
   const idLabels = await labelIds(z, k.labels ?? [])
   try {
     const res = await fetch(`${API}/cards/${cardId}?${auth(z)}`, {
