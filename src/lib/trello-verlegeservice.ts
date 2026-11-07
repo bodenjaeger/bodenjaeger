@@ -357,8 +357,41 @@ export async function aufmassBezahltNachTrello(cardId: string, text: string): Pr
   } else {
     console.warn('[trello] TRELLO_LIST_ID_AUFMASS_BEZAHLT fehlt — Karte bleibt in ihrer Liste.')
   }
+  await zahlungsLabelUmstellen(cfg, cardId)
   await kommentar(cfg, cardId, text)
   return ok
+}
+
+/** Label „Zahlung offen“ entfernen und „Bezahlt“ (grün) setzen. */
+async function zahlungsLabelUmstellen(cfg: TrelloConfig, cardId: string): Promise<void> {
+  const auth = `key=${encodeURIComponent(cfg.key)}&token=${encodeURIComponent(cfg.token)}`
+  try {
+    const kRes = await fetch(`${TRELLO_API}/cards/${cardId}?fields=idBoard,idLabels&${auth}`)
+    if (!kRes.ok) throw new Error(`Karte ${kRes.status}`)
+    const karte = (await kRes.json()) as { idBoard: string; idLabels: string[] }
+    const lRes = await fetch(`${TRELLO_API}/boards/${karte.idBoard}/labels?fields=name&limit=1000&${auth}`)
+    if (!lRes.ok) throw new Error(`Labels ${lRes.status}`)
+    const labels = (await lRes.json()) as Array<{ id: string; name: string }>
+    const name = (l: { name: string }) => l.name.trim().toLowerCase()
+
+    for (const l of labels.filter((x) => name(x) === 'zahlung offen' && karte.idLabels.includes(x.id))) {
+      await fetch(`${TRELLO_API}/cards/${cardId}/idLabels/${l.id}?${auth}`, { method: 'DELETE' })
+    }
+    let bezahlt = labels.find((x) => name(x) === 'bezahlt')?.id
+    if (!bezahlt) {
+      const neu = await fetch(`${TRELLO_API}/labels?${auth}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Bezahlt', color: 'green', idBoard: karte.idBoard }),
+      })
+      if (neu.ok) bezahlt = ((await neu.json()) as { id: string }).id
+    }
+    if (bezahlt && !karte.idLabels.includes(bezahlt)) {
+      await fetch(`${TRELLO_API}/cards/${cardId}/idLabels?value=${bezahlt}&${auth}`, { method: 'POST' })
+    }
+  } catch (e) {
+    console.error('[trello] Zahlungs-Label umstellen fehlgeschlagen:', e)
+  }
 }
 
 /** Kommentar an eine bestehende Karte, ohne sie zu verschieben. */
