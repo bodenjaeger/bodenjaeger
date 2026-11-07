@@ -14,7 +14,8 @@
  * Mischung mit Böden — und der Preis kommt nie aus dem Browser, sondern aus dem
  * WooCommerce-Produkt zum serverseitig bestimmten Kreis.
  */
-import { aufmassKreis, formatEuro, type AufmassKreis } from '@/lib/aufmass-kreise'
+import { formatEuro, type AufmassKreis } from '@/lib/aufmass-kreise'
+import { fahrwegKm, kreisFuer, MAX_FAHRWEG_KM } from '@/lib/verlegeservice/montage'
 import { toNetLineItems } from '@/lib/order-line-items'
 import { createPayPalOrder } from '@/lib/paypal'
 import { pruefeServicegebiet } from '@/lib/servicegebiet'
@@ -49,6 +50,7 @@ export const AUFMASS_META = {
   gclid: '_aufmass_gclid',
   /** „yes", sobald Trello und Meta nach der Zahlung bedient wurden. */
   nachZahlung: '_aufmass_nach_zahlung',
+  boeden: '_aufmass_boeden',
   test: '_testbestellung',
 } as const
 
@@ -64,9 +66,10 @@ export function istTestumgebung(): boolean {
 
 export interface AufmassAngebot {
   kreis: AufmassKreis
-  produktId: number
+  /** WooCommerce-Produkt mit der SKU; null = noch nicht angelegt, dann Gebührenzeile */
+  produktId: number | null
   produktName: string
-  /** Bruttopreis aus WooCommerce. */
+  /** Bruttopreis: aus dem WooCommerce-Produkt, sonst aus der Montageliste. */
   preis: number
   plz: string
   ort: string
@@ -119,16 +122,16 @@ async function ladeProduktPerSku(sku: string): Promise<WcProdukt | null> {
  */
 export async function aufmassAngebot(plz: string): Promise<AufmassAngebot | null> {
   const gebiet = pruefeServicegebiet(plz)
-  if (!gebiet || gebiet.areaStatus !== 'in_area') return null
-  const kreis = aufmassKreis(gebiet.distanceKm)
-  if (!kreis) return null
-  const produkt = await ladeProduktPerSku(kreis.sku)
-  if (!produkt) return null
+  // Verlegegebiet: 50 km Fahrweg (geschätzt aus der Luftlinie)
+  if (!gebiet || fahrwegKm(gebiet.distanceKm) > MAX_FAHRWEG_KM) return null
+  const k = kreisFuer(gebiet.distanceKm)
+  const kreis: AufmassKreis = { bisKm: k.bisKm, name: k.name, sku: k.aufmassSku }
+  const produkt = await ladeProduktPerSku(k.aufmassSku)
   return {
     kreis,
-    produktId: produkt.id,
-    produktName: produkt.name,
-    preis: parseFloat(produkt.price),
+    produktId: produkt?.id ?? null,
+    produktName: produkt?.name ?? `Aufmaß + Beratung + Angebot ${k.name}`,
+    preis: produkt ? parseFloat(produkt.price) : k.aufmass,
     plz: gebiet.plz,
     ort: gebiet.ort,
     distanceKm: gebiet.distanceKm,
@@ -157,6 +160,8 @@ export interface AufmassBestellungEingabe {
   ort: string
   zahlart: VsZahlartKey
   tracking: VsTracking
+  /** Böden, die als Original-Dielen mitgebracht werden */
+  boeden?: string[]
 }
 
 export async function aufmassBestellungAnlegen(
@@ -180,6 +185,7 @@ export async function aufmassBestellungAnlegen(
     { key: AUFMASS_META.entfernungKm, value: String(e.angebot.distanceKm) },
     { key: AUFMASS_META.widerrufVorzeitig, value: new Date().toISOString() },
   ]
+  if (e.boeden?.length) meta.push({ key: AUFMASS_META.boeden, value: e.boeden.join(' | ') })
   if (e.trelloCardId) meta.push({ key: AUFMASS_META.trelloKarte, value: e.trelloCardId })
   if (e.tracking.fbp) meta.push({ key: AUFMASS_META.fbp, value: e.tracking.fbp })
   if (e.tracking.fbc) meta.push({ key: AUFMASS_META.fbc, value: e.tracking.fbc })
@@ -198,10 +204,25 @@ export async function aufmassBestellungAnlegen(
     status: 'pending',
     billing: { ...adresse, email: e.email, phone: e.telefon },
     shipping: adresse,
-    // WooCommerce erwartet Nettobeträge (siehe toNetLineItems).
-    line_items: toNetLineItems([
-      { product_id: e.angebot.produktId, quantity: 1, subtotal: brutto, total: brutto },
-    ]),
+    // WooCommerce erwartet Nettobeträge (siehe toNetLineItems). Ist das
+    // Produkt mit der SKU noch nicht angelegt, geht das Aufmaß als
+    // Gebührenzeile mit Artikelnummer im Namen in die Bestellung.
+    ...(e.angebot.produktId
+      ? {
+          line_items: toNetLineItems([
+            { product_id: e.angebot.produktId, quantity: 1, subtotal: brutto, total: brutto },
+          ]),
+        }
+      : {
+          line_items: [],
+          fee_lines: [
+            {
+              name: `${e.angebot.produktName} (${e.angebot.kreis.sku})`,
+              total: (e.angebot.preis / 1.19).toFixed(2),
+              tax_status: 'taxable' as const,
+            },
+          ],
+        }),
     customer_note: `Aufmaß zur Verlegeservice-Anfrage ${e.leadId}`,
     meta_data: meta,
   })
@@ -233,11 +254,13 @@ function bezahltUrl(orderId: number, orderKey: string): string {
  * Weiterleitungsadresse zurück. Der Betrag kommt aus `order.total`.
  */
 export async function aufmassZahlungStarten(
-  order: Pick<WooCommerceOrder, 'id' | 'order_key' | 'total' | 'billing' | 'line_items'>,
+  order: Pick<WooCommerceOrder, 'id' | 'order_key' | 'total' | 'billing' | 'line_items'> & {
+    fee_lines?: Array<{ name: string }>
+  },
   zahlart: VsZahlartKey,
 ): Promise<string> {
   const betrag = parseFloat(order.total)
-  const name = order.line_items[0]?.name || 'Aufmaß + Beratung + Angebot'
+  const name = order.line_items[0]?.name || order.fee_lines?.[0]?.name || 'Aufmaß + Beratung + Angebot'
   const zurueck = bezahltUrl(order.id, order.order_key)
   const abgebrochen = `${zurueck}&abgebrochen=1`
 
@@ -271,7 +294,9 @@ export async function aufmassZahlungStarten(
  * `null` zurückgegeben.
  */
 export async function aufmassZahlungStartenSicher(
-  order: Pick<WooCommerceOrder, 'id' | 'order_key' | 'total' | 'billing' | 'line_items'>,
+  order: Pick<WooCommerceOrder, 'id' | 'order_key' | 'total' | 'billing' | 'line_items'> & {
+    fee_lines?: Array<{ name: string }>
+  },
   zahlart: VsZahlartKey,
 ): Promise<string | null> {
   try {
@@ -306,11 +331,13 @@ export interface AufmassBestellung {
   ort: string
   meta: Record<string, string>
   line_items: WooCommerceOrder['line_items']
+  fee_lines: Array<{ name: string }>
   billing: WooCommerceOrder['billing']
 }
 
 interface WcOrderMitMeta extends WooCommerceOrder {
   meta_data?: Array<{ key: string; value: unknown }>
+  fee_lines?: Array<{ name: string }>
 }
 
 /**
@@ -343,7 +370,7 @@ export async function ladeAufmassBestellung(
       status: o.status,
       total: parseFloat(o.total),
       zahlart: o.payment_method ?? '',
-      produktName: o.line_items[0]?.name ?? '',
+      produktName: o.line_items[0]?.name ?? o.fee_lines?.[0]?.name ?? '',
       vorname: o.billing.first_name,
       nachname: o.billing.last_name,
       email: o.billing.email,
@@ -353,6 +380,7 @@ export async function ladeAufmassBestellung(
       ort: o.billing.city,
       meta,
       line_items: o.line_items,
+      fee_lines: o.fee_lines ?? [],
       billing: o.billing,
     }
   } catch (e) {
