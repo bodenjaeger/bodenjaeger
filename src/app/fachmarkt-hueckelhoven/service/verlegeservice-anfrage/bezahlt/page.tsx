@@ -102,6 +102,11 @@ export default async function AufmassBezahltPage({ searchParams }: { searchParam
           {VS_AUFMASS_BEZAHLT.ueberschrift(b.vorname)}
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-lg text-mid">{VS_AUFMASS_BEZAHLT.text}</p>
+        {b.meta[AUFMASS_META.boeden] && (
+          <p className="mx-auto mt-2 max-w-xl font-bold text-dark">
+            {VS_AUFMASS_BEZAHLT.boeden(b.meta[AUFMASS_META.boeden].split(' | ').join(', '))}
+          </p>
+        )}
         <p className="mx-auto mt-2 max-w-xl text-mid">{VS_AUFMASS_BEZAHLT.gutschrift(preis)}</p>
         <p className="mt-4 text-sm text-mid">
           Bestellnummer: <span className="font-bold text-dark">{b.id}</span> · Vorgangsnummer:{' '}

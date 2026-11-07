@@ -299,8 +299,8 @@ export const VS_ZAHLUNG = {
 export const VS_AUFMASS_BEZAHLT = {
   ueberschrift: (vorname: string) => (vorname ? `Danke, ${vorname}! Dein Aufmaß ist bezahlt.` : 'Danke! Dein Aufmaß ist bezahlt.'),
   text: 'Wir rufen dich an und vereinbaren den Termin für dein Aufmaß. Die Zahlungsbestätigung bekommst du per E-Mail.',
-  gutschrift: (preis: string) =>
-    `Erteilst du uns den Auftrag mit Verlegung, schreiben wir dir ${preis} vollständig gut.`,
+  gutschrift: (preis: string) => `Bei Beauftragung schreiben wir dir ${preis} vollständig gut.`,
+  boeden: (liste: string) => `Wir bringen ${liste} als Original-Dielen mit.`,
   schritte: [
     'Wir rufen dich an und vereinbaren deinen Aufmaßtermin.',
     'Aufmaß vor Ort: Wir messen aus und prüfen Untergrund, Türen und Übergänge.',

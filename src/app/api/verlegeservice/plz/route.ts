@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { aufmassAngebot } from '@/lib/aufmass'
 import { istPlzFormat, pruefeServicegebiet } from '@/lib/servicegebiet'
+import { fahrwegKm, kreisFuer, MAX_FAHRWEG_KM } from '@/lib/verlegeservice/montage'
 
 /**
  * PLZ-Auflösung für Schritt 1 des Verlegeservice-Formulars.
@@ -31,7 +32,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ gefunden: false, grund: 'unbekannt' as const })
   }
 
-  const angebot = gebiet.areaStatus === 'in_area' ? await aufmassAngebot(plz) : null
+  const fahrt = fahrwegKm(gebiet.distanceKm)
+  const imGebiet = fahrt <= MAX_FAHRWEG_KM
+  const angebot = imGebiet ? await aufmassAngebot(plz) : null
 
   return NextResponse.json(
     {
@@ -40,6 +43,10 @@ export async function GET(request: NextRequest) {
       ort: gebiet.ort,
       distanceKm: gebiet.distanceKm,
       areaStatus: gebiet.areaStatus,
+      /** Geschätzter Fahrweg und ob wir dort verlegen (50 km Fahrweg) */
+      fahrtKm: fahrt,
+      imGebiet,
+      kreis: kreisFuer(gebiet.distanceKm).name,
       // null = Aufmaß hier nicht online buchbar (außerhalb oder Produkt fehlt).
       aufmass: angebot ? { preis: angebot.preis, kreis: angebot.kreis.name } : null,
     },
