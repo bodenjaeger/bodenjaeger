@@ -291,7 +291,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
         : a.weg === 'preis'
           ? 'Heute melden und Aufmaß anbieten'
           : fachmarkt
-            ? `Kunde kommt **${termin}** in den Fachmarkt`
+            ? `Kunde kommt **${termin}** in den Fachmarkt – keine Bestätigung nötig`
             : a.beratung === 'whatsapp'
               ? 'Per WhatsApp melden'
               : `Zurückrufen${a.rueckruf && a.rueckruf !== 'egal' ? ` – **${RUECKRUF_NAME[a.rueckruf].toLowerCase()}**` : ''}`
@@ -302,7 +302,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
         : a.weg === 'preis'
           ? [`${kanal} (Aufmaß-Link ist schon im Text)`, 'Fragen beantworten, sonst Fachmarkt-Termin anbieten', 'Kein Interesse → **🗂 Unqualifiziert / später**']
           : fachmarkt
-            ? [perWhatsapp ? 'Bestätigung per WhatsApp schicken' : 'Kurz anrufen und Termin bestätigen', 'Passende Böden bereitlegen', 'Nach dem Termin: Aufmaß-Link schicken oder → **⏳ Wartet auf Kunde**']
+            ? ['Passende Böden bereitlegen', 'Nach dem Termin: Aufmaß-Link schicken oder → **⏳ Wartet auf Kunde**']
             : a.beratung === 'whatsapp'
               ? ['WhatsApp schicken', 'Fragen beantworten', 'Aufmaß gewünscht → WhatsApp „Aufmaß-Link“ schicken']
               : ['Anrufen', perWhatsapp ? 'Nicht erreicht → WhatsApp „nicht erreicht“ und Karte nach **📞 Nicht erreicht**' : 'Nicht erreicht → Karte nach **📞 Nicht erreicht**', 'Aufmaß gewünscht → Aufmaß-Link schicken']
@@ -373,7 +373,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
     a.weg === 'aufmass'
       ? [{ name: 'Aufmaß', punkte: ['Bezahlt', 'Termin vereinbart', 'Angebot erstellt'] }]
       : fachmarkt
-        ? [{ name: 'Kontakt', punkte: ['Bestätigung geschickt', 'Kunde war da'] }]
+        ? [{ name: 'Termin', punkte: ['Kunde war da'] }]
         : [{ name: 'Kontakt', punkte: [erstkontakt, 'Nach 2 Tagen nachgefasst'] }]
 
   const titelVorne =
