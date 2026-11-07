@@ -5,6 +5,8 @@ import HeroSlider from "@/components/startseite/HeroSlider";
 import MusterboxLeiste from "@/components/startseite/MusterboxLeiste";
 import Schnellauswahl from "@/components/startseite/Schnellauswahl";
 import AktionsBanner from "@/components/startseite/AktionsBanner";
+import BodenWahl from "@/components/startseite/BodenWahl";
+import { BLACK_WEEKS_AKTION } from "@/content/startseite-aktion";
 import AktionsAngebote, { type AngebotsReiter } from "@/components/startseite/AktionsAngebote";
 import type { BodenfinderEmpfehlung, BodenfinderSchluessel } from "@/components/startseite/Bodenfinder";
 import { buildMetadata } from "@/lib/seo";
@@ -151,10 +153,15 @@ export default async function Home() {
       {/* H1 nur für Suchmaschinen/Screenreader — der Hero-Slider trägt keinen Text-Titel */}
       <h1 className="sr-only">Bodenbeläge online kaufen: Vinyl, Laminat &amp; Parkett</h1>
 
+      {/* Mobil und Tablet: Schnellauswahl ganz oben. Am Rechner übernehmen das die Menü-Reiter. */}
       <Schnellauswahl promoActive={promoActive} />
-      {/* Während einer Aktion nur das eine Banner, sonst der bisherige Slider */}
-      {promoActive ? <AktionsBanner ende={promoEnde} /> : <HeroSlider />}
+      {/* Während einer Aktion ein Banner aus der Vorlage, sonst der bisherige Slider */}
+      {promoActive ? <AktionsBanner aktion={BLACK_WEEKS_AKTION} ende={promoEnde} /> : <HeroSlider />}
       <MusterboxLeiste />
+      {/* Am Rechner die Bodenarten mit Erklärtext wie bisher */}
+      <div className="hidden lg:block">
+        <BodenWahl promoActive={promoActive} />
+      </div>
       <AktionsAngebote
         gruppen={gruppen}
         zubehoer={zubehoer}

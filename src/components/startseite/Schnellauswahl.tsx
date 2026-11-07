@@ -8,9 +8,11 @@ import { PROMO_PATH } from '@/lib/black-weeks';
    Bodenarten als runde Bilder und darunter beliebte Filter als Chips.
    Beide Reihen lassen sich mobil waagerecht wischen.
 
-   Alle Filterlinks sind die echten Kategoriefilter wie im Menü
-   (`src/content/megaMenu.ts`). Optik und Farbton führen in die Vinyl-
-   Kategorie, weil es dort die meisten Optiken gibt. */
+   Nur mobil und auf Tablets: Am Rechner übernehmen das die Menü-Reiter.
+
+   Optik und Farbton gibt es bei mehreren Bodenarten, deshalb führen diese
+   Chips auf „Alle Böden“ (/category/alle-boeden) mit gesetztem Filter.
+   Werte wie im Kategoriefilter (`src/content/megaMenu.ts`). */
 
 interface Kreis {
   label: string;
@@ -39,15 +41,16 @@ const KREISE: Kreis[] = [
 ];
 
 const CHIPS: Chip[] = [
-  { label: 'Landhausdiele', href: '/category/vinylboden?optik=landhausdiele' },
-  { label: 'XL-Diele', href: '/category/laminat?optik=xl-landhausdiele' },
-  { label: 'Fischgrät', href: '/category/vinylboden?optik=fischgraet' },
-  { label: 'Fliesenoptik', href: '/category/vinylboden?optik=fliese' },
-  { label: 'Hell', href: '/category/vinylboden?farbgebung=hell', swatch: FARBTON_SWATCH.hell },
-  { label: 'Mittel', href: '/category/vinylboden?farbgebung=mittel', swatch: FARBTON_SWATCH.mittel },
-  { label: 'Dunkel', href: '/category/vinylboden?farbgebung=dunkel', swatch: FARBTON_SWATCH.dunkel },
-  { label: 'Küche & Bad', href: '/category/rigid-vinyl' },
+  { label: 'Landhausdiele', href: '/category/alle-boeden?optik=landhausdiele' },
+  { label: 'XL-Diele', href: '/category/alle-boeden?optik=xl-landhausdiele' },
+  { label: 'Fischgrät', href: '/category/alle-boeden?optik=fischgraet' },
+  { label: 'Fliesenoptik', href: '/category/alle-boeden?optik=fliese' },
+  { label: 'Hell', href: '/category/alle-boeden?farbgebung=hell', swatch: FARBTON_SWATCH.hell },
+  { label: 'Mittel', href: '/category/alle-boeden?farbgebung=mittel', swatch: FARBTON_SWATCH.mittel },
+  { label: 'Dunkel', href: '/category/alle-boeden?farbgebung=dunkel', swatch: FARBTON_SWATCH.dunkel },
+  { label: 'Wasserfest', href: '/category/vinylboden' },
   { label: 'Echtholz geölt', href: '/category/parkett?oberflaeche=gebuerstet-natur-geoelt' },
+  { label: 'Alle Böden', href: '/category/alle-boeden' },
 ];
 
 const WISCHREIHE =
@@ -59,7 +62,7 @@ export default function Schnellauswahl({ promoActive }: { promoActive: boolean }
     : KREISE;
 
   return (
-    <nav aria-label="Schnellauswahl" className="content-container pt-4 lg:pt-6">
+    <nav aria-label="Schnellauswahl" className="content-container pt-4 lg:hidden">
       <ul className={`${WISCHREIHE} gap-3 lg:justify-between lg:gap-4`}>
         {kreise.map((k) => (
           <li key={k.label} className="flex-shrink-0">

@@ -38,6 +38,8 @@ const FILTERS_BY_CATEGORY: Record<string, string[]> = {
   // Musterbox: hier stehen die Böden selbst, deshalb die wichtigsten Bodenfilter
   'kostenlose-bodenmuster-bestellen': MUSTERBOX,
   musterbox: MUSTERBOX,
+  // „Alle Böden“ zeigt die Musterbox-Kategorie unter eigenem Namen (siehe category/[slug]/page.tsx)
+  'alle-boeden': MUSTERBOX,
 };
 
 export function filterAttributesFor(slug: string): string[] | null {
