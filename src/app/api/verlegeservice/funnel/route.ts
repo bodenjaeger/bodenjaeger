@@ -367,9 +367,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   if (fachmarkt) labels.push({ name: 'Termin Fachmarkt', farbe: 'pink' })
   if (a.weg === 'aufmass') labels.push({ name: 'Zahlung offen', farbe: 'yellow' })
 
-  // Checkliste nur beim Aufmaß – „Bezahlt“ hakt sich nach der Zahlung selbst ab
+  // Kleine Checkliste: ein Klick statt Kommentar. Beim Aufmaß hakt sich „Bezahlt“ selbst ab.
+  const erstkontakt = a.beratung === 'whatsapp' || (a.weg === 'preis' && perWhatsapp) ? 'WhatsApp geschrieben' : a.weg === 'preis' ? 'Angerufen' : 'Angerufen / geschrieben'
   const checklisten: Array<{ name: string; punkte: string[] }> =
-    a.weg === 'aufmass' ? [{ name: 'Aufmaß', punkte: ['Bezahlt', 'Termin vereinbart', 'Angebot erstellt'] }] : []
+    a.weg === 'aufmass'
+      ? [{ name: 'Aufmaß', punkte: ['Bezahlt', 'Termin vereinbart', 'Angebot erstellt'] }]
+      : fachmarkt
+        ? [{ name: 'Kontakt', punkte: ['Bestätigung geschickt', 'Kunde war da'] }]
+        : [{ name: 'Kontakt', punkte: [erstkontakt, 'Nach 2 Tagen nachgefasst'] }]
 
   const titelVorne =
     a.weg === 'aufmass'
