@@ -702,58 +702,18 @@ body.nav-menu-open [id^='trustbadge-container-'] {
   outline-offset: 2px;
 }
 
-
 /* ── Aktionsbanner Startseite (AktionsBanner.tsx) ──────────────────────────
-   Bewegung wie im animierten Black-Weeks-Motiv, eine Schleife von 7 s:
-   Leuchtschild flackert an, „50%“ leuchtet auf, die Bodenart-Kacheln
-   blinken nacheinander rot, dann läuft ein Glanz über den Button.
-   Farbe kommt aus --akzent. Bei „Bewegung reduzieren“ alles statisch. */
-.aktion-banner .aktion-schild {
-  animation: aktion-schild 7s infinite;
-}
-.aktion-banner .aktion-rabatt {
-  animation: aktion-rabatt 7s infinite;
-}
-.aktion-banner .aktion-kachel > a {
-  animation: aktion-kachel 7s infinite;
-}
-.aktion-banner .aktion-kachel:nth-child(1) > a { animation-delay: 2.8s; }
-.aktion-banner .aktion-kachel:nth-child(2) > a { animation-delay: 3.3s; }
-.aktion-banner .aktion-kachel:nth-child(3) > a { animation-delay: 3.8s; }
-.aktion-banner .aktion-glanz {
-  background: linear-gradient(100deg, transparent 0%, color-mix(in srgb, var(--akzent) 55%, transparent) 50%, transparent 100%);
+   Lichtstreifen, der regelmäßig über den Button unter dem Handy-Video läuft
+   (wie der Glanz im Video selbst). Bei „Bewegung reduzieren“ aus. */
+.aktion-glanz {
+  background: linear-gradient(100deg, transparent 0%, rgb(255 42 42 / 0.55) 50%, transparent 100%);
   transform: translateX(-120%) skewX(-20deg);
   animation: aktion-glanz 7s infinite;
-}
-
-@keyframes aktion-schild {
-  0%, 2% { opacity: 0.2; }
-  4% { opacity: 1; }
-  6% { opacity: 0.35; }
-  8% { opacity: 1; }
-  10% { opacity: 0.45; }
-  13%, 100% { opacity: 1; }
-}
-@keyframes aktion-rabatt {
-  0%, 14% { opacity: 0.18; filter: brightness(0.6); }
-  22% { opacity: 1; filter: brightness(1.35); }
-  30%, 100% { opacity: 1; filter: brightness(1); }
-}
-@keyframes aktion-kachel {
-  0% { background-color: var(--akzent); border-color: var(--akzent); }
-  7% { background-color: var(--akzent); border-color: var(--akzent); }
-  10%, 100% { background-color: rgb(20 20 20 / 0.95); border-color: rgb(255 255 255 / 0.25); }
 }
 @keyframes aktion-glanz {
   0%, 66% { transform: translateX(-120%) skewX(-20deg); }
   80%, 100% { transform: translateX(420%) skewX(-20deg); }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .aktion-banner .aktion-schild,
-  .aktion-banner .aktion-rabatt,
-  .aktion-banner .aktion-kachel > a,
-  .aktion-banner .aktion-glanz {
-    animation: none;
-  }
+  .aktion-glanz { animation: none; }
 }
