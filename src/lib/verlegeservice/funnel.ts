@@ -50,8 +50,6 @@ export interface FunnelAnfrage {
   empfehlung: boolean
   beratung: BeratungKey | null
   rueckruf: RueckrufKey | null
-  /** Kunde erlaubt Kontakt per WhatsApp (bei Beratung per WhatsApp automatisch) */
-  whatsapp: boolean
   /** „YYYY-MM-DDTHH:MM", Ortszeit Hückelhoven */
   termin: string | null
   vorname: string
@@ -170,6 +168,27 @@ export const BJ_WHATSAPP = '4915567017510'
 export function whatsappLink(nummerOhnePlus: string, text: string): string {
   const kodiert = encodeURIComponent(text).replace(/[()'!*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
   return `https://wa.me/${nummerOhnePlus}?text=${kodiert}`
+}
+
+/** Seite des Formulars */
+export const FORMULAR_PFAD = '/fachmarkt-hueckelhoven/service/verlegeservice-anfrage'
+
+/**
+ * Link, mit dem der Kunde das Aufmaß direkt buchen kann. Enthält nur
+ * Projektangaben (keine Kontaktdaten) und den Vorgang, damit die Buchung auf
+ * derselben Trello-Karte landet.
+ */
+export function aufmassLink(
+  basis: string,
+  a: { plz: string; produktId?: number | null; bodenart?: string | null; flaeche?: number | null; zeitraum?: string | null; vorgang?: string },
+): string {
+  const p = new URLSearchParams({ weg: 'aufmass', plz: a.plz })
+  if (a.produktId) p.set('boden', String(a.produktId))
+  if (a.bodenart) p.set('art', a.bodenart)
+  if (a.flaeche) p.set('m2', String(a.flaeche))
+  if (a.zeitraum) p.set('wann', a.zeitraum)
+  if (a.vorgang) p.set('v', a.vorgang)
+  return `${basis}${FORMULAR_PFAD}?${p.toString()}`
 }
 
 /** „max mustermann“ → „Max Mustermann“ */

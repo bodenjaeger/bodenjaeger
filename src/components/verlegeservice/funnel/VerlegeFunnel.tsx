@@ -94,7 +94,6 @@ interface Zustand {
   empfehlung: boolean
   beratung: BeratungKey | null
   rueckruf: RueckrufKey | null
-  whatsapp: boolean
   termin: string | null
   terminTag: string | null
   vorname: string
@@ -112,7 +111,7 @@ interface Zustand {
 const LEER: Zustand = {
   plz: '', weg: null, besitz: null, produkt: null, produktText: '', produktNichtGefunden: false, bodenart: null,
   flaeche: 40, altboden: null, sockelleisten: true, stufen: 0, tueren: 0, klasse: null, zeitraum: null,
-  wunschboeden: [], empfehlung: false, beratung: null, rueckruf: null, whatsapp: false, termin: null, terminTag: null,
+  wunschboeden: [], empfehlung: false, beratung: null, rueckruf: null, termin: null, terminTag: null,
   vorname: '', nachname: '', telefon: TELEFON_START, email: '', strasse: '', strasseGewaehlt: false, hausnummer: '',
   zahlart: null, widerruf: false, datenschutz: false,
 }
@@ -281,6 +280,54 @@ export default function VerlegeFunnel() {
     }
     merkeLandingpage()
     trackFormView()
+
+    // Aufmaß-Link aus WhatsApp/Trello: Angaben übernehmen und direkt beim
+    // ersten fehlenden Schritt (meist Wunschboden) einsteigen.
+    const q = new URLSearchParams(window.location.search)
+    const plz = q.get('plz') ?? ''
+    if (q.get('weg') !== 'aufmass' || !/^\d{5}$/.test(plz)) return
+    const v = q.get('v')
+    if (v) {
+      vorgang.current = v
+      try {
+        sessionStorage.setItem('vs-vorgang', v)
+      } catch {
+        /* ohne Speicher: gilt bis zum Neuladen */
+      }
+    }
+    const artRoh = q.get('art') ?? ''
+    const art = artRoh in BODENARTEN ? (artRoh as BodenartKey) : null
+    const m2 = Number(q.get('m2'))
+    const flaecheOk = m2 >= 5 && m2 <= 400
+    const wannRoh = q.get('wann') ?? ''
+    const wann = (['asap', '1-3', '3-6', 'offen'] as const).find((x) => x === wannRoh) ?? null
+    const basis: Zustand = { ...LEER, plz, weg: 'aufmass', besitz: 'nein', bodenart: art, flaeche: flaecheOk ? m2 : LEER.flaeche, zeitraum: wann }
+
+    const starten = (zst: Zustand) => {
+      const p = pfadFuer(zst)
+      const fehlt = p.find(
+        (s) =>
+          (s === 'bodenart' && !zst.bodenart) ||
+          (s === 'produkt' && !zst.produkt) ||
+          (s === 'flaeche' && !flaecheOk) ||
+          (s === 'zeitraum' && !zst.zeitraum),
+      )
+      const ziel: ScreenId = fehlt ?? 'wunschboden'
+      setZ(zst)
+      setVerlauf(p.slice(0, p.indexOf(ziel) + 1))
+    }
+    const bodenId = Number(q.get('boden'))
+    if (Number.isInteger(bodenId) && bodenId > 0) {
+      fetch(`/api/verlegeservice/boeden?id=${bodenId}`)
+        .then((r) => r.json())
+        .then((d: { boeden: Boden[] }) => {
+          const b = d.boeden?.[0]
+          starten(b ? { ...basis, besitz: 'bj', produkt: b, bodenart: b.art } : basis)
+        })
+        .catch(() => starten(basis))
+    } else {
+      starten(basis)
+    }
   }, [])
 
   const nachOben = () => kopfRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -466,7 +513,6 @@ export default function VerlegeFunnel() {
       empfehlung: z.empfehlung,
       beratung: z.beratung,
       rueckruf: z.rueckruf,
-      whatsapp: z.whatsapp || (z.weg === 'beratung' && z.beratung === 'whatsapp'),
       termin: z.termin,
       vorname: z.vorname,
       nachname: z.nachname,
@@ -930,12 +976,6 @@ export default function VerlegeFunnel() {
               if (t.ok) set('telefon', telefonAnzeige(t.e164))
               else setFehler((f) => ({ ...f, telefon: t.fehler }))
             }} />
-          {!(z.weg === 'beratung' && z.beratung === 'whatsapp') && (
-            <label className="-mt-1 flex cursor-pointer items-center gap-2.5 text-sm text-dark">
-              <input type="checkbox" checked={z.whatsapp} onChange={(e) => set('whatsapp', e.target.checked)} className="h-5 w-5 flex-shrink-0 accent-[#ed1b24]" />
-              <span>Ihr dürft mir auch per <b>WhatsApp</b> schreiben</span>
-            </label>
-          )}
           {z.weg === 'beratung' && z.beratung === 'telefon' && (
             <div className="grid gap-1.5">
               <span className="text-sm font-bold text-dark">Wann rufen wir an?</span>
@@ -946,7 +986,7 @@ export default function VerlegeFunnel() {
           )}
           <label className="flex cursor-pointer items-start gap-2.5 text-[13px] text-mid">
             <input type="checkbox" checked={z.datenschutz} onChange={(e) => set('datenschutz', e.target.checked)} className="mt-0.5 h-5 w-5 flex-shrink-0 accent-[#ed1b24]" />
-            <span>Ich bin einverstanden, dass Bodenjäger meine Angaben zur Bearbeitung meiner Anfrage verarbeitet und mich dazu kontaktiert. <a href="/datenschutz" target="_blank" className="text-dark underline">Datenschutz</a></span>
+            <span>Ich bin einverstanden, dass Bodenjäger meine Angaben zur Bearbeitung meiner Anfrage verarbeitet und mich dazu per Telefon, E-Mail oder WhatsApp kontaktiert. <a href="/datenschutz" target="_blank" className="text-dark underline">Datenschutz</a></span>
           </label>
           {fehler.datenschutz && <p className="text-sm font-bold text-brand">{fehler.datenschutz}</p>}
         </>

@@ -175,3 +175,18 @@ export async function karteAktualisieren(cardId: string, k: NeueKarte, kommentar
     return false
   }
 }
+
+/** Nur die Beschreibung einer Karte ersetzen. */
+export async function beschreibungSetzen(cardId: string, beschreibung: string): Promise<void> {
+  const z = zugang()
+  if (!z) return
+  try {
+    await fetch(`${API}/cards/${cardId}?${auth(z)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ desc: beschreibung.slice(0, 16000) }),
+    })
+  } catch (e) {
+    console.error('[verlegeservice/trello] Beschreibung setzen fehlgeschlagen:', e)
+  }
+}
