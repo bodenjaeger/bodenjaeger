@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Bodenjäger Verlegeanfrage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap">
+<style>
+/* Mobil zuerst: eine Frage pro Bildschirm, schmale Spalte (max. 560 px), Weiter-Leiste unten fest. Shop-Werte aus globals.css; bewusst nur helles Theme wie der Shop. */
+:root{
+  --brand:#ed1b24; --brand-hover:#c8161e; --chip-an:#d11820;
+  --dark:#2e2d32; --mid:#4c4c4c; --ash:#e5e5e5; --pale:#f9f9fb; --white:#fff; --success:#28a745;
+  --font:"Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--pale)}
+body{color:var(--dark);font-family:var(--font);font-size:16px;line-height:1.5;margin:0}
+b,strong,h1,h2,h3,button,.f{font-weight:700}
+.kopf{background:var(--dark);color:#fff}
+.kopf-in{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.kopf svg{height:24px;width:auto;display:block}
+.kopf .tel{font-size:13px;color:var(--ash);user-select:all}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 120px}
+.leiste{display:flex;align-items:center;gap:12px;margin-bottom:14px;min-height:40px}
+.zurueck{width:40px;height:40px;border-radius:8px;border:1px solid var(--ash);background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--dark);flex:none;padding:0}
+.zurueck:hover{border-color:var(--mid)}
+.zurueck svg{width:22px;height:22px}
+.fs{flex:1;min-width:0}
+.fs-text{font-size:12px;color:var(--mid);display:flex;justify-content:space-between;gap:8px}
+.fs-text b{color:var(--dark)}
+.fs-bar{height:6px;border-radius:99px;background:var(--ash);margin-top:6px;overflow:hidden}
+.fs-bar span{display:block;height:100%;background:var(--brand);border-radius:99px;transition:width .3s}
+.karte{background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(46,45,50,.10);padding:22px 18px}
+@media(min-width:600px){.karte{padding:30px 32px}}
+.kicker{margin:0 0 6px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.16em;color:var(--brand)}
+h1,h2{margin:0;font-size:clamp(1.35rem,5.2vw,1.75rem);line-height:1.2;letter-spacing:-.02em;text-wrap:balance}
+.hinweis{margin:8px 0 0;color:var(--mid);font-size:15px}
+.koerper{margin-top:20px;display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.opt{display:flex;align-items:center;gap:14px;width:100%;min-height:58px;padding:12px 16px;border:2px solid var(--ash);border-radius:12px;background:#fff;text-align:left;font:inherit;color:var(--dark);cursor:pointer;transition:border-color .15s,background-color .15s}
+.opt:hover{border-color:var(--mid)}
+.opt.an{border-color:var(--brand);background:rgba(237,27,36,.05)}
+.opt:focus-visible,.btn:focus-visible,.chip:focus-visible,.zurueck:focus-visible,.prod:focus-visible{outline:2px solid var(--dark);outline-offset:2px}
+.opt .ic{flex:none;width:40px;height:40px;border-radius:10px;background:var(--pale);display:grid;place-items:center;color:var(--brand)}
+.opt.an .ic{background:#fff}
+.opt .ic svg{width:22px;height:22px}
+.opt .t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.opt .t b{font-size:16px}
+.opt .t i{font-style:normal;font-size:13px;color:var(--mid);line-height:1.4}
+.opt .preis{font-weight:700;color:var(--brand);white-space:nowrap}
+.opt .badge{display:inline-block;margin-top:4px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;background:var(--dark);color:#fff;border-radius:6px;padding:2px 7px;max-width:100%;width:fit-content}
+.opt.gross{min-height:84px;align-items:flex-start}
+.raster2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.raster2 .opt{min-height:64px;padding:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:40px;padding:8px 14px;border:1px solid var(--ash);border-radius:999px;background:#fff;font:inherit;font-size:14px;cursor:pointer;color:var(--dark)}
+.chip:hover{border-color:var(--mid)}
+.chip.an{background:var(--chip-an);border-color:var(--chip-an);color:#fff;font-weight:700}
+.feld{display:grid;gap:6px}
+.feld label{font-size:14px;font-weight:700}
+.feld small{font-weight:400;color:var(--mid)}
+input[type=text],input[type=email],input[type=tel],input[type=number]{font:inherit;font-size:16px;width:100%;min-height:52px;padding:12px 14px;border:2px solid var(--ash);border-radius:8px;background:#fff;color:var(--dark)}
+input:focus{outline:none;box-shadow:0 0 0 3px rgba(237,27,36,.3)}
+input.gross{font-size:26px;font-weight:700;letter-spacing:.12em;text-align:center}
+.zwei{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fehler{color:var(--brand);font-size:14px;font-weight:700}
+.fehler:empty{display:none}
+.box{border:2px solid;border-radius:12px;padding:14px 16px;font-size:14px}
+.box p{margin:4px 0 0;color:var(--mid)}
+.box.gut{border-color:rgba(40,167,69,.3);background:rgba(40,167,69,.08)}
+.box.warn{border-color:rgba(237,27,36,.3);background:rgba(237,27,36,.05)}
+.box.info{border-color:var(--ash);background:var(--pale)}
+.qm{display:flex;align-items:baseline;justify-content:center;gap:8px;font-variant-numeric:tabular-nums}
+.qm input{width:130px;text-align:center;font-size:34px;font-weight:700;border-width:2px}
+.qm span{font-size:20px;font-weight:700}
+input[type=range]{width:100%;accent-color:var(--brand)}
+.zeile{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--ash)}
+.zeile:first-child{border-top:0}
+.stepper{display:flex;align-items:center;gap:6px;flex:none}
+.stepper button{width:40px;height:40px;border-radius:8px;border:1px solid var(--ash);background:#fff;font:inherit;font-size:20px;cursor:pointer;color:var(--dark)}
+.stepper output{min-width:32px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.schalter{display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer}
+.schalter input{width:22px;height:22px;accent-color:var(--brand)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--mid);cursor:pointer}
+.check input{margin-top:2px;width:20px;height:20px;accent-color:var(--brand);flex:none}
+.check a{color:var(--dark)}
+.suche{position:relative}
+.prods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.prod{position:relative;border:2px solid var(--ash);border-radius:12px;background:#fff;padding:0;overflow:hidden;cursor:pointer;text-align:left;font:inherit;color:var(--dark)}
+.prod.an{border-color:var(--brand)}
+.prod .bild{aspect-ratio:4/3;max-width:100%}
+.prod .info{padding:8px 10px;display:grid;gap:2px}
+.prod .info b{font-size:13px;line-height:1.3}
+.prod .info span{font-size:12px;color:var(--mid)}
+.prod .nr{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;font-size:13px;font-weight:700;display:none;place-items:center}
+.prod.an .nr{display:grid}
+.beispiel{font-size:12px;color:var(--mid);border-left:3px solid var(--ash);padding-left:10px}
+.zaehler{font-size:14px;color:var(--mid)}
+.zaehler b{color:var(--dark)}
+.beleg{border:1px solid var(--ash);border-radius:12px;background:var(--pale);padding:2px 16px}
+.beleg .zeile{font-variant-numeric:tabular-nums}
+.ergebnis{text-align:center;padding:8px 0 4px}
+.ergebnis .summe{font-size:clamp(1.9rem,8vw,2.6rem);font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:4px}
+.ergebnis .unter{font-size:14px;color:var(--mid);margin-top:6px}
+.teile{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.teil{border:1px solid var(--ash);border-radius:12px;padding:12px;background:var(--pale)}
+.teil span{display:block;font-size:12px;color:var(--mid)}
+.teil b{font-variant-numeric:tabular-nums;font-size:15px}
+details.aufschl{border:1px solid var(--ash);border-radius:12px;padding:4px 16px;background:#fff}
+details.aufschl summary{cursor:pointer;font-weight:700;padding:10px 0;font-size:14px}
+details.aufschl .zeile{font-size:13px;font-variant-numeric:tabular-nums}
+details.aufschl .zeile i{font-style:normal;color:var(--mid);display:block;font-size:12px}
+.btn{font:inherit;font-weight:700;font-size:16px;min-height:52px;padding:12px 24px;border-radius:8px;cursor:pointer;border:0;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;text-decoration:none}
+.btn.rot{background:var(--brand);color:#fff}
+.btn.rot:hover{background:var(--brand-hover)}
+.btn.rahmen{background:#fff;color:var(--dark);border:1px solid var(--ash)}
+.btn.rahmen:hover{border-color:var(--mid)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.unten{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);border-top:1px solid var(--ash);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));z-index:5}
+.unten-in{max-width:560px;margin:0 auto;display:grid;gap:6px}
+.unten small{font-size:12px;color:var(--mid);text-align:center}
+.vertrauen{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;font-size:12.5px;color:var(--mid)}
+.vertrauen span{display:flex;align-items:center;gap:6px}
+.vertrauen span::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--brand)}
+.danke-icon{width:56px;height:56px;border-radius:50%;background:var(--success);display:grid;place-items:center;margin-bottom:14px}
+.danke-icon svg{width:30px;height:30px}
+.liste{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.liste li{display:flex;gap:10px;align-items:flex-start;font-size:15px}
+.haken{flex:none;width:22px;height:22px;border-radius:50%;background:var(--brand);display:grid;place-items:center;margin-top:1px}
+.haken svg{width:13px;height:13px}
+/* Vorschlagslisten (Shop-Suche, Adresse) */
+.vorschlaege{display:grid;border:1px solid var(--ash);border-radius:8px;background:#fff;overflow:hidden}
+.vorschlaege:empty{display:none}
+.vorschlaege button{display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;padding:12px 14px;border:0;border-top:1px solid var(--ash);background:#fff;font:inherit;font-size:15px;color:var(--dark);cursor:pointer}
+.vorschlaege button:first-child{border-top:0}
+.vorschlaege button:hover,.vorschlaege button:focus-visible{background:var(--pale);outline:none}
+.vorschlaege small{color:var(--mid);font-size:12px;white-space:nowrap}
+.gewaehlt{display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid var(--brand);background:rgba(237,27,36,.05);border-radius:12px;padding:12px 14px}
+.gewaehlt button{background:none;border:0;font:inherit;font-size:13px;color:var(--mid);text-decoration:underline;cursor:pointer;padding:4px}
+/* Terminwahl */
+.tage{display:grid;grid-auto-flow:column;grid-auto-columns:64px;gap:8px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none}
+.tage::-webkit-scrollbar{display:none}
+.tag{border:2px solid var(--ash);border-radius:12px;background:#fff;padding:8px 4px;text-align:center;font:inherit;color:var(--dark);cursor:pointer;display:grid;gap:2px}
+.tag span{font-size:12px;color:var(--mid)}
+.tag b{font-size:18px;font-variant-numeric:tabular-nums}
+.tag small{font-size:11px;color:var(--mid)}
+.tag.an{border-color:var(--brand);background:rgba(237,27,36,.05)}
+.tag:focus-visible,.slot:focus-visible{outline:2px solid var(--dark);outline-offset:2px}
+.slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.slot{min-height:44px;border:1px solid var(--ash);border-radius:8px;background:#fff;font:inherit;font-size:15px;font-variant-numeric:tabular-nums;cursor:pointer;color:var(--dark)}
+.slot:hover{border-color:var(--mid)}
+.slot.an{background:var(--chip-an);border-color:var(--chip-an);color:#fff;font-weight:700}
+/* Team-Ansicht */
+.team{margin-top:20px;border:1px dashed var(--mid);border-radius:12px;padding:16px;background:#fff}
+.team h3{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--mid)}
+.labels{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.lbl{font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;color:#fff}
+.lbl.a{background:var(--success)}.lbl.b{background:#c47f00}.lbl.c{background:var(--mid)}
+.lbl.weg{background:var(--dark)}.lbl.rot{background:var(--brand)}
+.trello-titel{font-weight:700;margin-bottom:8px}
+pre.karte-text{margin:0;font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;background:var(--pale);border:1px solid var(--ash);border-radius:8px;padding:12px;overflow-x:auto}
+.cl{margin:12px 0 0}
+.cl b{font-size:13px}
+.cl ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px;font-size:13px}
+.cl li::before{content:"☐ ";color:var(--mid)}
+.meld{margin-top:12px;font-size:13px;display:grid;gap:4px}
+/* Bewertungen (nur Start) */
+.stimmen{margin-top:28px}
+.stimmen h2{font-size:17px;margin-bottom:10px}
+.rk-band{list-style:none;margin:0;padding:2px 2px 10px;display:grid;grid-auto-flow:column;grid-auto-columns:85%;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.rk-band::-webkit-scrollbar{display:none}
+@media(min-width:600px){.rk-band{grid-auto-columns:calc((100% - 12px)/2)}}
+.rk{scroll-snap-align:start;background:#fff;border:1px solid var(--ash);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.rk-kopf{display:flex;align-items:center;gap:10px}
+.rk-av{flex:none;width:34px;height:34px;border-radius:50%;background:var(--dark);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
+.rk-name{display:flex;flex-direction:column;min-width:0;flex:1;font-size:14px;line-height:1.3}
+.rk .sterne{color:#fbbc05;letter-spacing:2px;font-size:13px}
+.rk .g{flex:none;width:18px;height:18px}
+.rk p{margin:0;font-size:14px;line-height:1.5}
+@media(prefers-reduced-motion:no-preference){.karte{animation:rein .22s ease-out}@keyframes rein{from{transform:translateY(6px);opacity:.6}to{transform:none;opacity:1}}}
+</style>
+</head>
+<body>
+
+
+<header class="kopf"><div class="kopf-in"><svg role="img" aria-label="Bodenjäger" xmlns="http://www.w3.org/2000/svg" data-name="Ebene 1" viewBox="0 0 311.85 60.96"><path d="m60.96,30.48c0,16.83-13.65,30.48-30.48,30.48S0,47.31,0,30.48,13.65,0,30.48,0s30.48,13.65,30.48,30.48Zm-29.74,5.06c0,6.95-2.65,8.87-6.88,8.87-1.99,0-3.77-.33-5.16-.79l-1.13,8.14c1.99.66,5.03,1.06,7.34,1.06,9.79,0,15.88-4.43,15.88-17.14V7.48h-10.06v28.06Z" style="fill: #ed1c24; stroke-width: 0px;"></path><g><path d="m78.6,13.96h10.61c5.94,0,8.67,3.26,8.67,8.05,0,3.21-1.5,5.46-4.31,6.64,4.05.97,5.37,4.14,5.37,7.53,0,4.66-2.86,8.58-9.02,8.58h-11.31c-.84,0-1.41-.57-1.41-1.41V15.36c0-.84.57-1.41,1.41-1.41Zm2.68,13.29h7.26c3.08,0,5.19-1.67,5.19-4.97s-2.07-4.8-5.19-4.8h-7.26v9.77Zm0,3.34v10.65h8.01c3.26,0,5.54-1.63,5.54-5.28s-2.16-5.37-5.54-5.37h-8.01Z" style="fill: #fff; stroke-width: 0px;"></path><path d="m113.89,21.66c6.69,0,11.79,5.02,11.79,11.88s-5.11,11.88-11.79,11.88-11.79-5.06-11.79-11.88,5.06-11.88,11.79-11.88Zm0,20.55c4.44,0,7.92-3.48,7.92-8.67s-3.39-8.67-7.92-8.67-7.92,3.52-7.92,8.67,3.43,8.67,7.92,8.67Z" style="fill: #fff; stroke-width: 0px;"></path><path d="m149.45,44.76c-.84,0-1.41-.53-1.41-1.36v-2.02c-2.24,2.73-4.93,4.05-8.41,4.05-6.03,0-11.13-4.93-11.13-11.88s5.06-11.88,11.13-11.88c3.48,0,6.42,1.45,8.27,3.96v-10.25c0-.84.57-1.41,1.41-1.41h1.01c.84,0,1.41.57,1.41,1.41v27.99c0,.84-.57,1.41-1.41,1.41h-.88Zm-9.15-2.55c4.4,0,7.83-3.56,7.83-8.67s-3.43-8.67-7.83-8.67-7.92,3.48-7.92,8.67,3.52,8.67,7.92,8.67Z" style="fill: #fff; stroke-width: 0px;"></path><path d="m159.69,34.77c.62,4.88,4.14,7.44,7.97,7.44,3.08,0,5.5-1.5,6.69-3.65.26-.48.79-.84,1.32-.84h1.06c.84,0,1.36.4,1.36,1.01,0,.22-.09.48-.22.75-1.98,3.79-5.68,5.94-10.25,5.94-6.51,0-11.75-4.84-11.75-11.88s5.15-11.88,11.75-11.88c5.41,0,11.4,3.52,11.4,11,0,1.14-.09,2.11-1.23,2.11h-18.09Zm.13-3.21h15.53c-.62-4.4-4.09-6.69-7.75-6.69s-7,2.46-7.79,6.69Z" style="fill: #fff; stroke-width: 0px;"></path><path d="m184.55,22.32h.88c.84,0,1.41.57,1.41,1.41v1.76c2.07-2.64,4.84-3.83,7.88-3.83,5.63,0,8.14,3.43,8.14,8.58v13.11c0,.84-.57,1.41-1.41,1.41h-1.01c-.84,0-1.41-.57-1.41-1.41v-12.72c0-3.56-1.89-5.72-5.32-5.72s-6.73,2.9-6.73,6.73v11.71c0,.84-.57,1.41-1.41,1.41h-1.01c-.84,0-1.41-.57-1.41-1.41v-19.63c0-.84.57-1.41,1.41-1.41Z" style="fill: #fff; stroke-width: 0px;"></path><path d="m208.31,23.72c0-.84.57-1.41,1.41-1.41h1.01c.84,0,1.41.57,1.41,1.41v23.1c0,4.53-1.32,6.78-5.72,6.78-.79,0-1.76-.04-2.68-.22-.62-.13-1.01-.7-1.01-1.32v-.75c0-1.01.62-1.06,1.36-1.06.48.09,1.01.13,1.41.13,2.24,0,2.82-1.45,2.82-3.65v-23.02Zm-.57-7.44c0-1.36,1.01-2.46,2.46-2.46s2.51,1.1,2.51,2.46-1.01,2.46-2.51,2.46-2.46-1.1-2.46-2.46Z" style="fill: #fff; stroke-width: 0px;"></path><path d="m237.22,44.76c-.84,0-1.41-.53-1.41-1.36v-2.07c-2.2,2.77-4.93,4.09-8.41,4.09-6.03,0-11.13-4.93-11.13-11.88s5.06-11.88,11.13-11.88c3.48,0,6.42,1.41,8.27,3.96v-1.89c0-.84.57-1.41,1.41-1.41h1.01c.84,0,1.41.57,1.41,1.41v19.63c0,.84-.57,1.41-1.41,1.41h-.88Zm-9.15-2.55c4.4,0,7.83-3.61,7.83-8.67s-3.43-8.67-7.83-8.67-7.92,3.52-7.92,8.67,3.52,8.67,7.92,8.67Zm-6.38-26.14c0-1.28.92-2.29,2.29-2.29s2.29,1.01,2.29,2.29-.92,2.29-2.29,2.29-2.29-1.01-2.29-2.29Zm8.54,0c0-1.28.92-2.29,2.29-2.29s2.29,1.01,2.29,2.29-.92,2.29-2.29,2.29-2.29-1.01-2.29-2.29Z" style="fill: #fff; stroke-width: 0px;"></path><path d="m262.57,40.54c-1.94,2.55-4.88,3.78-8.27,3.78-5.98,0-10.65-5.02-10.65-11.31s4.31-11.35,10.69-11.35c3.74,0,6.42,1.45,8.27,3.79v-1.76c0-.84.62-1.36,1.41-1.36h.97c.84,0,1.41.57,1.41,1.41v19.71c0,6.29-3.96,10.17-10.74,10.17-4.8,0-8.85-1.89-10.34-5.81-.09-.18-.09-.35-.09-.53,0-.66.48-1.1,1.32-1.1h1.06c.7,0,1.23.44,1.5,1.06,1.01,2.2,3.48,3.21,6.56,3.21,4.22,0,6.91-2.33,6.91-6.91v-2.99Zm-7.35.62c4.4,0,7.66-3.48,7.66-8.14s-3.12-8.14-7.66-8.14-7.66,3.61-7.66,8.14,3.21,8.14,7.66,8.14Z" style="fill: #fff; stroke-width: 0px;"></path><path d="m274.36,34.77c.62,4.88,4.14,7.44,7.97,7.44,3.08,0,5.5-1.5,6.69-3.65.26-.48.79-.84,1.32-.84h1.06c.84,0,1.36.4,1.36,1.01,0,.22-.09.48-.22.75-1.98,3.79-5.68,5.94-10.25,5.94-6.51,0-11.75-4.84-11.75-11.88s5.15-11.88,11.75-11.88c5.41,0,11.4,3.52,11.4,11,0,1.14-.09,2.11-1.23,2.11h-18.09Zm.13-3.21h15.53c-.62-4.4-4.09-6.69-7.75-6.69s-7,2.46-7.79,6.69Z" style="fill: #fff; stroke-width: 0px;"></path><path d="m299.22,44.76c-.84,0-1.41-.57-1.41-1.41v-19.63c0-.84.57-1.41,1.41-1.41h.88c.79,0,1.41.57,1.41,1.36v3.48h.18c1.67-3.34,5.5-5.28,8.93-5.28.75,0,1.23.53,1.23,1.32v.88c0,.84-.57,1.41-1.41,1.5-4.8.44-8.8,3.43-8.8,10.43v7.35c0,.84-.57,1.41-1.41,1.41h-1.01Z" style="fill: #fff; stroke-width: 0px;"></path></g></svg><span class="tel">02433 938884</span></div></header>
+
+<main class="wrap">
+  <div class="leiste" id="leiste">
+    <button type="button" class="zurueck" id="zurueck" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+    <div class="fs"><div class="fs-text"><span id="fs-text"></span><span id="fs-weg"></span></div><div class="fs-bar"><span id="fs-bar"></span></div></div>
+  </div>
+  <section class="karte" id="karte" aria-live="polite"></section>
+  <div id="extra"></div>
+</main>
+
+<div class="unten" id="unten" hidden><div class="unten-in"><button type="button" class="btn rot" id="weiter">Weiter</button><small id="unten-hinweis"></small></div></div>
+
+<template id="tpl-stimmen">
+  <section class="stimmen" aria-labelledby="st-t"><h2 id="st-t">Das sagen Kunden über unseren Verlegeservice</h2><ul class="rk-band" tabindex="0"><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">P</span><span class="rk-name"><b>Petra H.</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Nach fachkundiger Beratung vor Ort bei Bodenjäger haben wir uns für einen Laminatboden entschieden. Wir haben trotz bevorstehender Weihnachtsfeiertage einen Termin zum Ausmessen bekommen und noch vor Jahreswechsel wurde der Boden fachmännisch verlegt. Wir sind sehr zufrieden. Die Mitarbeiter vom Bodenjäger haben sauber und korrekt gearbeitet. Wir würden jederzeit wieder bei Bodenjäger kaufen.</p></li><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">M</span><span class="rk-name"><b>Maike Siebenhaar</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Wir sind super zufrieden! Der Boden wurde trotz schiefer Wände absolut sauber und professionell verlegt. Die Beratung war kompetent und freundlich – man hat sich viel Zeit für uns genommen.</p></li><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">G</span><span class="rk-name"><b>Guido</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Ich bin absolut begeistert von der Arbeit der Firma Bodenjäger! Vom ersten Kontakt bis zur Fertigstellung lief alles professionell, zuverlässig und freundlich ab. Ein ganz besonderes Lob geht an den Bodenleger Daniel: Er hat hervorragende Arbeit geleistet! Die Verlegung meines Klickvinylbodens wurde mit höchster Präzision, Sorgfalt und handwerklichem Können durchgeführt.</p></li><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">R</span><span class="rk-name"><b>Rolf Preuth</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Sehr kompetente Firma die auf alle Wünsche z.B. alter Boden entfernen auch mehrlagig eingeht. Der Bodenleger war ein super Handwerker den wir auf jeden Fall weiterempfehlen können. Top Firma von A-Z.</p></li><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">M</span><span class="rk-name"><b>Michael Zens</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Wir haben die Verlegung eines Vinylbodens beauftragt. Die fachliche Beratung war professionell und sehr hilfreich. Die vereinbarten Termine wurden eingehalten und wir sind sehr zufrieden.</p></li><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">M</span><span class="rk-name"><b>Markus Heister</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Wir sind begeistert vom Bodenfachmarkt Jäger. Von der Beratung bis zur Verlegung alles Top, 5 Sterne plus. Ein tolles Verlegeteam schnell &amp; akkurat.</p></li><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">T</span><span class="rk-name"><b>Tong Su</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Wir möchten herzlich für die großartige Arbeit beim Verlegen unseres neuen Bodenbelags danken. Von Anfang an waren sie äußerst geduldig und professionell. Das Ergebnis ist hervorragend.</p></li><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">R</span><span class="rk-name"><b>Rosemarie</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Von der ersten Beratung, bis zum Verlegen des Teppichbodens hat alles wie besprochen hervorragend gepasst.</p></li><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">A</span><span class="rk-name"><b>Anika Kaminski</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Wir sind rundum super zufrieden, angefangen von der Beratung bis zum Endergebnis. Gestern und heute ist der Boden verlegt worden und wir sind super zufrieden.</p></li><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">H</span><span class="rk-name"><b>Hotte DerFlotte</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Sehr gute Beratung vor Ort. Es wurde zeitnah ein Termin zur Verlegung eines neuen Vinylbodens vereinbart.</p></li><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">R</span><span class="rk-name"><b>Ronald</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Am 22.01.2026 hatte Daniël von Außenbetrieb angefangen neue Boden zu verlegen. 08:30 angefangen Altboden zu entfernen und 16:00 fertig mit neuem Boden.</p></li><li class="rk"><div class="rk-kopf"><span class="rk-av" aria-hidden="true">H</span><span class="rk-name"><b>Herbert</b><span class="sterne" aria-label="5 von 5 Sternen">★★★★★</span></span><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.2a6.6 6.6 0 0 1 0-4.3V7.1H2.1a11 11 0 0 0 0 9.9l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg></div><p>Perfekt alles super top Arbeit sehr empfehlenswert. Von der Beratung bis zur Fertigstellung alle super freundlich und extrem hilfsbereit.</p></li></ul></section>
+</template>
+
+<script>
+(function(){
+// ─────────────────────────────────────────────────────────────────────────────
+// Feste Werte
+// ─────────────────────────────────────────────────────────────────────────────
+const PLZ={"40180":["Agentur für Arbeit Düsseldorf",46.4],"40181":["Kassenzahnärztliche Vereinigung Nordrhein",45.5],"40182":["Kassenärztliche Vereinigung Nordrhein Hauptstelle",43.8],"40186":["LeasePlan Deutschland GmbH",37.2],"40187":["Deutsche Rentenversicherung Rheinland",42.9],"40188":["NRW.BANK",42.4],"40189":["Deutsche Bank AG",43.1],"40190":["Landesregierung NRW",42.2],"40191":["Henkel AG & Co. KGaA",45.1],"40192":["Landesamt für Besoldung und Versorgung NRW",44.6],"40193":["IT. NRW",44.2],"40194":["Deutsche Rentenversicherung Rheinland",42.9],"40195":["Provinzial Versicherung AG",44.1],"40196":["Rheinische Post",38.8],"40198":["ERGO Versicherung AG",44.3],"40199":["Portigon AG",41.7],"40202":["HUK-Coburg",46.4],"40204":["Heinrich-Heine-Universität",42.9],"40210":["Düsseldorf",43.8],"40211":["Düsseldorf",43.8],"40212":["Düsseldorf",43.4],"40213":["Düsseldorf",43.0],"40215":["Düsseldorf",43.1],"40217":["Düsseldorf",42.7],"40219":["Düsseldorf",41.7],"40221":["Düsseldorf",40.7],"40223":["Düsseldorf",41.7],"40225":["Düsseldorf",43.0],"40227":["Düsseldorf",44.4],"40229":["Düsseldorf",46.1],"40231":["Düsseldorf",45.8],"40233":["Düsseldorf",45.1],"40235":["Düsseldorf",46.2],"40237":["Düsseldorf",46.3],"40239":["Düsseldorf",42.1],"40250":["Deutsche Post AG Niederlassung BRIEF Düsseldorf",50.2],"40251":["Eurotops GVV Versand GmbH",50.3],"40252":["BARMER",39.0],"40260":["billbox GmbH",46.7],"40300":["Commerzbank AG",41.7],"40302":["Landesamt für Besoldung und Versorgung NRW",44.6],"40340":["Landesamt für Besoldung und Versorgung NRW",44.6],"40463":["Deutsche Glasfaser Holding GmbH",45.1],"40464":["ARAG",45.9],"40466":["AOK Rheinland/Hamburg Die Gesundheitskasse",47.9],"40467":["Daimler AG",45.2],"40468":["Düsseldorf",45.0],"40470":["Düsseldorf",46.8],"40472":["Düsseldorf",47.5],"40474":["Düsseldorf",43.8],"40476":["Düsseldorf",44.8],"40477":["Düsseldorf",43.9],"40479":["Düsseldorf",42.1],"40489":["Düsseldorf",42.1],"40541":["BKK für Heilberufe",40.6],"40542":["ZA Zahnärztliche Abrechnungsgesellschaft AG",39.6],"40543":["Vodafone GmbH",39.7],"40545":["Düsseldorf",42.1],"40547":["Düsseldorf",42.0],"40549":["Düsseldorf",39.5],"40589":["Düsseldorf",43.9],"40591":["Düsseldorf",45.4],"40593":["Düsseldorf",42.1],"40595":["Düsseldorf",42.1],"40597":["Düsseldorf",47.4],"40599":["Düsseldorf",46.7],"40625":["Düsseldorf",48.5],"40627":["Düsseldorf",42.1],"40629":["Düsseldorf",51.9],"40667":["Meerbusch",39.3],"40668":["Meerbusch",42.0],"40670":["Meerbusch",38.5],"40699":["Erkrath",51.4],"40718":["PB Lebensversicherung AG",51.0],"40721":["Hilden",50.7],"40723":["Hilden",51.3],"40724":["Hilden",52.5],"40764":["Langenfeld",51.0],"40786":["Schwarz Pharma AG",47.1],"40789":["Monheim am Rhein",47.5],"40815":["Zeus-Versand GmbH",55.5],"40816":["Agentur für Arbeit Mettmann",57.8],"40822":["Mettmann",56.9],"40832":["Ratingen",51.6],"40842":["Esprit Europe GmbH",52.0],"40878":["Ratingen",51.1],"40880":["Ratingen",51.6],"40882":["Ratingen",52.0],"40883":["Ratingen",51.6],"40885":["Ratingen",54.2],"41050":["Stadt Mönchengladbach Der Oberbürgermeister",21.5],"41052":["Santander Consumer Bank AG CC Bank AG",21.2],"41054":["Agentur für Arbeit Mönchengladbach",22.3],"41061":["Mönchengladbach",21.9],"41063":["Mönchengladbach",22.0],"41065":["Mönchengladbach",21.9],"41066":["Mönchengladbach",26.4],"41068":["Mönchengladbach",19.9],"41069":["Mönchengladbach",18.6],"41169":["Mönchengladbach",22.0],"41179":["Mönchengladbach",15.7],"41189":["Mönchengladbach",16.2],"41199":["Mönchengladbach",17.3],"41200":["MyBrands-Zalando GmbH",16.4],"41236":["Mönchengladbach",19.9],"41238":["Mönchengladbach",20.5],"41239":["Mönchengladbach",18.1],"41260":["Deutsche Post AG Niederlassung BRIEF Mönchengladbach",16.8],"41261":["RCI Banque S.A. Niederlassung Deutschland",39.6],"41334":["Nettetal",30.3],"41352":["Korschenbroich",25.5],"41363":["Jüchen",20.0],"41366":["Schwalmtal",18.5],"41372":["Niederkrüchten",17.9],"41379":["Brüggen",21.1],"41424":["Bank 11 für Privatkunden und Handel GmbH",38.1],"41452":["QVC eDistribution Inc. & Co.KG",3.1],"41453":["3 M Deutschland GmbH",37.9],"41455":["BCA Autoauktionen GmbH Dokumentenverwaltung",37.8],"41456":["Stadt Neuss",36.8],"41457":["Janssen-Cilag GmbH",38.0],"41460":["Neuss",36.8],"41462":["Neuss",35.6],"41464":["Neuss",35.2],"41466":["Neuss",34.7],"41468":["Neuss",39.0],"41469":["Neuss",37.5],"41470":["Neuss",36.1],"41472":["Neuss",36.1],"41513":["Finanzamt Grevenbroich",26.0],"41515":["Grevenbroich",27.1],"41516":["Grevenbroich",29.3],"41517":["Grevenbroich",25.4],"41538":["Stadt Dormagen",42.2],"41539":["Dormagen",43.4],"41540":["Dormagen",41.3],"41541":["Dormagen",41.6],"41542":["Dormagen",39.1],"41561":["Gärtner Pötschke Kaarst GmbH",32.6],"41564":["Kaarst",33.9],"41569":["Rommerskirchen",32.2],"41747":["Viersen",25.5],"41748":["Viersen",24.6],"41749":["Viersen",28.3],"41751":["Viersen",24.6],"41812":["Erkelenz",7.1],"41833":["QVC eDistribution Inc. & Co.KG",3.1],"41836":["Hückelhoven",0.4],"41844":["Wegberg",10.8],"41849":["Wassenberg",7.1],"42300":["Deutsche Post AG Direkt Marketing Center Düsseldorf",44.0],"42577":["Kiekert AG",59.4],"42649":["Avena GmbH",58.9],"42657":["Solingen",59.5],"42697":["Solingen",55.7],"42699":["Solingen",56.5],"42719":["Solingen",59.2],"42781":["Haan",57.3],"42799":["Leichlingen",55.9],"45478":["Mülheim an der Ruhr",59.3],"45481":["Mülheim an der Ruhr",59.8],"45833":["Sirius Inkasso GmbH",44.5],"47044":["Agentur für Arbeit Duisburg",58.1],"47048":["Universität Duisburg-Essen Campus Duisburg",57.9],"47049":["Stadtverwaltung Duisburg",56.2],"47050":["NOVITAS BKK",57.1],"47051":["Duisburg",56.8],"47053":["Duisburg",55.3],"47055":["Duisburg",54.5],"47057":["Duisburg",57.2],"47058":["Duisburg",57.8],"47059":["Duisburg",56.0],"47118":["Amtsgericht Duisburg-Ruhrort",57.1],"47119":["Duisburg",57.8],"47137":["Duisburg",59.9],"47138":["Duisburg",56.0],"47139":["Duisburg",59.2],"47178":["Duisburg",56.0],"47179":["Duisburg",56.0],"47198":["Duisburg",54.8],"47199":["Duisburg",56.0],"47226":["Duisburg",52.6],"47228":["Duisburg",51.9],"47229":["Duisburg",50.5],"47239":["Duisburg",48.4],"47249":["Duisburg",52.0],"47259":["Duisburg",49.0],"47269":["Duisburg",51.7],"47279":["Duisburg",55.1],"47299":["Deutsche Post AG Niederlassung BRIEF Duisburg",53.2],"47303":["HUK-Coburg",56.5],"47305":["Targobank AG Zahlungsverkehr",57.1],"47439":["Stadt Moers",52.7],"47441":["Moers",52.5],"47443":["Moers",54.3],"47445":["Moers",53.2],"47447":["Moers",53.2],"47475":["Kamp-Lintfort",55.1],"47504":["Stadt Neukirchen-Vluyn",49.7],"47506":["Neukirchen-Vluyn",49.7],"47509":["Rheurdt",49.1],"47526":["Bau-und Liegenschaftsbetrieb NRW Zentrale",45.7],"47608":["Geldern",52.3],"47623":["Kevelaer",59.0],"47624":["Kevelaer",59.0],"47625":["Kevelaer",59.0],"47626":["Kevelaer",59.0],"47627":["Kevelaer",59.0],"47638":["Straelen",43.4],"47647":["Kerken",45.3],"47661":["Issum",55.4],"47669":["Wachtendonk",38.6],"47791":["Reklame Center",33.7],"47792":["Amtsgericht Krefeld",38.9],"47795":["Helios Klinikum Krefeld",38.2],"47796":["Agentur für Arbeit Krefeld",39.2],"47798":["Krefeld",38.9],"47799":["Krefeld",39.4],"47800":["Krefeld",41.4],"47802":["Krefeld",39.4],"47803":["Krefeld",40.3],"47804":["Krefeld",34.1],"47805":["Krefeld",39.2],"47807":["Krefeld",37.9],"47809":["Krefeld",41.1],"47829":["Krefeld",44.3],"47839":["Krefeld",41.1],"47875":["Stadt Willich",28.2],"47877":["Willich",32.6],"47904":["PORTICA GmbH Marketing Support",37.4],"47906":["Kempen",37.2],"47918":["Tönisvorst",35.3],"47929":["Grefrath",32.6],"50123":["Deutsche Rentenversicherung Knappschaft Bahn-See GST Bergheim",31.4],"50124":["Erftkreis Der Landrat",30.7],"50126":["Bergheim",30.7],"50127":["Bergheim",33.2],"50129":["Bergheim",33.1],"50169":["Kerpen",41.5],"50170":["Kerpen",36.6],"50171":["Kerpen",38.2],"50181":["Bedburg",25.3],"50189":["Elsdorf",27.3],"50226":["Frechen",44.0],"50259":["Pulheim",41.2],"50318":["Agentur für Arbeit Brühl",53.3],"50319":["Amtsgericht",53.6],"50321":["Brühl",53.8],"50351":["Stadtverwaltung",49.8],"50354":["Hürth",49.5],"50374":["Erftstadt",47.9],"50387":["Stadtverwaltung",59.1],"50389":["Wesseling",58.3],"50399":["Großannahmestelle BZ Köln West",45.3],"50411":["AachenMünchener Versicherung AG",52.0],"50412":["Generali Deutschland Versicherung AG",52.0],"50413":["Ford Bank Niederlassung der FCE Bank plc",48.8],"50414":["AachenMünchener Lebensversicherung AG",52.0],"50415":["Wahl Finance",47.4],"50416":["RWE Power AG",48.0],"50417":["Deutsche Post AG Niederl. Rentenservice",48.3],"50418":["Deutsche Post AG Niederlassung Köln (Paket)",52.4],"50419":["Deutsche Post AG Niederlassung BRIEF Köln West",45.3],"50421":["HUK-Coburg",52.1],"50422":["Daihatsu Versicherungsdienst",47.4],"50425":["Generali Deutschland Holding AG",52.5],"50426":["Apotheke LUX 99 Abt. Deutsche Internet Apotheke",50.3],"50427":["Zurich Service GmbH",54.4],"50428":["REWE Zentralfinanz eG",52.8],"50569":["Lanxess AG",54.4],"50574":["Familienkasse Nordrhein-Westfalen-Nord",51.9],"50575":["Agentur für Arbeit Köln",47.7],"50576":["Generali Schadenservice-Center Köln",51.8],"50579":["Generali Versicherung",51.8],"50580":["HDI AG",53.8],"50581":["Generali Deutschland Schadenmanagement GmbH",52.2],"50583":["ENVIVAS Krankenversicherung AG",52.2],"50585":["Atradius Kreditversicherung",54.3],"50586":["BERLIN-KÖLNISCHE VERSICHERUNGEN",52.3],"50587":["Deutsche Bank AG",52.7],"50588":["Deutsche Post AG, SSC Accouting Kreditorenbuchhaltung",52.6],"50589":["Deutsche Post AG SSC Acc Abt. Faktura / Reklamationsmanagement",52.6],"50590":["EXPRESS",53.1],"50591":["Allianz ONE-Business Solutions GmbH O-RE-KL-GEBS",51.7],"50592":["AXA Colonia Krankenversicherung AG",58.9],"50593":["Central Krankenversicherung AG",52.0],"50594":["DKV AG",47.2],"50595":["Europa Versicherungen AG",50.6],"50596":["AKB Autobörse AG",51.6],"50598":["Gothaer Versicherungen",52.4],"50600":["Westdeutscher Rundfunk Köln",52.5],"50602":["Kreissparkasse KSK KÃ¶ln",52.3],"50603":["Rewe-Zentral-AG",52.8],"50604":["Sparkasse Köln Bonn",51.9],"50605":["Stadt Köln Stadthaus",54.6],"50606":["SIGNAL IDUNA",51.5],"50607":["Deutsche Postbank AG Niederlassung Köln",52.6],"50657":["Zürich-Agrippina AG",53.2],"50658":["Finanzamt Köln-Nord",52.2],"50661":["AMB Generali Pensionskasse AG",52.0],"50662":["Finanzamt Köln-Mitte",52.9],"50663":["Landschaftsverband Rheinland",54.9],"50664":["Hauptzollamt",54.5],"50667":["Köln",52.7],"50668":["Köln",53.0],"50670":["Köln",52.1],"50672":["Köln",51.4],"50674":["Köln",51.5],"50676":["Köln",52.8],"50677":["Köln",53.0],"50678":["Köln",53.8],"50679":["Köln",54.4],"50725":["Ford Werke GmbH",51.8],"50726":["Milchwerke Köln / Wuppertal eG Campina U.A.",51.2],"50727":["bauer druck Köln KG",51.2],"50728":["Bundesverwaltungsamt",53.1],"50729":["DEVK Versicherungen",53.7],"50730":["Versorgungsamt Köln",54.1],"50733":["Köln",52.1],"50735":["Köln",52.2],"50737":["Köln",50.1],"50739":["Köln",49.5],"50765":["Köln",45.3],"50767":["Köln",46.6],"50769":["Köln",45.6],"50819":["Bundeszentrale für gesundheitliche Aufklärung",48.7],"50820":["A. Nattermann & Cie. GmbH",45.3],"50823":["Köln",50.5],"50825":["Köln",49.3],"50827":["Köln",48.3],"50829":["Köln",46.2],"50855":["IKK classic",44.9],"50858":["Köln",46.6],"50859":["Köln",44.1],"50919":["Deutsche Post AG Direkt Marketing Center",48.3],"50922":["Amtsgericht Köln",51.9],"50924":["Krankenhaus Weyertal",51.0],"50925":["Finanzamt Köln-West",50.6],"50926":["Bundesärztekammer BÄK",51.2],"50927":["Deutsche Sporthochschule",49.3],"50928":["Arbeiter-Samariter Bund",51.1],"50931":["Köln",50.5],"50933":["Köln",47.3],"50935":["Köln",49.2],"50937":["Köln",50.6],"50939":["Köln",51.7],"50960":["BG Energie Textil Elektro Medienerzeugnisse ( BG ETEM)",55.0],"50962":["BG Energie Textil Elektro Medienerzeugnisse ( BG ETEM)",55.0],"50963":["Deutschlandfunk Gemeinnützige Anstalt des öffentlichen Rechts",54.1],"50964":["Bundesamt für Familie und zivilgesellschaftliche Aufgaben",54.5],"50965":["UNICEF Deutschland",52.5],"50966":["BARMER",52.5],"50968":["Köln",54.5],"50969":["Köln",52.8],"50996":["Köln",56.9],"50997":["Köln",55.1],"50999":["Köln",59.2],"51057":["Deutz AG",54.8],"51058":["Kliniken der Stadt KÃ¶ln Zentralverwaltung",57.2],"51059":["AXA Versicherung AG",58.9],"51061":["Köln",54.9],"51063":["Köln",55.5],"51065":["Köln",56.3],"51067":["Köln",58.1],"51069":["Köln",58.5],"51101":["Polizeipräsidium Köln",57.4],"51103":["Köln",56.9],"51105":["Köln",56.2],"51149":["Köln",59.6],"51169":["Deutsche Post AG Nachsendezentrum Köln Ost",59.8],"51171":["AXA Versicherung AG (Colonia)",58.9],"51172":["Axa Lebensversicherung AG",58.9],"51173":["AXA Service AG (Corona GmbH)",58.9],"51175":["ASSTEL ProKunde Versicherungskonzepte GmbH",52.3],"51178":["Deutsche Post AG Rücksendezentrum Köln",59.8],"51221":["AdmiralDirekt.de GmbH",59.8],"51365":["Covestro AG",53.7],"51366":["Bayer HealthCare Deutschland AG",53.7],"51367":["Finanzamt Leverkusen",55.1],"51369":["LANXESS AG",53.7],"51370":["Finanzamt Leverkusen",55.6],"51371":["Leverkusen",51.5],"51373":["Leverkusen",53.7],"51375":["Leverkusen",58.0],"51377":["Leverkusen",58.7],"51379":["Leverkusen",54.6],"51381":["Leverkusen",55.5],"52028":["Agentur für Arbeit Aachen",29.1],"52045":["HUK-Coburg",32.7],"52046":["Chocoladefabriken Lindt & Sprüngli GmbH",31.7],"52047":["BIG direkt gesund",31.3],"52049":["Allianz Vers. AG",32.6],"52053":["Pro-Idee GmbH & Co. KG",30.9],"52054":["AachenMünchener Versicherung Aktiengesellschaft Direktion",32.8],"52055":["Junghans Wollversand GmbH & Co. KG",30.9],"52056":["RWTH Aachen",32.3],"52057":["Universitätsklinikum der RWTH Aachen",33.2],"52058":["Stadtverwaltung",32.3],"52059":["Sparkasse Aachen",32.4],"52060":["Technische Schule Landsysteme Lützow Kaserne",32.7],"52062":["Aachen",32.2],"52064":["Aachen",33.3],"52066":["Aachen",34.2],"52068":["Aachen",31.5],"52070":["Aachen",30.5],"52072":["Aachen",29.9],"52074":["Aachen",36.0],"52076":["Aachen",37.7],"52078":["Aachen",32.8],"52080":["Aachen",30.7],"52081":["Elegance GmbH & Co. KG",30.1],"52084":["AMB Generali Schadenmanagement GmbH",32.7],"52090":["StädteRegion Aachen",32.8],"52099":["Grünenthal GmbH",32.2],"52101":["Deutsche Post AG Direkt Marketing Center Aachen",31.2],"52115":["knpbmedia b.v.",23.5],"52134":["Herzogenrath",22.4],"52146":["Würselen",26.8],"52152":["Simmerath",50.6],"52156":["Monschau",55.4],"52159":["Roetgen",44.8],"52220":["Stadtverwaltung",31.0],"52222":["Stolberg (Rheinland)",30.6],"52223":["Stolberg (Rheinland)",35.7],"52224":["Stolberg (Rheinland)",35.1],"52249":["Eschweiler",26.3],"52348":["Finanzamt",33.2],"52349":["Düren",33.2],"52351":["Düren",33.3],"52353":["Düren",29.9],"52355":["Düren",33.7],"52372":["Kreuzau",38.8],"52379":["Langerwehe",27.7],"52382":["Niederzier",25.4],"52385":["Nideggen",44.0],"52388":["Nörvenich",40.0],"52391":["Vettweiß",44.3],"52393":["Hürtgenwald",38.7],"52396":["Heimbach",49.3],"52399":["Merzenich",32.8],"52425":["Forschungszentrum Jülich GmbH",20.8],"52426":["Heinrich-Heine-Universität Institut für Enzymtechnologie",20.2],"52428":["Jülich",17.5],"52441":["Linnich",8.7],"52445":["Titz",15.0],"52457":["Aldenhoven",17.5],"52459":["Inden",25.2],"52475":["Cinram GmbH",19.9],"52477":["Alsdorf",20.0],"52499":["Baesweiler",16.1],"52509":["Stadt Geilenkirchen",12.1],"52511":["Geilenkirchen",12.0],"52523":["Kreis Heinsberg",8.7],"52525":["Heinsberg",12.6],"52531":["Übach-Palenberg",16.5],"52538":["Gangelt",18.8],"53877":["Telekom",59.2],"53879":["Euskirchen",58.9],"53884":["Feldpostleitstelle Mechernich",59.8],"53894":["Mechernich",57.0],"53909":["Zülpich",49.3],"53919":["Weilerswist",54.9],"65164":["AXA Versicherung AG (Colonia)",58.9],"74071":["GDF Suez Energy Services Germany GmbH",47.6],"04160":["Fressnapf Tiernahrungs GmbH",43.8]}; // PLZ → [Ort, Luftlinie km] aus den Geodaten des Shops
+const UMWEG=1.3;   // Luftlinie → Fahrstrecke (Schätzung, im Shop später per Routenplaner)
+const MAX_FAHRT_KM=50;
+const VERLEGE_AB_KW=49; // pflegt das Team, z. B. im Backend
+
+// Montageliste 03/2026, Seite 1–10 (feste Preise). Kreise aus der Karte geschätzt (Luftlinie).
+const KREISE=[
+  {bis:5, name:'Kreis 1', aufmass:49, aufmassArt:'A0001', baustelle:169},
+  {bis:10,name:'Kreis 2', aufmass:59, aufmassArt:'A0002', baustelle:189},
+  {bis:15,name:'Kreis 3', aufmass:69, aufmassArt:'A0003', baustelle:209},
+  {bis:20,name:'Kreis 4', aufmass:79, aufmassArt:'A0004', baustelle:229},
+  {bis:99,name:'über Kreis 4', aufmass:119, aufmassArt:'A0005', baustelle:229},
+];
+// Verlegung €/m²: [<40, <80, ≥80]; min/max = lose bzw. verklebt, wo es beides gibt
+const VERLEGUNG={
+  klick:   {name:'Klick-Vinyl', min:[19,17,15], max:[19,17,15], art:'A0300', treppe:[65,85], verklebt:false},
+  laminat: {name:'Laminat',     min:[19,17,15], max:[19,17,15], art:'A0200', treppe:[65,85], verklebt:false},
+  klebe:   {name:'Klebe-Vinyl', min:[25,23,21], max:[25,23,21], art:'A0100', treppe:[65,85], verklebt:true},
+  parkett: {name:'Parkett',     min:[30,30,30], max:[40,40,40], art:'A0400/A0410', treppe:null, verklebt:'teils'},
+  teppich: {name:'Teppichboden',min:[13,11,9],  max:[16,14,12], art:'A0500/A0510', treppe:[35,55], verklebt:'teils'},
+  cv:      {name:'CV / PVC',    min:[15,13,11], max:[18,16,14], art:'A0600/A0610', treppe:[55,75], verklebt:'teils'},
+};
+const MINDERMENGE=120; // < 15 m²
+const ALTBODEN={
+  keiner:  {name:'Nichts – roher Estrich (Neubau)', preis:0, entsorgen:false},
+  lose:    {name:'Teppich / PVC lose', preis:4.90, entsorgen:true},
+  verklebt:{name:'Teppich / PVC verklebt', preis:9.90, entsorgen:true},
+  klick:   {name:'Laminat / Klick-Vinyl', preis:8.90, entsorgen:true},
+  fliesen: {name:'Fliesen', preis:null},
+  holz:    {name:'Parkett / Dielen', preis:null},
+  unklar:  {name:'Weiß ich nicht', preis:null},
+};
+const ENTSORGEN=7.90, SOCKEL_ENTFERNEN=2.90, SOCKEL_MONTAGE=[6.00,9.50], TUER=39, TREPPE_ALT=20;
+
+// Bodenpreise je Preisklasse (€/m²) — BEISPIELWERTE, im Shop aus den echten Produktpreisen je Kategorie
+const MATERIAL={
+  klick:  {guenstig:[25,35], mittel:[35,50], premium:[50,75]},
+  laminat:{guenstig:[12,20], mittel:[20,30], premium:[30,45]},
+  klebe:  {guenstig:[20,30], mittel:[30,45], premium:[45,65]},
+  parkett:{guenstig:[35,55], mittel:[55,80], premium:[80,120]},
+  teppich:{guenstig:[10,20], mittel:[20,35], premium:[35,60]},
+  cv:     {guenstig:[10,15], mittel:[15,25], premium:[25,40]},
+};
+const KLASSEN={guenstig:'Günstig',mittel:'Mittelklasse',premium:'Premium',empfehlung:'Eure Empfehlung'};
+
+// Beispiel-Böden für die Auswahl beim Aufmaß — im Shop live aus der Kategorie (Foto, Name, Preis)
+const BEISPIEL_BOEDEN=[
+  ['Eiche hell','#e3cfa8','#c9ad7f'],['Eiche natur','#c9a26b','#a77e47'],['Eiche grau','#b9b3a8','#8f887c'],
+  ['Eiche rustikal','#a8784a','#7d5532'],['Nussbaum','#7a5536','#573a22'],['Betonoptik','#c4c4c0','#9d9d98'],
+  ['Eiche weiß','#efe8dc','#d8cdb9'],['Räuchereiche','#6b5240','#4a382b'],
+];
+
+// Shop-Suche bei „schon bei Bodenjäger ausgesucht“ — BEISPIELDATEN, im Shop live aus der Produktsuche
+const SHOP_BEISPIELE=[
+  ['Klick-Vinyl Eiche natur','klick',39.95],['Klick-Vinyl Eiche grau','klick',44.95],['Klick-Vinyl Eiche hell Landhausdiele','klick',49.95],
+  ['Klick-Vinyl Fischgrät Eiche','klick',59.95],['Laminat Eiche natur','laminat',19.95],['Laminat Eiche rustikal','laminat',24.95],
+  ['Klebe-Vinyl Eiche hell','klebe',34.95],['Klebe-Vinyl Betonoptik','klebe',39.95],['Parkett Eiche Landhausdiele','parkett',69.95],
+  ['Parkett Eiche Fischgrät','parkett',89.95],
+].map(([name,art,preis])=>({name,art,preis}));
+// Adressvorschläge — im Shop von Google Places (nur Adressen in der eingegebenen PLZ)
+const STRASSEN=['Hauptstraße','Bahnhofstraße','Kirchstraße','Schulstraße','Gartenstraße','Lindenstraße','Mühlenweg','Am Markt','Bergstraße','Waldstraße','Friedhofstraße','Rathausplatz'];
+
+const ICON={
+  aufmass:'<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>',
+  preis:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M16 15h0"/>',
+  beratung:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+  shop:'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/>',
+  laden:'<path d="M3 9l1-5h16l1 5"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/>',
+  whatsapp:'<path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.5A8.4 8.4 0 1 1 21 11.5z"/>',
+};
+const svg=(p)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const HAKEN='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Zustand
+// ─────────────────────────────────────────────────────────────────────────────
+const LEER={plz:'',weg:null,besitz:null,bodenart:null,flaeche:40,flaecheUnklar:false,altboden:null,sockel:true,stufen:0,tueren:0,klasse:null,zeitraum:null,
+  wunsch:[],empfehlung:false,beratung:null,rueckruf:null,termin:null,terminTag:null,vorname:'',nachname:'',telefon:'',email:'',strasse:'',strasseOk:false,hausnr:'',produkt:null,produktText:'',zahlart:null,widerruf:false,datenschutz:false,quelle:'Instagram-Anzeige (utm_source=instagram)'};
+let st={...LEER};
+let verlauf=['plz'];
+const PFADE={
+  aufmass:['plz','weg','besitz','bodenart','flaeche','zeitraum','wunschboden','kontakt','zahlung'],
+  preis:['plz','weg','besitz','bodenart','flaeche','altboden','extras','klasse','zeitraum','kontakt'],
+  beratung:['plz','weg','besitz','beratungsart','kontakt'],
+};
+const WEG_NAME={aufmass:'Aufmaß',preis:'Preisrahmen',beratung:'Erstberatung'};
+
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const eur=n=>Math.round(n).toLocaleString('de-DE')+'\u00a0€';
+const eurGenau=n=>n.toLocaleString('de-DE',{minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2})+' €';
+const runden=(n,auf)=>auf?Math.ceil(n/50)*50:Math.floor(n/50)*50;
+
+function lage(){
+  const e=PLZ[st.plz]; if(!/^\d{5}$/.test(st.plz)) return null;
+  // Im Entwurf kennt die Tabelle nur PLZ bis 60 km — alles andere liegt sicher außerhalb.
+  if(!e) return {bekannt:true,ort:'Dein Ort',luft:999,fahrt:999,imGebiet:false,kreis:KREISE[4]};
+  const fahrt=Math.round(e[1]*UMWEG);
+  return {bekannt:true,ort:e[0],luft:e[1],fahrt,imGebiet:fahrt<=MAX_FAHRT_KM,kreis:KREISE.find(k=>e[1]<=k.bis)};
+}
+function aktuellerPfad(){
+  if(!st.weg) return ['plz','weg'];
+  let p=[...PFADE[st.weg]];
+  // Schon bei uns ausgesucht: Boden eintippen statt Bodenart wählen; mit Produkt entfällt die Preisklasse
+  if(st.besitz==='bj'){ p=p.map(x=>x==='bodenart'?'produkt':x); if(st.produkt) p=p.filter(x=>x!=='klasse'); }
+  if(st.weg==='beratung'&&st.beratung==='fachmarkt') p.splice(p.indexOf('beratungsart')+1,0,'termin');
+  return p;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Preisrahmen nach Montageliste
+// ─────────────────────────────────────────────────────────────────────────────
+function preisrahmen(){
+  const v=VERLEGUNG[st.bodenart], m2=st.flaeche, l=lage();
+  const stufe=m2<40?0:m2<80?1:2;
+  const posten=[];
+  const add=(name,min,max,info)=>posten.push({name,min,max,info});
+  add(`${v.name} verlegen (${m2} m²)`, v.min[stufe]*m2, v.max[stufe]*m2, v.min[stufe]===v.max[stufe]?`${eurGenau(v.min[stufe])}/m², Artikel ${v.art}`:`${eurGenau(v.min[stufe])}–${eurGenau(v.max[stufe])}/m² (lose bis verklebt)`);
+  if(m2<15) add('Mindermenge unter 15 m²',MINDERMENGE,MINDERMENGE,'Pauschale');
+  const ab=ALTBODEN[st.altboden];
+  const hatAlt=st.altboden&&st.altboden!=='keiner';
+  if(ab&&ab.preis){ const p=(ab.preis+ENTSORGEN)*m2; add(`Altboden entfernen und entsorgen`,p,p,`${eurGenau(ab.preis)} + ${eurGenau(ENTSORGEN)} je m²`); }
+  // Untergrund: Spanne, weil er erst beim Aufmaß sichtbar ist
+  const sp3=m2<50?10:8, sp6=m2<50?12:10;
+  if(v.verklebt===true) add('Untergrund grundieren und spachteln',(1.80+sp3)*m2,(3.80+sp6)*m2,'je nach Zustand, nach Aufmaß');
+  else if(v.verklebt==='teils') add('Untergrund vorbereiten',0,(3.80+sp6)*m2,'nötig bei verklebter Verlegung');
+  else add('Untergrund vorbereiten',0,(3.50+sp3)*m2,'falls nötig: Dampfbremse, spachteln');
+  if(st.sockel){ const lfm=m2; add(`Sockelleisten montieren (ca. ${lfm} lfm)`,SOCKEL_MONTAGE[0]*lfm+(hatAlt?SOCKEL_ENTFERNEN*lfm:0),SOCKEL_MONTAGE[1]*lfm+(hatAlt?SOCKEL_ENTFERNEN*lfm:0),'Faustregel: lfm ≈ m², Leisten-Material separat'); }
+  if(st.stufen>0){
+    if(v.treppe) add(`Treppe (${st.stufen} Stufen)`,v.treppe[0]*st.stufen,(v.treppe[1]+(hatAlt?TREPPE_ALT:0))*st.stufen,'gerade bis gewendelt');
+    else add(`Treppe (${st.stufen} Stufen)`,0,0,'Preis nach Aufmaß');
+  }
+  if(st.tueren>0) add(`Türen kürzen (${st.tueren})`,TUER*st.tueren,TUER*st.tueren,`${TUER} € je Tür`);
+  const k=l&&l.kreis; let bMax=k.baustelle;
+  if(k.name==='über Kreis 4') bMax+=Math.max(0,(l.fahrt-26))*3;
+  add(`Baustellenpauschale (${k.name})`,k.baustelle,bMax,k.name==='über Kreis 4'?'zzgl. Anfahrt ab Kreis 4':'Anfahrt und Einrichtung');
+  const vMin=posten.reduce((s,p)=>s+p.min,0), vMax=posten.reduce((s,p)=>s+p.max,0);
+  const klasse=st.produkt?null:(st.klasse==='empfehlung'?'mittel':st.klasse);
+  const mp=st.produkt?[st.produkt.preis,st.produkt.preis]:MATERIAL[st.bodenart][klasse];
+  const mMin=mp[0]*m2*1.05, mMax=mp[1]*m2*1.10;
+  const offen=[];
+  if(ab&&ab.preis===null) offen.push(st.altboden==='unklar'?'Ob und wie der alte Boden entfernt wird, klären wir beim Aufmaß.':`${ab.name} entfernen ist nicht enthalten, das klären wir beim Aufmaß.`);
+  if(st.stufen>0&&!v.treppe) offen.push('Die Treppe ist nicht enthalten, den Preis nennen wir dir nach dem Aufmaß.');
+  return {posten,vMin:runden(vMin,false),vMax:runden(vMax,true),mMin:runden(mMin,false),mMax:runden(mMax,true),
+    gMin:runden(vMin+mMin,false),gMax:runden(vMax+mMax,true),klasse,offen,mp};
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Lead-Stufe A/B/C (fürs Trello-Label) und Meldung an Meta/Google
+// ─────────────────────────────────────────────────────────────────────────────
+function leadStufe(){
+  const l=lage();
+  if(st.weg==='aufmass') return 'A';
+  let p=0;
+  if(l&&l.imGebiet) p+= l.kreis.name==='über Kreis 4'?1:2;
+  if(['asap','1-3'].includes(st.zeitraum)) p+=2; else if(st.zeitraum==='3-6') p+=1;
+  if(st.weg==='preis'&&st.flaeche>=25) p+=1;
+  if(st.telefon.replace(/\D/g,'').length>=6) p+=1;
+  if(st.besitz==='bj') p+=1;
+  if(st.beratung==='fachmarkt') p+=2;
+  return p>=5?'A':p>=3?'B':'C';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bildschirme
+// ─────────────────────────────────────────────────────────────────────────────
+// Beratungstermine zu den Öffnungszeiten: Mo–Fr 9–18:30, Sa 9–14 (letzter Start 30 Min. vor Schluss)
+const WT=['So','Mo','Di','Mi','Do','Fr','Sa'];
+function termintage(){
+  const tage=[],d=new Date();d.setHours(0,0,0,0);
+  while(tage.length<12){d.setDate(d.getDate()+1);if(d.getDay()!==0)tage.push(new Date(d));}
+  return tage;
+}
+function slots(tag){
+  const ende=tag.getDay()===6?13.5:18; const out=[];
+  for(let h=9;h<=ende;h+=0.5) out.push(`${String(Math.floor(h)).padStart(2,'0')}:${h%1?'30':'00'}`);
+  return out;
+}
+const tagKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function terminText(){
+  if(!st.termin) return '';
+  const [datum,zeit]=st.termin.split('T');const d=new Date(datum+'T00:00');
+  return `${WT[d.getDay()]}, ${d.getDate()}.${d.getMonth()+1}. um ${zeit} Uhr`;
+}
+function produktVorschlaege(){
+  const q=st.produktText.trim().toLowerCase(); if(q.length<2) return '';
+  const w=q.split(/\s+/);
+  return SHOP_BEISPIELE.filter(p=>w.every(x=>p.name.toLowerCase().includes(x))).slice(0,6)
+    .map(p=>`<button type="button" data-produkt="${esc(p.name)}"><span>${esc(p.name)}</span><small>${p.preis.toLocaleString('de-DE')} €/m²</small></button>`).join('');
+}
+function adressVorschlaege(){
+  const q=st.strasse.trim().toLowerCase(); const l=lage(); if(q.length<2||st.strasseOk) return '';
+  return STRASSEN.filter(x=>x.toLowerCase().startsWith(q)).slice(0,5)
+    .map(x=>`<button type="button" data-adr="${esc(x)}"><span>${esc(x)}</span><small>${st.plz} ${esc(l.ort)}</small></button>`).join('');
+}
+const opt=(key,val,titel,text,extra={})=>`<button type="button" class="opt${extra.gross?' gross':''}${(Array.isArray(st[key])?st[key].includes(val):st[key]===val)?' an':''}" data-key="${key}" data-val="${esc(val)}"${extra.multi?' data-multi="1"':''}${extra.disabled?' disabled':''}>${extra.icon?`<span class="ic">${svg(ICON[extra.icon])}</span>`:''}<span class="t"><b>${titel}</b>${text?`<i>${text}</i>`:''}${extra.badge?`<span class="badge">${extra.badge}</span>`:''}</span>${extra.preis?`<span class="preis">${extra.preis}</span>`:''}</button>`;
+const chip=(key,val,label)=>`<button type="button" class="chip${st[key]===val?' an':''}" data-key="${key}" data-val="${esc(val)}">${label}</button>`;
+
+const SCREENS={
+  plz:{
+    titel:'Boden verlegen lassen',
+    kicker:'Verlegeservice im Umkreis von 50 km',
+    hinweis:'In 2 Minuten zu deinem nächsten Schritt: Preisrahmen, Aufmaß mit deinem Wunschboden oder persönliche Beratung.',
+    body:()=>{const l=lage();let box='';
+      if(l&&!l.bekannt) box='<div class="box warn"><b>Diese PLZ kennen wir nicht.</b><p>Bitte prüfe die Eingabe.</p></div>';
+      else if(l&&l.imGebiet) box=`<div class="box gut"><b>Super, wir verlegen bei dir.</b><p>${esc(l.ort)} liegt ca. ${l.fahrt} km Fahrweg von unserem Fachmarkt in Hückelhoven entfernt.</p></div>`;
+      else if(l) box=`<div class="box warn"><b>${esc(l.ort)} liegt außerhalb unseres Verlegegebiets.</b><p>Wir verlegen bis ca. ${MAX_FAHRT_KM} km Fahrweg. Deinen Boden liefern wir dir aber deutschlandweit, und beraten lassen kannst du dich natürlich auch.</p></div>`;
+      return `<div class="feld"><label for="plz">Postleitzahl des Objekts</label><input class="gross" type="text" id="plz" inputmode="numeric" maxlength="5" autocomplete="postal-code" placeholder="41836" value="${esc(st.plz)}"></div>${box}`},
+    weiter:()=>{const l=lage();return !!(l&&l.bekannt)},
+    btn:'Weiter',
+  },
+  weg:{
+    titel:'Wie können wir dir helfen?',
+    hinweis:'Du kannst später jederzeit umsteigen.',
+    auto:true,
+    body:()=>{const l=lage();
+      if(!l.imGebiet) return opt('weg','beratung','Persönlich beraten lassen','Telefonisch oder im Fachmarkt in Hückelhoven',{icon:'beratung',gross:1})
+        +`<a class="opt gross" href="https://www.bodenjaeger.de" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">${svg(ICON.shop)}</span><span class="t"><b>Boden im Shop bestellen</b><i>Lieferung deutschlandweit, Set mit Dämmung und Sockelleiste</i></span></a>`;
+      return opt('weg','aufmass','Aufmaß mit deinem Wunschboden','Wir kommen mit deinen 3 Favoriten als Original-Dielen, messen aus und machen dir ein genaues Angebot.',{icon:'aufmass',gross:1,preis:eur(l.kreis.aufmass),badge:'Wird bei Beauftragung gutgeschrieben'})
+        +opt('weg','preis','Preisrahmen berechnen','Sofort eine Von-bis-Summe für Boden und Verlegung, kostenlos.',{icon:'preis',gross:1})
+        +opt('weg','beratung','Erst persönlich beraten lassen','Telefonisch oder im Fachmarkt, kostenlos.',{icon:'beratung',gross:1});},
+    weiter:()=>!!st.weg,
+  },
+  besitz:{
+    titel:'Hast du deinen Boden schon?',
+    auto:true,
+    body:()=>{let s=opt('besitz','nein','Nein, noch nicht','Wir helfen dir bei der Auswahl')+opt('besitz','bj','Ja, bei Bodenjäger ausgesucht oder gekauft','')+opt('besitz','fremd','Ja, woanders gekauft','');
+      if(st.besitz==='fremd') s+='<div class="box warn"><b>Wir verlegen nur Böden aus unserem Sortiment.</b><p>Schau dir gern unsere Böden an, wir finden bestimmt etwas Passendes für dich.</p></div>';
+      return s;},
+    // Bei fremder Ware nicht automatisch weiter, damit der Hinweis gelesen wird
+    autoWenn:()=>st.besitz!=='fremd',
+    weiter:()=>!!st.besitz,
+    btn:()=>st.besitz==='fremd'?'Okay, ich schaue mir eure Böden an':'Weiter',
+  },
+  bodenart:{
+    titel:'Welcher Boden soll es werden?',
+    hinweis:'Noch unsicher? Wähle, was dir am nächsten kommt.',
+    auto:true,
+    body:()=>`<div class="raster2">${Object.entries(VERLEGUNG).map(([k,v])=>opt('bodenart',k,v.name,{klick:'wasserfest, leise',laminat:'robust, günstig',klebe:'flach, sehr strapazierfähig',parkett:'echtes Holz',teppich:'warm und weich',cv:'pflegeleicht, preiswert'}[k])).join('')}</div>`,
+    weiter:()=>!!st.bodenart,
+  },
+  produkt:{
+    titel:'Welchen Boden hast du ausgesucht?',
+    hinweis:'Tipp einfach los, wir schlagen dir Böden aus unserem Shop vor.',
+    body:()=>{
+      if(st.produkt) return `<div class="gewaehlt"><span><b>${esc(st.produkt.name)}</b><br><span style="font-size:13px;color:var(--mid)">${VERLEGUNG[st.produkt.art].name}</span></span><button type="button" data-aktion="produkt-weg">Ändern</button></div>`;
+      let s=`<div class="feld"><label for="produkt-suche">Produktname oder Dekor</label><input type="text" id="produkt-suche" autocomplete="off" placeholder="z. B. Eiche natur" value="${esc(st.produktText)}"></div><div class="vorschlaege" id="produkt-vorschlaege">${produktVorschlaege()}</div>`;
+      if(st.produktText.trim().length>=3) s+=`<div class="feld"><label>Nicht dabei? Dann sag uns noch die Bodenart:</label><div class="chips">${Object.entries(VERLEGUNG).map(([k,v])=>chip('bodenart',k,v.name)).join('')}</div></div>`;
+      return s+'<p class="beispiel">Entwurf: Beispieldaten. Im Shop kommen die Vorschläge live aus eurer Produktsuche, mit Foto.</p>';},
+    weiter:()=>!!st.produkt||(st.produktText.trim().length>=3&&!!st.bodenart),
+  },
+  flaeche:{
+    titel:'Wie viel Fläche ungefähr?',
+    hinweis:'Grob reicht. Ein Zimmer hat oft 12–20 m².',
+    body:()=>`<div class="qm"><input type="number" id="qm" min="5" max="400" inputmode="numeric" value="${st.flaeche}" aria-label="Fläche in Quadratmetern"><span>m²</span></div>
+      <input type="range" id="qm-r" min="5" max="200" step="1" value="${Math.min(200,st.flaeche)}" aria-label="Fläche einstellen">
+      <div class="chips" style="justify-content:center">${[15,30,50,80,120].map(n=>`<button type="button" class="chip${st.flaeche===n?' an':''}" data-qm="${n}">${n} m²</button>`).join('')}</div>`,
+    weiter:()=>st.flaeche>=5,
+  },
+  altboden:{
+    titel:'Was liegt aktuell auf dem Boden?',
+    hinweis:'Das Entfernen rechnen wir gleich mit ein.',
+    auto:true,
+    body:()=>Object.entries(ALTBODEN).map(([k,a])=>opt('altboden',k,a.name,'')).join(''),
+    weiter:()=>!!st.altboden,
+  },
+  extras:{
+    titel:'Was soll noch dazu?',
+    body:()=>`<div class="beleg">
+      <label class="zeile schalter"><span>Neue Sockelleisten montieren</span><input type="checkbox" id="sockel" ${st.sockel?'checked':''}></label>
+      <div class="zeile"><span>Treppe (Anzahl Stufen)</span><span class="stepper"><button type="button" data-step="stufen" data-d="-1" aria-label="weniger">−</button><output>${st.stufen}</output><button type="button" data-step="stufen" data-d="1" aria-label="mehr">+</button></span></div>
+      <div class="zeile"><span>Türen kürzen</span><span class="stepper"><button type="button" data-step="tueren" data-d="-1" aria-label="weniger">−</button><output>${st.tueren}</output><button type="button" data-step="tueren" data-d="1" aria-label="mehr">+</button></span></div>
+    </div>`,
+    weiter:()=>true,
+  },
+  klasse:{
+    titel:'In welcher Preisklasse suchst du?',
+    hinweis:()=>`${VERLEGUNG[st.bodenart].name} gibt es bei uns in allen Preislagen.`,
+    auto:true,
+    body:()=>{const m=MATERIAL[st.bodenart];return opt('klasse','guenstig','Günstig',`ca. ${m.guenstig[0]}–${m.guenstig[1]} €/m²`)+opt('klasse','mittel','Mittelklasse',`ca. ${m.mittel[0]}–${m.mittel[1]} €/m²`)+opt('klasse','premium','Premium',`ca. ${m.premium[0]}–${m.premium[1]} €/m²`)+opt('klasse','empfehlung','Weiß ich nicht – empfehlt mir etwas','Wir rechnen mit der Mittelklasse und schlagen dir passende Böden vor')+'<p class="beispiel">Entwurf: Preisspannen sind Beispielwerte, im Shop kommen sie aus euren Produktpreisen.</p>';},
+    weiter:()=>!!st.klasse,
+  },
+  zeitraum:{
+    titel:'Wann soll verlegt werden?',
+    hinweis:`Aktuell planen wir Verlegungen ab KW ${VERLEGE_AB_KW}.`,
+    auto:true,
+    body:()=>opt('zeitraum','asap','So schnell wie möglich','')+opt('zeitraum','1-3','In 1–3 Monaten','')+opt('zeitraum','3-6','In 3–6 Monaten','')+opt('zeitraum','offen','Noch offen','Ich informiere mich erst'),
+    weiter:()=>!!st.zeitraum,
+  },
+  wunschboden:{
+    hinweis:'Diese bringen wir dir als Original-Dielen zum Aufmaß mit, damit du sie bei dir zu Hause im Licht siehst.',
+    titel:()=>st.produkt?'Möchtest du noch Böden zum Vergleich?':'Such dir bis zu 3 Böden aus',
+    body:()=>{const v=VERLEGUNG[st.bodenart].name, max=st.produkt?2:3;
+      return `${st.produkt?`<div class="gewaehlt"><span><b>${esc(st.produkt.name)}</b><br><span style="font-size:13px;color:var(--mid)">kommt auf jeden Fall mit</span></span></div>`:''}<p class="zaehler"><b>${st.wunsch.length} von ${max}</b> ${st.produkt?'weitere ':''}ausgewählt · ${esc(v)}</p>
+      <div class="prods">${BEISPIEL_BOEDEN.map(([n,c1,c2],i)=>{const idx=st.wunsch.indexOf(n);return `<button type="button" class="prod${idx>-1?' an':''}" data-wunsch="${esc(n)}" aria-pressed="${idx>-1}"><div class="bild" style="background:repeating-linear-gradient(90deg,${c1} 0 22%,${c2} 22% 23%,${c1} 23% 48%,${c2} 48% 49%,${c1} 49% 74%,${c2} 74% 75%,${c1} 75%)"></div><span class="nr">${idx+1}</span><div class="info"><b>${esc(v)} ${esc(n)}</b><span>Beispiel</span></div></button>`}).join('')}</div>
+      <label class="check" style="margin-top:6px"><input type="checkbox" id="empfehlung" ${st.empfehlung?'checked':''}> <span>Bringt mir zusätzlich eure Empfehlung mit.</span></label>
+      <p class="beispiel">Entwurf: Im Shop stehen hier eure echten Böden der gewählten Kategorie mit Foto und Preis, mit Suche und Filter.</p>`},
+    weiter:()=>!!st.produkt||st.wunsch.length>0||st.empfehlung,
+    btn:()=>st.produkt||st.wunsch.length||st.empfehlung?'Weiter':'Wähle mindestens einen Boden',
+  },
+  beratungsart:{
+    titel:'Wie möchtest du beraten werden?',
+    auto:true,
+    body:()=>opt('beratung','telefon','Rückruf am Telefon','Wir rufen dich zur Wunschzeit an',{icon:'beratung'})+opt('beratung','fachmarkt','Termin im Fachmarkt','Such dir einen Termin aus und sieh alle Böden in echt. Neckarstraße 9, Hückelhoven',{icon:'laden'})+opt('beratung','whatsapp','Per WhatsApp','Schreib uns Fotos und Fragen',{icon:'whatsapp'}),
+    weiter:()=>!!st.beratung,
+  },
+  termin:{
+    titel:'Wann möchtest du kommen?',
+    hinweis:'Such dir einen Termin aus. Dann nehmen wir uns Zeit für dich und legen passende Böden bereit.',
+    body:()=>{const tage=termintage();if(!st.terminTag)st.terminTag=tagKey(tage[0]);
+      const tag=tage.find(t=>tagKey(t)===st.terminTag)||tage[0];
+      return `<div class="tage" role="listbox" aria-label="Tag wählen">${tage.map(t=>`<button type="button" class="tag${tagKey(t)===st.terminTag?' an':''}" data-tag="${tagKey(t)}" aria-selected="${tagKey(t)===st.terminTag}"><span>${WT[t.getDay()]}</span><b>${t.getDate()}</b><small>${['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'][t.getMonth()]}</small></button>`).join('')}</div>
+      <div class="slots">${slots(tag).map(z=>{const k=`${tagKey(tag)}T${z}`;return `<button type="button" class="slot${st.termin===k?' an':''}" data-slot="${k}">${z}</button>`}).join('')}</div>
+      ${st.termin?`<div class="box gut"><b>Dein Termin: ${terminText()}</b><p>Fachmarkt Hückelhoven, Neckarstraße 9</p></div>`:''}`;},
+    weiter:()=>!!st.termin,
+    btn:()=>st.termin?'Weiter':'Wähle einen Termin',
+  },
+  kontakt:{
+    titel:()=>({aufmass:'Deine Kontaktdaten',preis:'Wohin dürfen wir deinen Preisrahmen schicken?',beratung:st.beratung==='fachmarkt'?'Für wen ist der Termin?':'Wie erreichen wir dich?'}[st.weg]),
+    hinweis:()=>({aufmass:'Damit wir den Termin mit dir abstimmen können.',preis:'Deinen Preisrahmen siehst du gleich hier und bekommst ihn zusätzlich per E-Mail.',beratung:st.beratung==='fachmarkt'?`Dein Termin: ${terminText()}. Die Bestätigung schicken wir dir per E-Mail.`:'Mehr brauchen wir nicht. Alles Weitere besprechen wir persönlich.'}[st.weg]),
+    body:()=>{const f=(id,label,typ,auto,wert,opt2)=>`<div class="feld"><label for="${id}">${label}${opt2?' <small>(optional)</small>':''}</label><input type="${typ}" id="${id}" autocomplete="${auto}" value="${esc(wert)}"${typ==='tel'?' inputmode="tel"':''}><div class="fehler" id="f-${id}"></div></div>`;
+      let s=`<div class="zwei">${f('vorname','Vorname','text','given-name',st.vorname)}${f('nachname','Nachname','text','family-name',st.nachname)}</div>`;
+      if(st.weg==='aufmass') s+=`${f('telefon','Telefon','tel','tel',st.telefon)}${f('email','E-Mail','email','email',st.email)}`;
+      if(st.weg==='preis') s+=`${f('email','E-Mail','email','email',st.email)}${f('telefon','Telefon','tel','tel',st.telefon,1)}`;
+      if(st.weg==='beratung'){
+        if(st.beratung==='fachmarkt') s+=`${f('email','E-Mail','email','email',st.email)}${f('telefon','Telefon','tel','tel',st.telefon,1)}`;
+        else s+=f('telefon',st.beratung==='whatsapp'?'Handynummer (WhatsApp)':'Telefon','tel','tel',st.telefon);
+        if(st.beratung==='telefon') s+=`<div class="feld"><label>Wann rufen wir an?</label><div class="chips">${[['egal','Egal'],['vormittags','Vormittags'],['mittags','Mittags'],['nachmittags','Nachmittags']].map(([k,l])=>chip('rueckruf',k,l)).join('')}</div></div>`;
+      }
+      s+=`<label class="check"><input type="checkbox" id="datenschutz" ${st.datenschutz?'checked':''}> <span>Ich bin einverstanden, dass Bodenjäger meine Angaben zur Bearbeitung meiner Anfrage verarbeitet und mich dazu kontaktiert. <a href="https://www.bodenjaeger.de/datenschutz" target="_blank" rel="noopener">Datenschutz</a></span></label><div class="fehler" id="f-datenschutz"></div>`;
+      return s;},
+    weiter:()=>true,
+    pruefe:()=>{const e={};const tel=st.telefon.replace(/\D/g,'');
+      if(st.vorname.trim().length<2) e.vorname='Bitte gib deinen Vornamen ein.';
+      if(st.nachname.trim().length<2) e.nachname='Bitte gib deinen Nachnamen ein.';
+      const telPflicht=st.weg==='aufmass'||(st.weg==='beratung'&&st.beratung!=='fachmarkt');
+      if((telPflicht||st.telefon.trim())&&(tel.length<6||!/^(\+|0)/.test(st.telefon.trim()))) e.telefon='Bitte prüfe die Telefonnummer (z. B. 0170 1234567).';
+      if((st.weg!=='beratung'||st.beratung==='fachmarkt')&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(st.email.trim())) e.email='Bitte prüfe deine E-Mail-Adresse.';
+      if(!st.datenschutz) e.datenschutz='Bitte stimme zu, damit wir dich kontaktieren dürfen.';
+      return e;},
+    btn:()=>({aufmass:'Weiter zur Zahlung',preis:'Preisrahmen anzeigen',beratung:st.beratung==='fachmarkt'?'Termin buchen':st.beratung==='whatsapp'?'WhatsApp-Beratung anfragen':'Rückruf anfordern'}[st.weg]),
+    unten:()=>st.weg==='aufmass'?'':'Kostenlos und unverbindlich',
+  },
+  zahlung:{
+    titel:'Aufmaß buchen',
+    hinweis:'Nach der Zahlung rufen wir dich an und vereinbaren den Termin.',
+    body:()=>{const l=lage();
+      return `<div class="beleg">
+        <div class="zeile"><span><b>Aufmaß + Beratung + Angebot</b><br><span style="font-size:13px;color:var(--mid)">${esc(l.ort)}, ${l.kreis.name}</span></span><b>${eur(l.kreis.aufmass)}</b></div>
+        <div class="zeile" style="font-size:14px"><span>Dein Wunschboden als Original-Dielen</span><span>${st.wunsch.length+(st.empfehlung?1:0)+(st.produkt?1:0)}×</span></div>
+        <div class="zeile" style="font-size:14px;color:var(--success)"><span>Gutschrift bei Beauftragung</span><span>vollständig</span></div>
+        <div class="zeile"><span>Jetzt zu zahlen <small style="color:var(--mid)">inkl. MwSt.</small></span><b>${eur(l.kreis.aufmass)}</b></div></div>
+        <p style="margin:0;font-size:13px;color:var(--mid)">Kostenlos absagen oder verschieben bis 24 Stunden vor dem Termin.</p>
+        <div class="feld"><label for="strasse">Adresse für das Aufmaß</label>${st.strasseOk?`<div class="gewaehlt"><span><b>${esc(st.strasse)}</b><br><span style="font-size:13px;color:var(--mid)">${st.plz} ${esc(l.ort)}</span></span><button type="button" data-aktion="adresse-weg">Ändern</button></div>`:`<input type="text" id="strasse" autocomplete="off" placeholder="Straße eintippen" value="${esc(st.strasse)}"><div class="vorschlaege" id="adr-vorschlaege">${adressVorschlaege()}</div>`}<div class="fehler" id="f-strasse"></div></div>
+        ${st.strasseOk?`<div class="feld" style="max-width:180px"><label for="hausnr">Hausnummer</label><input type="text" id="hausnr" autocomplete="off" value="${esc(st.hausnr)}"><div class="fehler" id="f-hausnr"></div></div>`:''}
+        <p class="beispiel">Entwurf: Im Shop kommen die Vorschläge von Google und nur Adressen aus deiner PLZ sind wählbar. Probier z. B. „Ha“.</p>
+        <div class="feld"><label>Zahlungsart</label><div class="chips">${chip('zahlart','paypal','PayPal')}${chip('zahlart','karte','Karte, Apple Pay, Google Pay')}${chip('zahlart','klarna','Klarna')}</div><div class="fehler" id="f-zahlart"></div></div>
+        <label class="check"><input type="checkbox" id="widerruf" ${st.widerruf?'checked':''}> <span>Ich verlange ausdrücklich, dass Bodenjäger vor Ablauf der Widerrufsfrist mit dem Aufmaß beginnt. Mir ist bekannt, dass mein Widerrufsrecht mit vollständiger Erbringung des Aufmaßes erlischt.</span></label><div class="fehler" id="f-widerruf"></div>
+        <p style="margin:0;font-size:13px;color:var(--mid)">Es gelten unsere <a href="https://www.bodenjaeger.de/agb" target="_blank" rel="noopener" style="color:var(--dark)">AGB</a>. Entwurf: Hier wird nichts abgebucht.</p>`},
+    weiter:()=>true,
+    pruefe:()=>{const e={};if(!st.strasseOk)e.strasse='Bitte wähle deine Straße aus den Vorschlägen.';else if(!/\d/.test(st.hausnr))e.hausnr='Bitte gib deine Hausnummer an.';if(!st.zahlart)e.zahlart='Bitte wähle eine Zahlungsart.';if(!st.widerruf)e.widerruf='Bitte bestätige den Hinweis zum Widerrufsrecht.';return e;},
+    btn:()=>`Jetzt ${eur(lage().kreis.aufmass)} bezahlen`,
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Abschluss-Ansichten
+// ─────────────────────────────────────────────────────────────────────────────
+function ergebnisPreis(){
+  const r=preisrahmen(),v=VERLEGUNG[st.bodenart],l=lage();
+  const boden=st.produkt?st.produkt.name:`${v.name} (${KLASSEN[st.klasse]})`;
+  const enthalten=[`Boden: ${boden}`,`Verlegung von ca. ${st.flaeche} m²`];
+  const ab=ALTBODEN[st.altboden];
+  if(ab&&ab.preis) enthalten.push('Alten Boden entfernen und entsorgen');
+  enthalten.push('Untergrund vorbereiten, falls nötig');
+  if(st.sockel) enthalten.push('Sockelleisten montieren');
+  if(st.stufen>0&&v.treppe) enthalten.push(`Treppe mit ${st.stufen} Stufen`);
+  if(st.tueren>0) enthalten.push(`${st.tueren} ${st.tueren===1?'Tür':'Türen'} kürzen`);
+  enthalten.push('Anfahrt und Baustelleneinrichtung');
+  const hinweise=[...r.offen];
+  if(st.sockel) hinweise.push('Die Sockelleisten selbst suchst du dir beim Aufmaß aus.');
+  hinweise.push('Wie viel am Untergrund zu tun ist, sehen wir erst vor Ort. Dein genaues Angebot bekommst du nach dem Aufmaß.');
+  return `<p class="kicker">Dein Preisrahmen</p><h1>Hallo ${esc(st.vorname)}, so viel kostet dein neuer Boden ungefähr</h1>
+  <div class="ergebnis"><div class="summe">${eur(r.gMin)} – ${eur(r.gMax)}</div><div class="unter">komplett mit Boden und Verlegung, inkl. MwSt.</div></div>
+  <div class="box info"><b>Darin enthalten</b><ul class="liste" style="margin-top:8px">${enthalten.map(x=>`<li><span class="haken">${HAKEN}</span><span>${esc(x)}</span></li>`).join('')}</ul></div>
+  <p style="margin:0;font-size:13px;color:var(--mid)">${hinweise.map(esc).join(' ')}</p>
+  <button type="button" class="btn rot" data-aktion="zum-aufmass">Aufmaß mit Wunschboden buchen · ${eur(l.kreis.aufmass)}</button>
+  <p style="margin:-4px 0 0;font-size:12px;color:var(--mid);text-align:center">Wird bei Beauftragung vollständig gutgeschrieben</p>
+  <button type="button" class="btn rahmen" data-aktion="zur-beratung">Lieber erst im Fachmarkt beraten lassen</button>`;
+}
+function danke(){
+  const l=lage();
+  if(st.weg==='aufmass') return `<div class="danke-icon">${HAKEN}</div><h1>Danke, ${esc(st.vorname)}! Dein Aufmaß ist bezahlt.</h1>
+    <p class="hinweis">Wir rufen dich an und vereinbaren deinen Termin. Die Zahlungsbestätigung kommt per E-Mail.</p>
+    <ul class="liste"><li><span class="haken">${HAKEN}</span><span>Wir bringen <b>${esc([st.produkt?st.produkt.name:null,...st.wunsch,st.empfehlung?'unsere Empfehlung':null].filter(Boolean).join(', '))}</b> als Original-Dielen mit.</span></li>
+    <li><span class="haken">${HAKEN}</span><span>Vor Ort messen wir aus und prüfen Untergrund, Türen und Übergänge.</span></li>
+    <li><span class="haken">${HAKEN}</span><span>Du bekommst dein genaues Angebot. Bei Beauftragung schreiben wir dir ${eur(l.kreis.aufmass)} gut.</span></li></ul>`;
+  const t={telefon:['Wir rufen dich an.','Ein Berater aus unserem Fachmarkt meldet sich zu deiner Wunschzeit.'],
+    fachmarkt:['Dein Termin steht.',`Wir erwarten dich am ${terminText()} im Fachmarkt. Sag bei uns einfach kurz, dass du einen Beratungstermin hast. Die Bestätigung kommt per E-Mail.`],
+    whatsapp:['Wir schreiben dir per WhatsApp.','Schick uns gern schon Fotos von deinen Räumen, dann können wir dich noch besser beraten.']}[st.beratung];
+  return `<div class="danke-icon">${HAKEN}</div><h1>Danke, ${esc(st.vorname)}! ${t[0]}</h1><p class="hinweis">${t[1]}</p>
+    <div class="box info"><b>Fachmarkt Hückelhoven</b><p>Neckarstraße 9 · Mo–Fr 9–18:30 Uhr, Sa 9–14 Uhr</p></div>`;
+}
+
+function teamAnsicht(){
+  const l=lage(),stufe=leadStufe(),weg=st.weg;
+  const ab=st.altboden?ALTBODEN[st.altboden].name:null;
+  const titel=`${weg==='beratung'&&st.beratung==='fachmarkt'?'📅 '+terminText()+' – ':''}${st.vorname} ${st.nachname} – ${l.ort} (${st.plz}) – ${WEG_NAME[weg]}`;
+  const zeilen=[`**KONTAKT** ${st.vorname} ${st.nachname}`.trim(),`Tel: ${st.telefon||'–'} · E-Mail: ${st.email||'–'}`,`${st.plz} ${l.ort}${st.strasseOk?', '+st.strasse+' '+st.hausnr:''} · ca. ${l.fahrt} km Fahrweg · ${l.kreis.name}`,'',`**WEG** ${WEG_NAME[weg]}`];
+  if(st.besitz) zeilen.push(`Boden schon? ${({nein:'Nein',bj:'Bei Bodenjäger ausgesucht',fremd:'Woanders gekauft – Hinweis gezeigt, will bei uns aussuchen'})[st.besitz]}`);
+  if(st.bodenart) zeilen.push(`Bodenart: ${VERLEGUNG[st.bodenart].name} · Fläche: ${st.flaeche} m²`);
+  if(ab) zeilen.push(`Altboden: ${ab}`);
+  if(st.produkt||st.produktText) zeilen.push(`Ausgesuchter Boden: ${st.produkt?st.produkt.name:st.produktText+' (frei eingegeben)'}`);
+  if(weg==='preis'){const r=preisrahmen();zeilen.push(`Extras: ${[st.sockel?'Sockelleisten':null,st.stufen?st.stufen+' Stufen':null,st.tueren?st.tueren+' Türen':null].filter(Boolean).join(', ')||'–'}`,st.produkt?null:`Preisklasse: ${KLASSEN[st.klasse]}`,`Genannter Preisrahmen: ${eur(r.gMin)} – ${eur(r.gMax)}`,'',`**KALKULATION (intern, nicht für den Kunden)**`,...r.posten.map(p=>`${p.name}: ${p.min===p.max?eur(p.min):eur(p.min)+' – '+eur(p.max)}`),`Boden: ${eur(r.mMin)} – ${eur(r.mMax)}`);}
+  if(st.zeitraum) zeilen.push(`Zeitraum: ${({asap:'So schnell wie möglich','1-3':'1–3 Monate','3-6':'3–6 Monate',offen:'Noch offen'})[st.zeitraum]}`);
+  if(weg==='aufmass') zeilen.push(`Wunschböden: ${[st.produkt?st.produkt.name:null,...st.wunsch,st.empfehlung?'+ Empfehlung':null].filter(Boolean).join(', ')}`,`BEZAHLT: ${eur(l.kreis.aufmass)} – Artikel ${l.kreis.aufmassArt} – ${({paypal:'PayPal',karte:'Karte',klarna:'Klarna'})[st.zahlart]}`);
+  if(weg==='beratung') zeilen.push(`Beratung: ${({telefon:'Rückruf',fachmarkt:'Termin im Fachmarkt',whatsapp:'WhatsApp'})[st.beratung]}${st.rueckruf&&st.beratung==='telefon'?' · '+st.rueckruf:''}${st.beratung==='fachmarkt'?' · '+terminText():''}`);
+  zeilen.push('',`**QUELLE** ${st.quelle}`);
+
+  let liste='',plan='';
+  if(weg==='beratung'&&st.beratung==='fachmarkt') liste=['Kunde kommt am '+terminText()+' → Karte öffnen','Passende Böden bereitlegen','Bodenart / Wunsch?','Räume und ca. m²?','Was liegt aktuell? Entfernen?','Treppe? Türen?','Wann soll verlegt werden? (ab KW '+VERLEGE_AB_KW+')','Nächster Schritt: Aufmaß gebucht / später'];
+  else if(weg==='beratung') liste=['Bodenart / Wunsch?','Räume und ca. m²?','Was liegt aktuell? Entfernen?','Treppe? Türen?','Wann soll verlegt werden? (ab KW '+VERLEGE_AB_KW+')','Budget-Rahmen?','Boden schon gesehen? Fachmarkt oder Musterbox anbieten','Nächster Schritt: Aufmaß gebucht / Fachmarkttermin / später'];
+  if(weg==='aufmass') liste=['Termin vereinbaren','Dielen einpacken: '+[st.produkt?st.produkt.name:null,...st.wunsch,st.empfehlung?'Empfehlung':null].filter(Boolean).join(', '),'Aufmaß durchführen','Angebot in SAP erstellen (A000x gutschreiben)'];
+  if(weg==='preis'){ liste=['Preisrahmen-Mail ist raus (automatisch)']; if(stufe!=='C') liste.push('Tag 2: anrufen und Aufmaß anbieten');
+    plan=['Sofort: Mail mit Preisrahmen und Link „Aufmaß buchen“',stufe!=='C'?'Tag 2: Anruf (Lead-Stufe '+stufe+')':'Kein Anruf (Lead-Stufe C)','Tag 3: Mail „Boden in echt sehen“ – Fachmarkt oder Musterbox','Tag 7: Mail Erinnerung Aufmaß','Tag 14: ohne Reaktion → Liste „Später“']; }
+
+  const meld = weg==='aufmass'
+    ? [`Meta + Google: Kauf „Aufmaß gebucht“ mit Wert ${eur(l.kreis.aufmass)} (Optimierungsziel)`,'Zusätzlich: Anfrage (Lead)']
+    : [`Meta + Google: Anfrage (Lead) mit Wert ${({A:3,B:2,C:1})[stufe]} · Weg: ${WEG_NAME[weg]}`, st.beratung==='fachmarkt'?'Zusätzlich: „Termin im Fachmarkt gebucht“ (Schedule)':null].filter(Boolean);
+
+  return `<div class="team"><h3>Team-Ansicht (Trello)</h3>
+    <div class="labels"><span class="lbl ${stufe.toLowerCase()}">Lead-Stufe ${stufe}</span><span class="lbl weg">${WEG_NAME[weg]}</span>${weg==='beratung'&&st.beratung==='fachmarkt'?'<span class="lbl rot">Termin Fachmarkt</span>':''}${weg==='aufmass'?'<span class="lbl rot">Aufmaß bezahlt</span>':''}</div>
+    <div class="trello-titel">${esc(titel)}</div>
+    <div style="font-size:13px;color:var(--mid);margin-bottom:8px">Liste: ${weg==='aufmass'?'Aufmaß bezahlt – Termin vereinbaren':st.beratung==='fachmarkt'?'Termin vereinbart':'Neu'}${st.beratung==='fachmarkt'&&weg==='beratung'?` · Fälligkeitsdatum: ${terminText()}`:''}</div>
+    <pre class="karte-text">${esc(zeilen.join('\n'))}</pre>
+    <div class="cl"><b>Checkliste${weg==='beratung'?(st.beratung==='fachmarkt'?' für die Beratung im Fachmarkt':' fürs Gespräch'):''}</b><ul>${liste.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+    ${plan?`<div class="cl"><b>Automatisches Nachfassen</b><ul>${plan.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+    <div class="meld">${meld.map(x=>`<span>📊 ${esc(x)}</span>`).join('')}</div>
+    <button type="button" class="btn rahmen" style="margin-top:14px" data-aktion="neu">Neue Anfrage durchspielen</button></div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rendern und Navigation
+// ─────────────────────────────────────────────────────────────────────────────
+const karte=document.getElementById('karte'),extra=document.getElementById('extra'),unten=document.getElementById('unten'),weiterBtn=document.getElementById('weiter');
+const wert=v=>typeof v==='function'?v():v;
+let modus='frage'; // frage | ergebnis | danke
+
+function render(){
+  const id=verlauf[verlauf.length-1];
+  const pfad=aktuellerPfad();
+  const pos=pfad.indexOf(id)+1;
+  document.getElementById('zurueck').style.visibility=(verlauf.length>1||modus!=='frage')&&modus!=='danke'?'visible':'hidden';
+  if(modus!=='frage'){
+    document.getElementById('fs-text').innerHTML='<b>Fertig</b>';document.getElementById('fs-weg').textContent=WEG_NAME[st.weg]||'';
+    document.getElementById('fs-bar').style.width='100%';
+    karte.innerHTML=`<div class="koerper" style="margin-top:0">${modus==='ergebnis'?ergebnisPreis():danke()}</div>`;
+    extra.innerHTML=teamAnsicht();unten.hidden=true;window.scrollTo({top:0,behavior:'smooth'});return;
+  }
+  const s=SCREENS[id];
+  document.getElementById('fs-text').innerHTML=st.weg?`Schritt <b>${pos}</b> von ${pfad.length}`:`Schritt <b>${pos}</b>`;
+  document.getElementById('fs-weg').textContent=st.weg?WEG_NAME[st.weg]:'';
+  document.getElementById('fs-bar').style.width=(st.weg?pos/(pfad.length+1)*100:pos*8)+'%';
+  const kicker=wert(s.kicker), hinweis=wert(s.hinweis);
+  karte.innerHTML=`${kicker?`<p class="kicker">${kicker}</p>`:''}<h${id==='plz'?1:2}>${wert(s.titel)}</h${id==='plz'?1:2}>${hinweis?`<p class="hinweis">${hinweis}</p>`:''}<div class="koerper">${s.body()}</div>`;
+  extra.innerHTML=id==='plz'?document.getElementById('tpl-stimmen').innerHTML:'';
+  const zeigeBtn=!s.auto||(s.autoWenn&&!s.autoWenn());
+  unten.hidden=!zeigeBtn;
+  weiterBtn.textContent=wert(s.btn)||'Weiter';
+  weiterBtn.disabled=!s.weiter();
+  document.getElementById('unten-hinweis').textContent=wert(s.unten)||'';
+  document.getElementById('unten-hinweis').hidden=!wert(s.unten);
+  // Fokus aufs erste Eingabefeld (nicht am Handy aufspringen lassen bei Kacheln)
+  const erstes=karte.querySelector('input[type=text],input[type=email],input[type=tel]');
+  if(erstes&&id!=='zahlung'&&!erstes.value) setTimeout(()=>erstes.focus({preventScroll:true}),50);
+}
+
+function weiter(){
+  const id=verlauf[verlauf.length-1], s=SCREENS[id];
+  if(!s.weiter()) return;
+  if(s.pruefe){const e=s.pruefe();karte.querySelectorAll('.fehler').forEach(f=>f.textContent='');Object.entries(e).forEach(([k,m])=>{const f=document.getElementById('f-'+k);if(f)f.textContent=m;});
+    if(Object.keys(e).length){const f=karte.querySelector('.fehler:not(:empty)');f&&f.scrollIntoView({behavior:'smooth',block:'center'});return;}}
+  const pfad=aktuellerPfad(), i=pfad.indexOf(id);
+  if(i===pfad.length-1){ modus=st.weg==='preis'?'ergebnis':'danke'; render(); return; }
+  verlauf.push(pfad[i+1]); render(); window.scrollTo({top:0,behavior:'smooth'});
+}
+function zurueck(){
+  if(modus!=='frage'){modus='frage';render();return;}
+  if(verlauf.length>1){verlauf.pop();render();}
+}
+
+// Eingaben
+karte.addEventListener('click',e=>{
+  const o=e.target.closest('[data-key]');
+  if(o&&!o.disabled){const k=o.dataset.key,v=o.dataset.val;
+    if(k==='weg'&&st.weg!==v){ st.weg=v; }
+    else if(k==='beratung'&&st.beratung!==v){ st.beratung=v; st.termin=null; }
+    else if(k==='besitz'&&st.besitz!==v){ st.besitz=v; st.produkt=null; st.produktText=''; }
+    else st[k]=v;
+    const id=verlauf[verlauf.length-1],s=SCREENS[id];
+    render();
+    if(s&&s.auto&&(!s.autoWenn||s.autoWenn())&&o.classList.contains('opt')) setTimeout(weiter,180);
+    if(k==='bodenart'&&id==='produkt'){const n=document.getElementById('produkt-suche');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}}
+    return;}
+  const q=e.target.closest('[data-qm]'); if(q){st.flaeche=+q.dataset.qm;render();return;}
+  const sp=e.target.closest('[data-step]'); if(sp){const k=sp.dataset.step;st[k]=Math.max(0,Math.min(40,st[k]+ +sp.dataset.d));render();return;}
+  const w=e.target.closest('[data-wunsch]'); if(w){const n=w.dataset.wunsch,i=st.wunsch.indexOf(n);if(i>-1)st.wunsch.splice(i,1);else if(st.wunsch.length<(st.produkt?2:3))st.wunsch.push(n);render();return;}
+  const tg=e.target.closest('[data-tag]'); if(tg){st.terminTag=tg.dataset.tag;render();return;}
+  const sl=e.target.closest('[data-slot]'); if(sl){st.termin=sl.dataset.slot;render();return;}
+  const pr=e.target.closest('[data-produkt]'); if(pr){st.produkt=SHOP_BEISPIELE.find(x=>x.name===pr.dataset.produkt);st.bodenart=st.produkt.art;render();setTimeout(weiter,250);return;}
+  const ad=e.target.closest('[data-adr]'); if(ad){st.strasse=ad.dataset.adr;st.strasseOk=true;render();setTimeout(()=>document.getElementById('hausnr')?.focus(),50);return;}
+  const a=e.target.closest('[data-aktion]'); if(a) aktion(a.dataset.aktion);
+});
+extra.addEventListener('click',e=>{const a=e.target.closest('[data-aktion]');if(a)aktion(a.dataset.aktion);});
+function aktion(was){
+  if(was==='zum-aufmass'){ // Umstieg mit allen Angaben: nur noch Wunschboden, Name, Zahlung
+    st.weg='aufmass';modus='frage';const pf=aktuellerPfad();verlauf=pf.slice(0,pf.indexOf('wunschboden')+1);render();window.scrollTo({top:0,behavior:'smooth'});}
+  if(was==='zur-beratung'){st.weg='beratung';st.beratung='fachmarkt';modus='frage';verlauf=['plz','weg','besitz','beratungsart','termin'];render();window.scrollTo({top:0,behavior:'smooth'});}
+  if(was==='produkt-weg'){st.produkt=null;st.bodenart=null;render();return;}
+  if(was==='adresse-weg'){st.strasseOk=false;st.hausnr='';render();return;}
+  if(was==='neu'){st={...LEER,wunsch:[]};verlauf=['plz'];modus='frage';render();window.scrollTo({top:0});}
+}
+karte.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='plz'){t.value=t.value.replace(/\D/g,'').slice(0,5);st.plz=t.value;
+    if(st.weg){const l=lage();if(l&&l.bekannt&&!l.imGebiet&&st.weg!=='beratung')st.weg=null;}
+    const pos=t.selectionStart;render();const n=document.getElementById('plz');n.focus();n.setSelectionRange(pos,pos);
+    if(st.plz.length===5&&lage()?.bekannt) setTimeout(()=>{if(verlauf[verlauf.length-1]==='plz')weiter();},700);
+    return;}
+  if(t.id==='qm'){st.flaeche=Math.max(0,Math.min(400,+t.value||0));document.getElementById('qm-r').value=Math.min(200,st.flaeche);weiterBtn.disabled=!SCREENS.flaeche.weiter();return;}
+  if(t.id==='qm-r'){st.flaeche=+t.value;document.getElementById('qm').value=st.flaeche;karte.querySelectorAll('[data-qm]').forEach(c=>c.classList.toggle('an',+c.dataset.qm===st.flaeche));return;}
+  if(t.id==='produkt-suche'){st.produktText=t.value;const v=document.getElementById('produkt-vorschlaege');if(v)v.innerHTML=produktVorschlaege();
+    const hatChips=!!karte.querySelector('[data-key="bodenart"]');if((st.produktText.trim().length>=3)!==hatChips){const pos=t.selectionStart;render();const n=document.getElementById('produkt-suche');n.focus();n.setSelectionRange(pos,pos);}
+    weiterBtn.disabled=!SCREENS.produkt.weiter();return;}
+  if(t.id==='strasse'){st.strasse=t.value;st.strasseOk=false;const v=document.getElementById('adr-vorschlaege');if(v)v.innerHTML=adressVorschlaege();const f=document.getElementById('f-strasse');if(f)f.textContent='';return;}
+  if(['vorname','nachname','telefon','email','hausnr'].includes(t.id)){st[t.id]=t.value;const f=document.getElementById('f-'+t.id);if(f)f.textContent='';return;}
+});
+karte.addEventListener('change',e=>{const t=e.target;
+  if(['datenschutz','widerruf','empfehlung','sockel'].includes(t.id)){st[t.id]=t.checked;const f=document.getElementById('f-'+t.id);if(f)f.textContent='';
+    if(t.id==='empfehlung'){weiterBtn.disabled=!SCREENS.wunschboden.weiter();weiterBtn.textContent=wert(SCREENS.wunschboden.btn);}}
+});
+weiterBtn.addEventListener('click',weiter);
+document.getElementById('zurueck').addEventListener('click',zurueck);
+render();
+})();
+</script>
+
+</body>
+</html>
