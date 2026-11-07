@@ -19,7 +19,7 @@ const DATA_ATTRS: Record<string, string> = {
   'data-desktop-position': 'left',
   'data-desktop-custom-width': '156',
   'data-desktop-enable-fadeout': 'false',
-  'data-disable-mobile': 'false',
+  'data-disable-mobile': 'true', // auf dem Handy aus: überdeckt Inhalte, Note steht dort im Footer und auf der Startseite
   'data-disable-trustbadge': 'false',
   'data-mobile-custom-width': '156',
   'data-mobile-disable-reviews': 'false',
@@ -68,6 +68,12 @@ export default function TrustedShops() {
     const applyPosition = () => {
       if (!container) return;
       const viewport = window.innerWidth;
+      // Auf dem Handy ausblenden (zusätzlich zu data-disable-mobile, falls das Widget eine andere Grenze nutzt)
+      if (viewport < MOBILE_BREAKPOINT) {
+        container.style.setProperty('display', 'none', 'important');
+      } else {
+        container.style.removeProperty('display');
+      }
       const offset = computeLeftOffset(viewport);
       container.style.removeProperty('right');
       if (offset === null) {
