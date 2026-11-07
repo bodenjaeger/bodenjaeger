@@ -315,7 +315,7 @@ export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
     <div className="w-full overflow-hidden py-[10px]">
       <div className="content-container">
       <div
-        className="w-full relative overflow-hidden bg-white rounded-2xl"
+        className="group/slider w-full relative overflow-hidden bg-white rounded-2xl"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onTouchStart={onTouchStart}
@@ -591,11 +591,11 @@ export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
           })}
         </div>
 
-        {/* Navigation Arrows */}
+        {/* Pfeile: auf dem Handy ausgeblendet (dort wischen + Punkte), am Rechner erst beim Überfahren sichtbar; per Tastatur sichtbar sobald fokussiert */}
         <button
           onClick={goToPrevSlide}
           disabled={isTransitioning}
-          className="absolute left-3 top-1/2 z-20 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation"
+          className="absolute left-3 top-1/2 z-20 -translate-y-1/2 hidden md:flex md:opacity-0 md:group-hover/slider:opacity-100 focus-visible:opacity-100 h-10 w-10 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-[opacity,background-color] duration-200 hover:bg-gray-100 active:bg-ash disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation"
           aria-label="Vorheriges Angebot"
         >
           <ChevronLeft className="h-6 w-6" aria-hidden="true" />
@@ -604,7 +604,7 @@ export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
         <button
           onClick={goToNextSlide}
           disabled={isTransitioning}
-          className="absolute right-3 top-1/2 z-20 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-colors hover:bg-gray-100 active:bg-ash disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation"
+          className="absolute right-3 top-1/2 z-20 -translate-y-1/2 hidden md:flex md:opacity-0 md:group-hover/slider:opacity-100 focus-visible:opacity-100 h-10 w-10 items-center justify-center rounded-lg border border-ash bg-white text-dark transition-[opacity,background-color] duration-200 hover:bg-gray-100 active:bg-ash disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation"
           aria-label="Nächstes Angebot"
         >
           <ChevronRight className="h-6 w-6" aria-hidden="true" />
@@ -622,7 +622,7 @@ export default function HeroSlider({ showPromo = false }: HeroSliderProps) {
                   ? 'bg-white w-6 md:w-8'
                   : 'bg-white/50 hover:bg-white/75 w-2.5 md:w-3'
               }`}
-              aria-label={`Go to slide ${index + 1}`}
+              aria-label={`Zu Angebot ${index + 1}`}
               aria-current={index === currentSlide ? 'true' : 'false'}
             />
           ))}

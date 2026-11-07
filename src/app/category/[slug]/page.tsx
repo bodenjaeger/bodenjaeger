@@ -15,7 +15,20 @@ import { klickVinylKategorietext, klickVinylName } from '@/lib/klick-vinyl';
 import { categorySeoDescription, categorySeoTitle } from '@/content/category-seo';
 
 // Interne Muster-Kategorie: nicht indexieren (steht auch nicht in der Sitemap)
-const NOINDEX_CATEGORIES = new Set(['muster']);
+const NOINDEX_CATEGORIES = new Set(['muster', 'alle-boeden']);
+
+/* „Alle Böden“: In der Musterbox-Kategorie stehen alle Böden (Vinyl, Laminat,
+   Parkett) mit den Bodenfiltern. Diese Seite zeigt genau diese Produkte, aber
+   mit eigener Überschrift und eigenem Text, damit Käufer nicht auf einer
+   Musterseite landen. Ziel der Optik- und Farbton-Chips der Startseite.
+   Vorerst nicht im Google-Index, weil der Inhalt der Musterseite gleicht. */
+const ALIAS_KATEGORIEN: Record<string, { quelle: string; name: string; text: string }> = {
+  'alle-boeden': {
+    quelle: 'musterbox',
+    name: 'Alle Böden',
+    text: '<p>Klick-Vinyl, Klebe-Vinyl, Laminat und Parkett auf einen Blick. Filter nach Optik, Farbton, Bodenart oder Marke und finde deinen Boden über alle Bodenarten hinweg. Jeder Boden auch als kostenloses Muster.</p>',
+  },
+};
 
 // Category mapping for display names (fallback)
 const categoryNames: Record<string, string> = {
@@ -54,13 +67,14 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/cat
   const filterAttributes = filterAttributesFor(slug);
   // Gefilterte Seiten sind Varianten der Kategorie und gehören nicht in den Google-Index
   const isFiltered = filterAttributes ? hasActiveFilters(parseActiveFilters(resolvedParams, filterAttributes)) : false;
-  const categoryData = await wooCommerceClient.getCategoryBySlug(slug).catch(() => null);
-  const name = klickVinylName(categoryData?.name || categoryNames[slug] || slug);
+  const alias = ALIAS_KATEGORIEN[slug];
+  const categoryData = alias ? null : await wooCommerceClient.getCategoryBySlug(slug).catch(() => null);
+  const name = alias?.name ?? klickVinylName(categoryData?.name || categoryNames[slug] || slug);
 
   return buildMetadata({
     // Ab Seite 2 „– Seite N“, damit Title/Description nicht Seite 1 doppeln
     title: categorySeoTitle(slug, name, pageSuffix(page)),
-    description: categorySeoDescription(name, klickVinylKategorietext(slug, categoryData?.description || null), pageSuffix(page)),
+    description: categorySeoDescription(name, alias?.text ?? klickVinylKategorietext(slug, categoryData?.description || null), pageSuffix(page)),
     path: isFiltered ? `/category/${slug}` : listingHref(`/category/${slug}`, page),
     ...((NOINDEX_CATEGORIES.has(slug) || isFiltered) && { robots: { index: false, follow: true } }),
   });
@@ -68,6 +82,9 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/cat
 
 export default async function CategoryPage({ params, searchParams }: PageProps<'/category/[slug]'>) {
   const { slug } = await params;
+  const alias = ALIAS_KATEGORIEN[slug];
+  /** Kategorie, aus der die Produkte kommen (bei „Alle Böden“ die Musterbox) */
+  const quelle = alias?.quelle ?? slug;
   const { showPromoTile, perPage } = getPromoTileListing(slug);
   const resolvedParams = await searchParams;
   const basePath = `/category/${slug}`;
@@ -82,7 +99,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<'
   // Try to fetch category information from WordPress
   let categoryData = null;
   try {
-    categoryData = await wooCommerceClient.getCategoryBySlug(slug);
+    categoryData = await wooCommerceClient.getCategoryBySlug(quelle);
     console.log('📁 Category data fetched:', categoryData ? `Found: ${categoryData.name}` : 'Not found');
   } catch (error) {
     console.error('Error fetching category:', error);
@@ -117,12 +134,12 @@ export default async function CategoryPage({ params, searchParams }: PageProps<'
         page: requested.page,
         sort: requested.sort,
       }
-    : await loadListingPage(basePath, slug, resolvedParams, perPage);
+    : await loadListingPage(basePath, quelle, resolvedParams, perPage);
 
   // Use WordPress name if available, otherwise use fallback
-  const categoryName = klickVinylName(categoryData?.name || categoryNames[slug] || slug);
-  const categoryDescription = klickVinylKategorietext(slug, categoryData?.description || null);
-  const categoryImage = categoryData?.image || null;
+  const categoryName = alias?.name ?? klickVinylName(categoryData?.name || categoryNames[slug] || slug);
+  const categoryDescription = alias?.text ?? klickVinylKategorietext(slug, categoryData?.description || null);
+  const categoryImage = alias ? null : categoryData?.image || null;
 
   const breadcrumb = buildBreadcrumbSchema([
     { name: 'Startseite', url: SITE_URL },
@@ -162,6 +179,7 @@ export async function generateStaticParams() {
     'zubehoer',
     'muster',
     'musterbox',
+    'alle-boeden',
     'teppichboden',
     // Marken-Kategorien
     'coretec',
