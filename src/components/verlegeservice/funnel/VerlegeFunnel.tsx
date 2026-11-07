@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import { Check, ChevronLeft, Loader2, MessageCircle, Phone, Ruler, ShoppingBag, Store, Calculator } from 'lucide-react'
 import { STANDORT } from '@/content/fachmarkt'
@@ -565,10 +566,10 @@ export default function VerlegeFunnel() {
         <>
           <Option gross aktiv={z.weg === 'beratung'} onClick={() => waehle('weg', 'beratung')} icon={<Phone className="h-5 w-5" />}
             titel="Persönlich beraten lassen" text="Telefonisch oder im Fachmarkt in Hückelhoven" />
-          <a href="/" className={`${KARTE} min-h-[84px] items-start ${KARTE_AUS}`}>
+          <Link href="/" className={`${KARTE} min-h-[84px] items-start ${KARTE_AUS}`}>
             <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-pale text-brand"><ShoppingBag className="h-5 w-5" /></span>
             <span className="flex flex-col gap-0.5"><span className="font-bold text-dark">Boden im Shop bestellen</span><span className="text-[13px] text-mid">Lieferung deutschlandweit, Set mit Dämmung und Sockelleiste</span></span>
-          </a>
+          </Link>
         </>
       )
       break
