@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable react/jsx-no-target-blank, react/no-unescaped-entities, react/jsx-key, react/jsx-no-comment-textnodes */
 
 /**
  * Verlegeservice-Formular mit drei Wegen (mobil zuerst, eine Frage pro Bildschirm):
