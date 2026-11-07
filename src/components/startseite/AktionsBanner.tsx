@@ -4,7 +4,7 @@ import { Fragment, useEffect, useState, type CSSProperties } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import type { StartseitenAktion } from '@/content/startseite-aktion';
+import type { AktionsGrafik, Klickflaeche, StartseitenAktion } from '@/content/startseite-aktion';
 
 /* Aktionsbanner als Vorlage für alle Geräte (Inhalt: src/content/startseite-aktion.ts).
    Optik wie das Black-Weeks-Motiv: schwarzer Grund mit rotem Schein,
@@ -44,7 +44,65 @@ function Punkt({ farbe }: { farbe: string }) {
   return <span style={{ color: farbe }}>.</span>;
 }
 
+function Klickflaechen({ flaechen }: { flaechen: Klickflaeche[] }) {
+  return (
+    <>
+      {flaechen.map((f) => (
+        <Link
+          key={f.label}
+          href={f.href}
+          aria-label={f.label}
+          className="absolute rounded-md transition-shadow hover:shadow-[0_0_0_2px_#fff,0_0_18px_rgba(255,42,42,.7)] focus-visible:shadow-[0_0_0_3px_#fff]"
+          style={{ left: `${f.links}%`, top: `${f.oben}%`, width: `${f.breite}%`, height: `${f.hoehe}%` }}
+        />
+      ))}
+    </>
+  );
+}
+
+/* Fertige Grafik exakt wie gestaltet, inkl. Animation. Desktop vollständig,
+   mobil oben/unten angeschnitten (niedriger), darunter Countdown und Button. */
+function GrafikBanner({ grafik, button, ende }: { grafik: AktionsGrafik; button: StartseitenAktion['button']; ende: string | null }) {
+  const { desktop, mobil } = grafik;
+  const verschiebung = (mobil.ausschnittOben / (mobil.hoehe - mobil.ausschnittHoehe)) * 100;
+  return (
+    <section aria-label="Aktuelle Aktion" className="content-container pt-4 lg:pt-6">
+      <div className="overflow-hidden rounded-2xl bg-black">
+        <div className="relative hidden md:block" style={{ aspectRatio: `${desktop.breite} / ${desktop.hoehe}` }}>
+          <Link href={button.href} aria-label={button.label} className="absolute inset-0">
+            <Image src={desktop.src} alt={grafik.alt} fill priority unoptimized={grafik.animiert} sizes="1400px" className="object-cover" />
+          </Link>
+          <Klickflaechen flaechen={desktop.klickflaechen} />
+        </div>
+        <div className="relative md:hidden" style={{ aspectRatio: `${mobil.breite} / ${mobil.ausschnittHoehe}` }}>
+          <Link href={button.href} aria-label={button.label} className="absolute inset-0">
+            <Image
+              src={mobil.src}
+              alt={grafik.alt}
+              fill
+              priority
+              unoptimized={grafik.animiert}
+              sizes="100vw"
+              className="object-cover"
+              style={{ objectPosition: `50% ${verschiebung}%` }}
+            />
+          </Link>
+          <Klickflaechen flaechen={mobil.klickflaechen} />
+        </div>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 text-white md:hidden">
+          {ende ? <Restzeit ende={ende} /> : <span />}
+          <Link href={button.href} className="flex min-h-11 flex-shrink-0 items-center gap-1 rounded-lg bg-white px-4 text-sm font-bold text-dark">
+            Angebote
+            <ChevronRight className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function AktionsBanner({ aktion, ende }: { aktion: StartseitenAktion; ende: string | null }) {
+  if (aktion.grafik) return <GrafikBanner grafik={aktion.grafik} button={aktion.button} ende={ende} />;
   const a = aktion.akzent;
   const schild: CSSProperties = {
     borderColor: a,
