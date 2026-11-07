@@ -256,7 +256,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
 
   /** Beschreibung der Karte; mit Vorgang enthält der Aufmaß-Link die Karte, damit eine Buchung dort landet */
   const baueBeschreibung = (vorgang?: string): string => {
-    const link = aufmassLink(SITE_URL, {
+    // In der Vorschau auf die Vorschau verlinken, damit man den Link testen kann
+    const basis = process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : SITE_URL
+    const link = aufmassLink(basis, {
       plz: gebiet.plz,
       produktId: a.produkt?.id,
       bodenart: a.bodenart,
