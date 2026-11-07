@@ -1188,7 +1188,7 @@ export default function VerlegeFunnel() {
   const zeigeZurueck = !ergebnis ? verlauf.length > 1 : !!ergebnis.preisrahmen
 
   return (
-    <div ref={kopfRef} className="mx-auto w-full max-w-[560px] scroll-mt-24 px-4 pb-32 pt-4">
+    <div ref={kopfRef} className="mx-auto w-full max-w-[560px] scroll-mt-24 px-4 pb-12 pt-4">
       <div className="mb-3.5 flex min-h-10 items-center gap-3">
         <button type="button" onClick={zurueck} aria-label="Zurück"
           className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-ash bg-white hover:border-mid ${zeigeZurueck ? '' : 'invisible'}`}>
@@ -1220,6 +1220,15 @@ export default function VerlegeFunnel() {
               </div>
             )}
             {sendeFehler && <p className="mt-4 text-sm font-bold text-brand">{sendeFehler}</p>}
+            {button && (
+              <div className="mt-6">
+                <button type="button" onClick={button.onClick} disabled={!button.aktiv}
+                  className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-brand px-6 font-bold text-white hover:bg-[#c8161e] disabled:cursor-not-allowed disabled:opacity-50">
+                  {button.text}
+                </button>
+                {istLetzter && z.weg !== 'aufmass' && <p className="mt-1.5 text-center text-xs text-mid">Kostenlos und unverbindlich</p>}
+              </div>
+            )}
           </>
         )}
       </section>
@@ -1236,17 +1245,6 @@ export default function VerlegeFunnel() {
           document.body,
         )}
 
-      {button && !abschluss && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ash bg-white/95 px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3">
-          <div className="mx-auto max-w-[560px]">
-            <button type="button" onClick={button.onClick} disabled={!button.aktiv}
-              className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-brand px-6 font-bold text-white hover:bg-[#c8161e] disabled:cursor-not-allowed disabled:opacity-50">
-              {button.text}
-            </button>
-            {istLetzter && z.weg !== 'aufmass' && <p className="mt-1.5 text-center text-xs text-mid">Kostenlos und unverbindlich</p>}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
