@@ -9,7 +9,9 @@ import type { StartseitenAktion } from '@/content/startseite-aktion';
 /* Aktionsbanner als Vorlage für alle Geräte (Inhalt: src/content/startseite-aktion.ts).
    Optik wie das Black-Weeks-Motiv: schwarzer Grund mit rotem Schein,
    Leuchtschild, große Rabattzahl, Bodenart-Kacheln, weißer Button.
-   Alles echter Text, nur die Dielen sind ein Bild.
+   Alles echter Text, nur die Dielen sind ein Bild. Bewegung wie im Motiv
+   per CSS (globals.css, „Aktionsbanner“): Schild flackert an, Rabatt leuchtet
+   auf, Kacheln blinken nacheinander rot, Glanz über den Button. 7 s Schleife.
    Ab lg drei Spalten wie im Motiv, darunter gestapelt und kompakt. */
 
 function zweistellig(n: number) {
@@ -52,14 +54,14 @@ export default function AktionsBanner({ aktion, ende }: { aktion: StartseitenAkt
   const leuchtZahl: CSSProperties = { textShadow: `0 0 28px ${a}cc, 0 4px 0 rgba(0,0,0,.35)` };
 
   const schildElement = (klasse: string) => (
-    <p className={`inline-block rounded-md border-[3px] font-bold uppercase leading-none tracking-tight ${klasse}`} style={schild}>
+    <p className={`aktion-schild inline-block rounded-md border-[3px] font-bold uppercase leading-none tracking-tight ${klasse}`} style={schild}>
       {aktion.marke}
     </p>
   );
 
   const rabattElement = (klasse: { oben: string; gross: string; unten: string }) =>
     aktion.rabatt && (
-      <p className="font-bold leading-none">
+      <p className="aktion-rabatt font-bold leading-none">
         <span className={`block ${klasse.oben}`}>{aktion.rabatt.oben}</span>
         <span className={`block tracking-tight ${klasse.gross}`} style={leuchtZahl}>
           {aktion.rabatt.gross}
@@ -71,7 +73,7 @@ export default function AktionsBanner({ aktion, ende }: { aktion: StartseitenAkt
   const kacheln = (klasse: string) => (
     <ul className={`flex gap-2 ${klasse}`}>
       {aktion.links.map((l) => (
-        <li key={l.label} className="min-w-0 flex-1 lg:flex-none">
+        <li key={l.label} className="aktion-kachel min-w-0 flex-1 lg:flex-none">
           <Link
             href={l.href}
             className="flex h-10 -skew-x-6 items-center justify-center gap-1 rounded-md border border-white/20 bg-white/[0.06] px-3 text-sm font-bold uppercase transition-colors hover:border-white lg:h-12 lg:px-5 lg:text-base"
@@ -87,22 +89,27 @@ export default function AktionsBanner({ aktion, ende }: { aktion: StartseitenAkt
   const button = (
     <Link
       href={aktion.button.href}
-      className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-white px-6 text-base font-bold text-dark transition-colors hover:bg-ash lg:inline-flex lg:min-h-14 lg:text-lg"
+      className="relative flex min-h-12 items-center justify-center gap-2 overflow-hidden rounded-lg bg-white px-6 text-base font-bold text-dark transition-colors hover:bg-ash lg:inline-flex lg:min-h-14 lg:text-lg"
       style={{ boxShadow: `0 0 26px ${a}80` }}
     >
-      {aktion.button.label}
-      <ChevronRight className="h-5 w-5" strokeWidth={3} aria-hidden="true" />
+      {/* Lichtstreifen, der regelmäßig über den Button läuft */}
+      <span className="aktion-glanz pointer-events-none absolute inset-y-0 left-0 w-1/3" aria-hidden="true" />
+      <span className="relative">{aktion.button.label}</span>
+      <ChevronRight className="relative h-5 w-5" strokeWidth={3} aria-hidden="true" />
     </Link>
   );
 
   return (
     <section aria-label="Aktuelle Aktion" className="content-container pt-4 lg:pt-6">
       <div
-        className="relative overflow-hidden rounded-2xl text-white"
-        style={{
-          backgroundColor: aktion.hintergrund,
-          backgroundImage: `radial-gradient(ellipse 60% 70% at 58% 45%, ${a}40 0%, transparent 70%)`,
-        }}
+        className="aktion-banner relative overflow-hidden rounded-2xl text-white"
+        style={
+          {
+            '--akzent': a,
+            backgroundColor: aktion.hintergrund,
+            backgroundImage: `radial-gradient(ellipse 60% 70% at 58% 45%, ${a}40 0%, transparent 70%)`,
+          } as CSSProperties
+        }
       >
         {/* ── Mobil und Tablet ── */}
         <div className="flex flex-col items-center gap-3 px-4 py-5 text-center sm:px-8 lg:hidden">
