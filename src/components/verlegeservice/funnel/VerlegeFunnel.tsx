@@ -684,7 +684,7 @@ export default function VerlegeFunnel() {
         <>
           <Option gross aktiv={z.weg === 'aufmass'} onClick={() => waehle('weg', 'aufmass')} icon={<Ruler className="h-5 w-5" />}
             titel="Aufmaß mit deinem Wunschboden" text="Wir bringen deine 3 Favoriten als Großmuster mit, messen aus und machen dir ein genaues Angebot."
-            preis={aufmassPreis ?? undefined} badge="Wird bei Beauftragung gutgeschrieben" />
+            preis={aufmassPreis ?? undefined} badge="Bei Beauftragung komplett gutgeschrieben" />
           <Option gross aktiv={z.weg === 'preis'} onClick={() => waehle('weg', 'preis')} icon={<Calculator className="h-5 w-5" />}
             titel="Preisrahmen berechnen" text="Sofort eine Von-bis-Summe für Boden und Verlegung, kostenlos." />
           <Option gross aktiv={z.weg === 'beratung'} onClick={() => waehle('weg', 'beratung')} icon={<Phone className="h-5 w-5" />}
@@ -1055,7 +1055,7 @@ export default function VerlegeFunnel() {
               <dd className="font-bold tabular-nums">{aufmassPreis}</dd>
             </div>
             <div className="flex justify-between gap-3 border-t border-ash py-3 text-sm"><dt>Dein Wunschboden als Großmuster</dt><dd>{anzahl}×</dd></div>
-            <div className="flex justify-between gap-3 border-t border-ash py-3 text-sm text-success"><dt>Gutschrift bei Beauftragung</dt><dd>vollständig</dd></div>
+            <div className="flex justify-between gap-3 border-t border-ash py-3 text-sm font-bold text-success"><dt>Bei Beauftragung bekommst du zurück</dt><dd className="tabular-nums">{aufmassPreis}</dd></div>
             <div className="flex justify-between gap-3 border-t border-ash py-3"><dt>Jetzt zu zahlen <span className="text-sm text-mid">inkl. MwSt.</span></dt><dd className="font-bold tabular-nums">{aufmassPreis}</dd></div>
           </dl>
           <p className="text-[13px] text-mid">Kostenlos absagen oder verschieben bis 24 Stunden vor dem Termin.</p>
@@ -1148,12 +1148,17 @@ export default function VerlegeFunnel() {
         <p className="text-[13px] text-mid">{r.hinweise.join(' ')}</p>
         <p className="text-sm text-dark">Wir melden uns in Kürze bei dir. Oder du buchst gleich hier:</p>
         {aufmassPreis && (
-          <>
+          <div className="grid gap-3 rounded-xl border-2 border-success/30 bg-success/10 p-4">
+            <p className="flex gap-2.5 text-[15px] text-dark">
+              <Haken />
+              <span>
+                <b>Das Aufmaß kostet dich am Ende nichts:</b> Die {aufmassPreis} bekommst du bei Beauftragung komplett gutgeschrieben.
+              </span>
+            </p>
             <button type="button" onClick={zumAufmass} className="min-h-[52px] rounded-lg bg-brand px-6 font-bold text-white hover:bg-[#c8161e]">
               Aufmaß mit Wunschboden buchen · {aufmassPreis}
             </button>
-            <p className="-mt-2 text-center text-xs text-mid">Wird bei Beauftragung vollständig gutgeschrieben</p>
-          </>
+          </div>
         )}
         <button type="button" onClick={zurBeratung} className="min-h-[52px] rounded-lg border border-ash bg-white px-6 font-bold text-dark hover:border-mid">
           Lieber erst im Fachmarkt beraten lassen
