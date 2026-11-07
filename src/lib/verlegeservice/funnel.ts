@@ -233,7 +233,7 @@ export function pruefeKontakt(a: Pick<FunnelAnfrage, 'weg' | 'beratung' | 'vorna
   const e: Record<string, string> = {}
   if (a.vorname.trim().length < 2) e.vorname = 'Bitte gib deinen Vornamen ein.'
   if (a.nachname.trim().length < 2) e.nachname = 'Bitte gib deinen Nachnamen ein.'
-  const telefonPflicht = a.weg === 'aufmass' || (a.weg === 'beratung' && a.beratung !== 'fachmarkt')
+  const telefonPflicht = a.weg === 'aufmass' || a.weg === 'preis' || (a.weg === 'beratung' && a.beratung !== 'fachmarkt')
   const telefonLeer = a.telefon.replace(/\s/g, '') === '' || a.telefon.replace(/\s/g, '') === '+49'
   if (telefonPflicht || !telefonLeer) {
     const t = pruefeTelefon(a.telefon)

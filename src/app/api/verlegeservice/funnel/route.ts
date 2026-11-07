@@ -293,7 +293,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
           : fachmarkt
             ? `Kunde kommt **${termin}** in den Fachmarkt – keine Bestätigung nötig`
             : a.beratung === 'whatsapp'
-              ? 'Per WhatsApp melden'
+              ? 'Kunde schreibt uns per WhatsApp – dort antworten'
               : `Zurückrufen${a.rueckruf && a.rueckruf !== 'egal' ? ` – **${RUECKRUF_NAME[a.rueckruf].toLowerCase()}**` : ''}`
 
     const ablauf =
@@ -304,7 +304,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
           : fachmarkt
             ? ['Passende Böden bereitlegen', 'Nach dem Termin: Aufmaß-Link schicken oder → **⏳ Wartet auf Kunde**']
             : a.beratung === 'whatsapp'
-              ? ['WhatsApp schicken', 'Fragen beantworten', 'Aufmaß gewünscht → WhatsApp „Aufmaß-Link“ schicken']
+              ? ['Im WhatsApp-Chat antworten (seine Nachricht enthält die Vorgangsnummer)', 'Kam keine Nachricht? Selbst schreiben über den Link oben', 'Aufmaß gewünscht → WhatsApp „Aufmaß-Link“ schicken']
               : ['Anrufen', perWhatsapp ? 'Nicht erreicht → WhatsApp „nicht erreicht“ und Karte nach **📞 Nicht erreicht**' : 'Nicht erreicht → Karte nach **📞 Nicht erreicht**', 'Aufmaß gewünscht → Aufmaß-Link schicken']
 
     const z: string[] = []

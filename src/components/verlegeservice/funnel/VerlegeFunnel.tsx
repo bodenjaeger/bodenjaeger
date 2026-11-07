@@ -11,9 +11,11 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
-import { Check, ChevronLeft, Loader2, MessageCircle, Phone, Ruler, ShoppingBag, Store, Calculator } from 'lucide-react'
+import { Check, ChevronLeft, MessageCircle, Phone, Ruler, ShoppingBag, Store, Calculator } from 'lucide-react'
+import BrandLoader from '@/components/BrandLoader'
 import { STANDORT } from '@/content/fachmarkt'
 import { formatEuro } from '@/lib/aufmass-kreise'
 import { BODENARTEN, ALTBOEDEN, type AltbodenKey, type BodenartKey } from '@/lib/verlegeservice/montage'
@@ -134,6 +136,14 @@ function pfadFuer(z: Zustand): ScreenId[] {
   return p
 }
 
+interface GespeicherterVorgang {
+  v: string
+  name?: string
+  email?: string
+  tel?: string
+}
+const personKey = (vor: string, nach: string) => `${vor} ${nach}`.trim().toLowerCase().replace(/\s+/g, ' ')
+
 // ── Kleine Bausteine ─────────────────────────────────────────────────────────
 
 const KARTE = 'flex w-full items-center gap-3.5 rounded-xl border-2 bg-white px-4 py-3 text-left transition-colors'
@@ -247,9 +257,21 @@ export default function VerlegeFunnel() {
   const [strassen, setStrassen] = useState<string[]>([])
   const [strassenStatus, setStrassenStatus] = useState<'leer' | 'laedt' | 'fertig'>('leer')
   const [ergebnis, setErgebnis] = useState<FunnelErfolg | null>(null)
-  // Karte der ersten Anfrage – eine zweite Anfrage im selben Besuch aktualisiert sie
-  const vorgang = useRef<string | undefined>(undefined)
+  // Karte der ersten Anfrage – eine zweite Anfrage derselben Person im selben
+  // Besuch aktualisiert sie. Andere Person (Name, Mail und Nummer anders) → neue Karte.
+  const vorgangGespeichert = useRef<GespeicherterVorgang | null>(null)
+  const vorgangFuer = (zst: Zustand): string | undefined => {
+    const g = vorgangGespeichert.current
+    if (!g) return undefined
+    if (!g.name) return g.v
+    const gleich =
+      g.name === personKey(zst.vorname, zst.nachname) ||
+      (!!g.email && g.email === zst.email.trim().toLowerCase()) ||
+      (!!g.tel && g.tel.length > 6 && g.tel === zst.telefon.replace(/\D/g, ''))
+    return gleich ? g.v : undefined
+  }
   const [sendet, setSendet] = useState(false)
+  const [leitetWeiter, setLeitetWeiter] = useState(false)
   const [sendeFehler, setSendeFehler] = useState<string>()
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const turnstileRef = useRef<TurnstileInstance | null>(null)
@@ -274,7 +296,8 @@ export default function VerlegeFunnel() {
 
   useEffect(() => {
     try {
-      vorgang.current = sessionStorage.getItem('vs-vorgang') ?? undefined
+      const roh = sessionStorage.getItem('vs-vorgang')
+      if (roh) vorgangGespeichert.current = JSON.parse(roh) as GespeicherterVorgang
     } catch {
       /* kein Speicher verfügbar */
     }
@@ -288,9 +311,10 @@ export default function VerlegeFunnel() {
     if (q.get('weg') !== 'aufmass' || !/^\d{5}$/.test(plz)) return
     const v = q.get('v')
     if (v) {
-      vorgang.current = v
+      // Aus dem Aufmaß-Link: gehört sicher zu dieser Anfrage, ohne Abgleich
+      vorgangGespeichert.current = { v }
       try {
-        sessionStorage.setItem('vs-vorgang', v)
+        sessionStorage.setItem('vs-vorgang', JSON.stringify({ v }))
       } catch {
         /* ohne Speicher: gilt bis zum Neuladen */
       }
@@ -525,7 +549,7 @@ export default function VerlegeFunnel() {
       datenschutz: z.datenschutz,
       tracking: sammleTrackingKontext(startZeit.current) as VsTracking,
       turnstileToken: turnstileToken ?? undefined,
-      vorgang: vorgang.current,
+      vorgang: vorgangFuer(z),
     }
     try {
       const res = await fetch('/api/verlegeservice/funnel', {
@@ -552,14 +576,24 @@ export default function VerlegeFunnel() {
         })
       }
       if (json.vorgang) {
-        vorgang.current = json.vorgang
+        const g: GespeicherterVorgang = { v: json.vorgang, name: personKey(z.vorname, z.nachname), email: z.email.trim().toLowerCase(), tel: z.telefon.replace(/\D/g, '') }
+        vorgangGespeichert.current = g
         try {
-          sessionStorage.setItem('vs-vorgang', json.vorgang)
+          sessionStorage.setItem('vs-vorgang', JSON.stringify(g))
         } catch {
           /* ohne Speicher: gilt nur bis zum Neuladen */
         }
       }
+      // Beratung per WhatsApp: direkt in den Chat mit uns, nicht warten
+      if (z.weg === 'beratung' && z.beratung === 'whatsapp' && json.leadId) {
+        setErgebnis(json)
+        setLeitetWeiter(true)
+        setTimeout(() => setLeitetWeiter(false), 4000)
+        window.location.href = waAnUns(json.leadId, 'Ich möchte mich zu meinem Bodenprojekt beraten lassen:')
+        return
+      }
       if (json.zahlungUrl) {
+        setLeitetWeiter(true)
         const ziel = json.zahlungUrl
         setTimeout(() => {
           window.location.href = ziel
@@ -626,7 +660,7 @@ export default function VerlegeFunnel() {
               className="min-h-[60px] w-full rounded-lg border-2 border-ash bg-white px-4 text-center text-[26px] font-bold tracking-[0.12em] text-dark outline-none focus:ring-[3px] focus:ring-brand/30"
             />
           </div>
-          {plzStatus === 'laedt' && <p className="text-sm text-mid">Wir prüfen deinen Standort …</p>}
+          {plzStatus === 'laedt' && <p className="flex items-center gap-2.5 text-sm text-mid"><BrandLoader className="h-7 w-7" label="Standort wird geprüft" />Wir prüfen deinen Standort …</p>}
           {plzStatus === 'unbekannt' && <Hinweis ton="warn" titel="Diese PLZ kennen wir nicht.">Bitte prüfe die Eingabe.</Hinweis>}
           {plzStatus === 'ok' && plzInfo && plzInfo.imGebiet && (
             <Hinweis ton="gut" titel="Super, wir verlegen bei dir.">
@@ -698,7 +732,7 @@ export default function VerlegeFunnel() {
           <Feld id="vf-produkt" label="Produktname oder Dekor" wert={z.produktText} onChange={(v) => set('produktText', v)} auto="off" placeholder="z. B. Eiche natur" />
           {z.produktText.trim().length >= 2 && (
             <div className="grid max-h-[320px] overflow-y-auto overscroll-contain rounded-lg border border-ash bg-white">
-              {sucht && !treffer.length && <p className="px-3.5 py-3 text-sm text-mid">Suche läuft …</p>}
+              {sucht && !treffer.length && <p className="flex items-center gap-2.5 px-3.5 py-3 text-sm text-mid"><BrandLoader className="h-7 w-7" label="Suche läuft" />Suche läuft …</p>}
               {!sucht && !treffer.length && <p className="px-3.5 py-3 text-sm text-mid">Nichts gefunden. Probier einen anderen Begriff.</p>}
               {treffer.map((b) => (
                 <button key={b.id} type="button"
@@ -800,7 +834,7 @@ export default function VerlegeFunnel() {
       const spanne = (k: 'guenstig' | 'mittel' | 'premium') => (klassen ? `ca. ${klassen[k][0]}–${klassen[k][1]} €/m²` : undefined)
       inhalt = (
         <>
-          {klassen === undefined && <p className="text-sm text-mid">Preise werden geladen …</p>}
+          {klassen === undefined && <p className="flex items-center gap-2.5 text-sm text-mid"><BrandLoader className="h-7 w-7" label="Preise werden geladen" />Preise werden geladen …</p>}
           <Option aktiv={z.klasse === 'guenstig'} onClick={() => waehle('klasse', 'guenstig')} titel="Günstig" text={spanne('guenstig')} />
           <Option aktiv={z.klasse === 'mittel'} onClick={() => waehle('klasse', 'mittel')} titel="Mittelklasse" text={spanne('mittel')} />
           <Option aktiv={z.klasse === 'premium'} onClick={() => waehle('klasse', 'premium')} titel="Premium" text={spanne('premium')} />
@@ -874,7 +908,7 @@ export default function VerlegeFunnel() {
                 </div>
               )}
               <div className="grid max-h-[320px] overflow-y-auto overscroll-contain rounded-lg border border-ash bg-white">
-                {auswahlLaedt && !auswahl.length && <p className="px-3.5 py-3 text-sm text-mid">Böden werden geladen …</p>}
+                {auswahlLaedt && !auswahl.length && <p className="flex items-center gap-2.5 px-3.5 py-3 text-sm text-mid"><BrandLoader className="h-7 w-7" label="Böden werden geladen" />Böden werden geladen …</p>}
                 {!auswahlLaedt && !auswahl.length && (
                   <p className="px-3.5 py-3 text-sm text-mid">{suche ? `Zu „${auswahlSuche.trim()}" haben wir nichts gefunden. Probier einen anderen Begriff.` : 'Gerade keine Böden verfügbar.'}</p>
                 )}
@@ -957,7 +991,7 @@ export default function VerlegeFunnel() {
           : z.weg === 'preis' ? 'Deinen Preisrahmen siehst du gleich hier. Bei Fragen melden wir uns kurz bei dir.'
             : fachmarkt ? `Dein Termin: ${terminText(z.termin)}.`
               : 'Mehr brauchen wir nicht. Alles Weitere besprechen wir persönlich.'
-      const telefonOptional = z.weg === 'preis' || fachmarkt
+      const telefonOptional = fachmarkt
       inhalt = (
         <>
           <div className="grid grid-cols-2 gap-2.5">
@@ -1048,7 +1082,7 @@ export default function VerlegeFunnel() {
                     ))}
                   </div>
                 )}
-                {strassenStatus === 'laedt' && strassen.length === 0 && <p className="text-[13px] text-mid">Suche Straßen in {z.plz} …</p>}
+                {strassenStatus === 'laedt' && strassen.length === 0 && <p className="flex items-center gap-2.5 text-[13px] text-mid"><BrandLoader className="h-6 w-6" label="Straßen werden gesucht" />Suche Straßen in {z.plz} …</p>}
                 {strassenStatus === 'fertig' && z.strasse.trim().length >= 3 && (
                   <p className="text-[13px] text-mid">
                     {strassen.length === 0 ? `Keine passende Straße in ${z.plz} gefunden. Prüf bitte die Schreibweise oder ` : 'Deine Straße ist nicht dabei? '}
@@ -1088,10 +1122,10 @@ export default function VerlegeFunnel() {
 
   // ── Abschluss-Ansichten ────────────────────────────────────────────────────
   /** Kunde schreibt uns selbst – mit Vorgangsnummer, damit wir die Nachricht direkt zuordnen */
-  const waAnUns = (leadId: string) =>
-    whatsappLink(BJ_WHATSAPP, `Hallo Bodenjäger, hier ist ${z.vorname.trim()} ${z.nachname.trim()} (Anfrage ${leadId}). Ich habe eine Frage:`)
+  const waAnUns = (leadId: string, anliegen = 'Ich habe eine Frage:') =>
+    whatsappLink(BJ_WHATSAPP, `Hallo Bodenjäger, hier ist ${z.vorname.trim()} ${z.nachname.trim()} (Anfrage ${leadId}). ${anliegen}`)
   const WaKnopf = ({ leadId, text }: { leadId: string; text: string }) => (
-    <a href={waAnUns(leadId)} target="_blank" rel="noopener noreferrer"
+    <a href={waAnUns(leadId, z.beratung === 'whatsapp' && z.weg === 'beratung' ? 'Ich möchte mich zu meinem Bodenprojekt beraten lassen:' : undefined)} target="_blank" rel="noopener noreferrer"
       className="flex min-h-[52px] items-center justify-center gap-2 rounded-lg border border-ash bg-white px-6 font-bold text-dark hover:border-mid">
       <MessageCircle className="h-5 w-5 text-[#25D366]" aria-hidden="true" />
       {text}
@@ -1190,12 +1224,23 @@ export default function VerlegeFunnel() {
         )}
       </section>
 
+      {(sendet || leitetWeiter) &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-white/85 backdrop-blur-sm" role="status">
+            <BrandLoader className="h-16 w-16" label="Wird gesendet" />
+            <p className="font-bold text-dark">
+              {z.weg === 'aufmass' ? 'Du wirst zur Zahlung weitergeleitet …' : z.beratung === 'whatsapp' && z.weg === 'beratung' ? 'WhatsApp wird geöffnet …' : 'Einen Moment …'}
+            </p>
+          </div>,
+          document.body,
+        )}
+
       {button && !abschluss && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ash bg-white/95 px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3">
           <div className="mx-auto max-w-[560px]">
             <button type="button" onClick={button.onClick} disabled={!button.aktiv}
               className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-brand px-6 font-bold text-white hover:bg-[#c8161e] disabled:cursor-not-allowed disabled:opacity-50">
-              {sendet && <Loader2 className="h-5 w-5 animate-spin" />}
               {button.text}
             </button>
             {istLetzter && z.weg !== 'aufmass' && <p className="mt-1.5 text-center text-xs text-mid">Kostenlos und unverbindlich</p>}
