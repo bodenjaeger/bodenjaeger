@@ -140,24 +140,29 @@ export async function karteAnlegen(k: NeueKarte): Promise<string | null> {
 }
 
 async function checklistenAnlegen(z: Zugang, cardId: string, checklisten: Array<{ name: string; punkte: string[] }>): Promise<void> {
-  for (const cl of checklisten) {
-    try {
-      const c = await fetch(`${API}/cards/${cardId}/checklists?${auth(z)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: cl.name }),
-      }).then((r) => r.json() as Promise<{ id: string }>)
-      for (const punkt of cl.punkte) {
-        await fetch(`${API}/checklists/${c.id}/checkItems?${auth(z)}`, {
+  // Listen und Punkte parallel anlegen; die Reihenfolge halten feste Positionen
+  await Promise.all(
+    checklisten.map(async (cl, i) => {
+      try {
+        const c = await fetch(`${API}/cards/${cardId}/checklists?${auth(z)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: punkt.slice(0, 500), pos: 'bottom' }),
-        })
+          body: JSON.stringify({ name: cl.name, pos: i + 1 }),
+        }).then((r) => r.json() as Promise<{ id: string }>)
+        await Promise.all(
+          cl.punkte.map((punkt, j) =>
+            fetch(`${API}/checklists/${c.id}/checkItems?${auth(z)}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: punkt.slice(0, 500), pos: (j + 1) * 1024 }),
+            }),
+          ),
+        )
+      } catch (e) {
+        console.error('[verlegeservice/trello] Checkliste fehlgeschlagen:', e)
       }
-    } catch (e) {
-      console.error('[verlegeservice/trello] Checkliste fehlgeschlagen:', e)
-    }
-  }
+    }),
+  )
 }
 
 /**
@@ -192,7 +197,7 @@ export async function karteAktualisieren(cardId: string, k: NeueKarte, kommentar
     const alt = await fetch(`${API}/cards/${cardId}/checklists?fields=id&${auth(z)}`).then((r) =>
       r.ok ? (r.json() as Promise<Array<{ id: string }>>) : [],
     )
-    for (const c of alt) await fetch(`${API}/checklists/${c.id}?${auth(z)}`, { method: 'DELETE' })
+    await Promise.all(alt.map((c) => fetch(`${API}/checklists/${c.id}?${auth(z)}`, { method: 'DELETE' })))
     await checklistenAnlegen(z, cardId, k.checklisten ?? [])
     await fetch(`${API}/cards/${cardId}/actions/comments?${auth(z)}&text=${encodeURIComponent(kommentar)}`, { method: 'POST' })
     return true

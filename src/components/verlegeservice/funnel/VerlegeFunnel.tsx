@@ -988,22 +988,20 @@ export default function VerlegeFunnel() {
       titel = z.weg === 'aufmass' ? 'Deine Kontaktdaten' : z.weg === 'preis' ? 'Fast geschafft: Wer bist du?' : fachmarkt ? 'Für wen ist der Termin?' : z.beratung === 'whatsapp' ? 'Fast geschafft: Wer bist du?' : 'Wie erreichen wir dich?'
       hinweis =
         z.weg === 'aufmass' ? 'Damit wir den Termin mit dir abstimmen können.'
-          : z.weg === 'preis' ? 'Deinen Preisrahmen siehst du gleich hier. Danach melden wir uns kurz per WhatsApp, falls du Fragen hast.'
-            : fachmarkt ? `Dein Termin: ${terminText(z.termin)}. Eine Nummer reicht, falls sich etwas ändert.`
+          : z.weg === 'preis' ? 'Deinen Preisrahmen siehst du gleich hier. Danach melden wir uns bei dir.'
+            : fachmarkt ? `Dein Termin: ${terminText(z.termin)}.`
               : z.beratung === 'whatsapp' ? 'Danach öffnet sich WhatsApp, du musst nur noch auf Senden tippen.'
                 : 'Mehr brauchen wir nicht. Alles Weitere besprechen wir persönlich.'
-      const telefonOptional = z.weg === 'beratung' && z.beratung === 'whatsapp'
+      const emailOptional = z.weg === 'beratung' && z.beratung === 'whatsapp'
       inhalt = (
         <>
           <div className="grid grid-cols-2 gap-2.5">
             <Feld id="vf-vorname" label="Vorname" wert={z.vorname} onChange={(v) => set('vorname', v)} auto="given-name" fehler={fehler.vorname} />
             <Feld id="vf-nachname" label="Nachname" wert={z.nachname} onChange={(v) => set('nachname', v)} auto="family-name" fehler={fehler.nachname} />
           </div>
-          {(z.weg !== 'beratung' || fachmarkt) && (
-            <Feld id="vf-email" optional={fachmarkt} label="E-Mail" typ="email" wert={z.email} onChange={(v) => set('email', v)} auto="email" fehler={fehler.email} />
-          )}
+          <Feld id="vf-email" optional={emailOptional} label="E-Mail" typ="email" wert={z.email} onChange={(v) => set('email', v)} auto="email" fehler={fehler.email} />
           <Feld id="vf-telefon" label={z.beratung === 'whatsapp' && z.weg === 'beratung' ? 'Handynummer (WhatsApp)' : 'Handynummer'} typ="tel" inputMode="tel"
-            wert={z.telefon} onChange={(v) => set('telefon', v)} auto="tel" optional={telefonOptional} fehler={fehler.telefon}
+            wert={z.telefon} onChange={(v) => set('telefon', v)} auto="tel" fehler={fehler.telefon}
             onBlur={() => {
               const roh = z.telefon.replace(/\s/g, '')
               if (!roh || roh === '+49') return
@@ -1047,7 +1045,7 @@ export default function VerlegeFunnel() {
     }
     case 'zahlung': {
       titel = 'Aufmaß buchen'
-      hinweis = 'Nach der Zahlung melden wir uns per WhatsApp oder Telefon und vereinbaren den Termin.'
+      hinweis = 'Nach der Zahlung melden wir uns bei dir und vereinbaren den Termin.'
       const anzahl = z.wunschboeden.length + (z.empfehlung ? 1 : 0) + (z.produkt ? 1 : 0)
       inhalt = (
         <>
@@ -1148,7 +1146,7 @@ export default function VerlegeFunnel() {
           <ul className="mt-2 grid gap-2.5">{r.enthalten.map((x) => <li key={x} className="flex gap-2.5 text-[15px]"><Haken />{x}</li>)}</ul>
         </div>
         <p className="text-[13px] text-mid">{r.hinweise.join(' ')}</p>
-        <p className="text-sm text-dark">Wir melden uns in Kürze per WhatsApp bei dir. Oder du buchst gleich hier:</p>
+        <p className="text-sm text-dark">Wir melden uns in Kürze bei dir. Oder du buchst gleich hier:</p>
         {aufmassPreis && (
           <>
             <button type="button" onClick={zumAufmass} className="min-h-[52px] rounded-lg bg-brand px-6 font-bold text-white hover:bg-[#c8161e]">

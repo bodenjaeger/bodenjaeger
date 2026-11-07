@@ -298,11 +298,11 @@ export const VS_ZAHLUNG = {
 /** Texte der Seite, auf die Stripe und PayPal nach der Zahlung zurückleiten. */
 export const VS_AUFMASS_BEZAHLT = {
   ueberschrift: (vorname: string) => (vorname ? `Danke, ${vorname}! Dein Aufmaß ist bezahlt.` : 'Danke! Dein Aufmaß ist bezahlt.'),
-  text: 'Wir melden uns per WhatsApp oder Telefon und vereinbaren den Termin für dein Aufmaß. Die Zahlungsbestätigung bekommst du per E-Mail.',
+  text: 'Wir melden uns bei dir und vereinbaren den Termin für dein Aufmaß. Die Zahlungsbestätigung bekommst du per E-Mail.',
   gutschrift: (preis: string) => `Bei Beauftragung schreiben wir dir ${preis} vollständig gut.`,
   boeden: (liste: string) => `Wir bringen ${liste} als Großmuster mit.`,
   schritte: [
-    'Wir melden uns per WhatsApp oder Telefon und vereinbaren deinen Aufmaßtermin.',
+    'Wir melden uns bei dir und vereinbaren deinen Aufmaßtermin.',
     'Aufmaß vor Ort: Wir messen aus und prüfen Untergrund, Türen und Übergänge.',
     'Du bekommst dein genaues Angebot mit Boden, Zubehör und Verlegung.',
     'Verlegung zum Wunschtermin und gemeinsame Abnahme.',

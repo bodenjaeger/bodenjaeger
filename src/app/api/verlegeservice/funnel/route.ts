@@ -173,7 +173,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
 
   // Adresse gegen das Straßenverzeichnis der PLZ prüfen. Nicht gefundene
   // Straßen (z. B. Neubaugebiet) werden angenommen, aber auf der Karte markiert.
-  const strasseGeprueft = a.weg === 'aufmass' ? await strasseBekannt(a.strasse, gebiet.plz, gebiet.ort) : null
+  // Unabhängige Abfragen gleichzeitig starten, damit der Kunde nicht wartet
+  const vorher = vorgangPruefen(a.vorgang)
+  const leadIdP = vorher ? Promise.resolve(vorher.leadId) : naechsteLeadId()
+  const angebotP = a.weg === 'aufmass' ? aufmassAngebot(a.plz) : Promise.resolve(null)
+  const strasseP = a.weg === 'aufmass' ? strasseBekannt(a.strasse, gebiet.plz, gebiet.ort) : Promise.resolve(null)
 
   // ── Produkt und Preisrahmen ──────────────────────────────────────────────
   let produktPreis: number | null = null
@@ -228,14 +232,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   }
 
   // ── Aufmaß-Angebot ───────────────────────────────────────────────────────
-  const angebot = a.weg === 'aufmass' ? await aufmassAngebot(a.plz) : null
+  const [angebot, strasseGeprueft] = await Promise.all([angebotP, strasseP])
   if (a.weg === 'aufmass' && !angebot) return fehler('Für diesen Standort können wir das Aufmaß nicht online buchen.')
 
   // ── Lead ─────────────────────────────────────────────────────────────────
   // Zweite Anfrage im selben Besuch (z. B. Preisrahmen → Aufmaß): dieselbe
   // Karte und dieselbe Lead-ID, damit nichts doppelt im Board landet.
-  const vorher = vorgangPruefen(a.vorgang)
-  const leadId = vorher?.leadId ?? (await naechsteLeadId())
+  const leadId = await leadIdP
   const stufe = leadStufe(a, Number.isFinite(kreis.bisKm), imGebiet)
   const name = `${a.vorname} ${a.nachname}`.trim()
   const termin = a.beratung === 'fachmarkt' ? terminText(a.termin) : ''
