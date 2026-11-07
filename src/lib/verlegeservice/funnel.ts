@@ -50,6 +50,8 @@ export interface FunnelAnfrage {
   empfehlung: boolean
   beratung: BeratungKey | null
   rueckruf: RueckrufKey | null
+  /** Kunde erlaubt Kontakt per WhatsApp (bei Beratung per WhatsApp automatisch) */
+  whatsapp: boolean
   /** „YYYY-MM-DDTHH:MM", Ortszeit Hückelhoven */
   termin: string | null
   vorname: string
@@ -160,6 +162,19 @@ export const istEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim(
 // Nummer bekommen.
 
 export const TELEFON_START = '+49 '
+
+/** WhatsApp-Nummer von Bodenjäger (ohne +) */
+export const BJ_WHATSAPP = '4915567017510'
+
+/** wa.me-Link mit fertigem Text. Klammern & Co. werden kodiert, damit Markdown-Links heil bleiben. */
+export function whatsappLink(nummerOhnePlus: string, text: string): string {
+  const kodiert = encodeURIComponent(text).replace(/[()'!*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
+  return `https://wa.me/${nummerOhnePlus}?text=${kodiert}`
+}
+
+/** „max mustermann“ → „Max Mustermann“ */
+export const grossAnfang = (s: string) =>
+  s.trim().split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
 export type TelefonPruefung = { ok: true; e164: string } | { ok: false; fehler: string }
 

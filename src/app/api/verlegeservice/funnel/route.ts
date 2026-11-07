@@ -16,10 +16,12 @@ import {
   istGueltigerTermin,
   leadStufe,
   pruefeKontakt,
+  grossAnfang,
   pruefeTelefon,
   pruefeZahlung,
   telefonAnzeige,
   terminText,
+  whatsappLink,
   type FunnelAnfrage,
   type FunnelAntwort,
   type ProduktWahl,
@@ -90,6 +92,7 @@ function normalisiere(r: Record<string, unknown>): FunnelAnfrage {
     wunschboeden: Array.isArray(r.wunschboeden) ? r.wunschboeden.map(produkt).filter((p): p is ProduktWahl => !!p).slice(0, 3) : [],
     empfehlung: r.empfehlung === true,
     beratung: eins(r.beratung, ['telefon', 'fachmarkt', 'whatsapp'] as const),
+    whatsapp: r.whatsapp === true || r.beratung === 'whatsapp',
     rueckruf: eins(r.rueckruf, ['egal', 'vormittags', 'mittags', 'nachmittags'] as const),
     termin: typeof r.termin === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(r.termin) ? r.termin : null,
     vorname: s(r.vorname, 80),
@@ -245,31 +248,32 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   // kurze Ablauf, danach Kunde und Projekt. Kalkulation und Quelle ganz unten.
   const t = a.tracking
   const fachmarkt = a.weg === 'beratung' && a.beratung === 'fachmarkt'
-  const vorname = a.vorname.trim()
-  const bodenWort = a.produkt ? produktName : a.bodenart ? BODENARTEN[a.bodenart].name : 'Boden'
+  const vorname = grossAnfang(a.vorname)
+  const bodenWort = a.produkt ? produktName : a.bodenart ? BODENARTEN[a.bodenart].name : ''
+  const perWhatsapp = a.whatsapp && !!a.telefon
+  const wa = (text: string) => whatsappLink(a.telefon.slice(1), text)
 
-  /** WhatsApp-Link mit fertigem Text (Klammern & Co. kodiert, damit der Trello-Link heil bleibt) */
-  const waLink = (text: string) =>
-    `https://wa.me/${a.telefon.slice(1)}?text=${encodeURIComponent(text).replace(/[()'!*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`
-
-  const hallo = `Hallo ${vorname}, hier ist Bodenjäger aus Hückelhoven 👋`
+  // Nachrichten: kurz, persönlich, immer mit einer klaren Frage zum nächsten Schritt
+  const hallo = `Hallo ${vorname}, hier ist Bodenjäger aus Hückelhoven.`
+  const gruss = 'Viele Grüße aus Hückelhoven'
   const waText =
     a.weg === 'aufmass'
-      ? `${hallo} Danke für deine Aufmaß-Buchung! Wann passt es dir, dass wir bei dir vorbeikommen? Schick uns gern zwei, drei Termine, die dir passen. Deine Großmuster bringen wir mit.`
+      ? `${hallo} Danke für deine Aufmaß-Buchung! Wann passt es dir, dass wir bei dir vorbeikommen? Schick uns gern zwei, drei Termine. Deine Großmuster bringen wir mit.\n\n${gruss}`
       : a.weg === 'preis'
-        ? `${hallo} Du hast dir gerade den Preisrahmen für deinen ${bodenWort} berechnet. Hast du noch Fragen dazu? Genau wird es mit einem Aufmaß bei dir vor Ort – wir bringen deine Wunschböden als Großmuster mit. Sollen wir einen Termin machen?`
+        ? `${hallo} Danke, dass du deinen Preisrahmen${bodenWort ? ` für ${bodenWort}` : ''} berechnet hast! Den genauen Preis bekommst du nach einem kurzen Aufmaß bei dir zu Hause. Deine Wunschböden bringen wir als Großmuster mit, damit du sie im echten Licht siehst.\n\nWann würde es dir passen? Oder magst du lieber erst bei uns im Fachmarkt vorbeischauen?\n\n${gruss}`
         : fachmarkt
-          ? `${hallo} Wir freuen uns auf dich am ${termin} im Fachmarkt, Neckarstraße 9 in Hückelhoven. Falls etwas dazwischenkommt, schreib uns einfach kurz hier.`
+          ? `${hallo} Dein Beratungstermin steht: ${termin} bei uns im Fachmarkt, Neckarstraße 9. Wir legen passende Böden für dich bereit.\n\nFalls etwas dazwischenkommt, schreib uns einfach hier. Bis bald!`
           : a.beratung === 'whatsapp'
-            ? `${hallo} Danke für deine Anfrage! Schick uns gern ein paar Fotos von den Räumen und ungefähr die Quadratmeter, dann beraten wir dich direkt hier.`
-            : `${hallo} Wir wollten dich wegen deiner Anfrage zum Bodenverlegen zurückrufen. Wann passt es dir am besten?`
-  const waNichtErreicht = `${hallo} Wir haben versucht, dich wegen deiner Anfrage anzurufen. Wann können wir dich am besten erreichen? Du kannst uns auch gern direkt hier schreiben.`
+            ? `${hallo} Schön, dass du dich meldest! Schick uns gern ein paar Fotos von den Räumen und ungefähr die Quadratmeter, dann beraten wir dich direkt hier im Chat.\n\n${gruss}`
+            : `${hallo} Du wolltest einen Rückruf zum Bodenverlegen. Wann passt es dir am besten? Gern können wir auch direkt hier schreiben.\n\n${gruss}`
+  const waNichtErreicht = `${hallo} Wir haben gerade versucht, dich wegen deiner Anfrage anzurufen. Wann passt es dir besser? Oder schreib uns einfach hier, was du vorhast.\n\n${gruss}`
 
+  const kanal = perWhatsapp ? 'WhatsApp schicken' : 'Anrufen'
   const naechsterSchritt =
     a.weg === 'aufmass'
-      ? 'Sobald das Label **Bezahlt** da ist: Termin fürs Aufmaß vereinbaren'
+      ? 'Sobald das Label **Bezahlt** da ist: Termin fürs Aufmaß ausmachen'
       : a.weg === 'preis'
-        ? 'Heute melden und Aufmaß anbieten'
+        ? `Heute melden und Aufmaß anbieten`
         : fachmarkt
           ? `Kunde kommt **${termin}** in den Fachmarkt`
           : a.beratung === 'whatsapp'
@@ -278,20 +282,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
 
   const ablauf =
     a.weg === 'aufmass'
-      ? ['WhatsApp schicken oder anrufen, Termin ausmachen → Karte nach **📏 Aufmaß-Termin steht**', 'Großmuster einpacken (Liste unten), Aufmaß machen', 'Angebot in SAP, Aufmaß gutschreiben → **📄 Angebot erstellt**']
+      ? [`${kanal}, Termin ausmachen → Karte nach **📏 Aufmaß-Termin steht**`, 'Großmuster einpacken (Liste unten), Aufmaß machen', 'Angebot in SAP, Aufmaß gutschreiben → **📄 Angebot erstellt**']
       : a.weg === 'preis'
-        ? ['WhatsApp schicken oder anrufen', 'Aufmaß oder Fachmarkt-Termin anbieten', 'Kein Interesse → **🗂 Unqualifiziert / später**']
+        ? [kanal, 'Aufmaß oder Beratung im Fachmarkt anbieten', 'Kein Interesse → **🗂 Unqualifiziert / später**']
         : fachmarkt
-          ? ['Bestätigung per WhatsApp schicken', 'Passende Böden bereitlegen', 'Nach dem Termin: Aufmaß buchen lassen oder → **⏳ Wartet auf Kunde**']
+          ? [perWhatsapp ? 'Bestätigung per WhatsApp schicken' : 'Kurz anrufen und Termin bestätigen', 'Passende Böden bereitlegen', 'Nach dem Termin: Aufmaß buchen lassen oder → **⏳ Wartet auf Kunde**']
           : a.beratung === 'whatsapp'
             ? ['WhatsApp schicken', 'Fragen beantworten, Aufmaß oder Fachmarkt-Termin anbieten']
-            : ['Anrufen', 'Nicht erreicht → WhatsApp „nicht erreicht“ schicken und Karte nach **📞 Nicht erreicht**', 'Aufmaß oder Fachmarkt-Termin anbieten']
+            : ['Anrufen', perWhatsapp ? 'Nicht erreicht → WhatsApp „nicht erreicht“ und Karte nach **📞 Nicht erreicht**' : 'Nicht erreicht → Karte nach **📞 Nicht erreicht**', 'Aufmaß oder Fachmarkt-Termin anbieten']
 
   const z: string[] = []
   z.push(`## ➡️ ${naechsterSchritt}`)
-  if (a.telefon) {
-    z.push(`📞 **${telefonAnzeige(a.telefon)}** · 💬 **[WhatsApp mit Text öffnen](${waLink(waText)})**`)
-    z.push(`_Nicht erreicht? [WhatsApp „nicht erreicht“](${waLink(waNichtErreicht)})_`)
+  if (perWhatsapp) {
+    z.push(`💬 **[WhatsApp mit Text öffnen](${wa(waText)})** · 📞 ${telefonAnzeige(a.telefon)}`)
+    z.push(`_Nicht erreicht? [WhatsApp „nicht erreicht“](${wa(waNichtErreicht)})_`)
+  } else if (a.telefon) {
+    z.push(`📞 **${telefonAnzeige(a.telefon)}** _(keine WhatsApp-Freigabe – bitte anrufen)_`)
   } else if (a.email) {
     z.push(`✉️ **${a.email}** _(keine Telefonnummer angegeben)_`)
   }

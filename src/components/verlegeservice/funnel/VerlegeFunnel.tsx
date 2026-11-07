@@ -18,6 +18,7 @@ import { STANDORT } from '@/content/fachmarkt'
 import { formatEuro } from '@/lib/aufmass-kreise'
 import { BODENARTEN, ALTBOEDEN, type AltbodenKey, type BodenartKey } from '@/lib/verlegeservice/montage'
 import {
+  BJ_WHATSAPP,
   RUECKRUF_NAME,
   TELEFON_START,
   WEG_NAME,
@@ -30,6 +31,7 @@ import {
   telefonAnzeige,
   terminSlots,
   terminText,
+  whatsappLink,
   termintage,
   type BeratungKey,
   type BesitzKey,
@@ -92,6 +94,7 @@ interface Zustand {
   empfehlung: boolean
   beratung: BeratungKey | null
   rueckruf: RueckrufKey | null
+  whatsapp: boolean
   termin: string | null
   terminTag: string | null
   vorname: string
@@ -109,7 +112,7 @@ interface Zustand {
 const LEER: Zustand = {
   plz: '', weg: null, besitz: null, produkt: null, produktText: '', produktNichtGefunden: false, bodenart: null,
   flaeche: 40, altboden: null, sockelleisten: true, stufen: 0, tueren: 0, klasse: null, zeitraum: null,
-  wunschboeden: [], empfehlung: false, beratung: null, rueckruf: null, termin: null, terminTag: null,
+  wunschboeden: [], empfehlung: false, beratung: null, rueckruf: null, whatsapp: false, termin: null, terminTag: null,
   vorname: '', nachname: '', telefon: TELEFON_START, email: '', strasse: '', strasseGewaehlt: false, hausnummer: '',
   zahlart: null, widerruf: false, datenschutz: false,
 }
@@ -463,6 +466,7 @@ export default function VerlegeFunnel() {
       empfehlung: z.empfehlung,
       beratung: z.beratung,
       rueckruf: z.rueckruf,
+      whatsapp: z.whatsapp || (z.weg === 'beratung' && z.beratung === 'whatsapp'),
       termin: z.termin,
       vorname: z.vorname,
       nachname: z.nachname,
@@ -856,9 +860,9 @@ export default function VerlegeFunnel() {
       titel = 'Wie möchtest du beraten werden?'
       inhalt = (
         <>
+          <Option aktiv={z.beratung === 'whatsapp'} onClick={() => waehle('beratung', 'whatsapp', { termin: null })} icon={<MessageCircle className="h-5 w-5" />} titel="Per WhatsApp" text="Schick uns Fotos und Fragen, wir antworten schnell" badge="Am schnellsten" />
+          <Option aktiv={z.beratung === 'fachmarkt'} onClick={() => waehle('beratung', 'fachmarkt')} icon={<Store className="h-5 w-5" />} titel="Termin im Fachmarkt" text="Alle Böden in echt sehen. Neckarstraße 9, Hückelhoven" />
           <Option aktiv={z.beratung === 'telefon'} onClick={() => waehle('beratung', 'telefon', { termin: null })} icon={<Phone className="h-5 w-5" />} titel="Rückruf am Telefon" text="Wir rufen dich zur Wunschzeit an" />
-          <Option aktiv={z.beratung === 'fachmarkt'} onClick={() => waehle('beratung', 'fachmarkt')} icon={<Store className="h-5 w-5" />} titel="Termin im Fachmarkt" text="Such dir einen Termin aus und sieh alle Böden in echt. Neckarstraße 9, Hückelhoven" />
-          <Option aktiv={z.beratung === 'whatsapp'} onClick={() => waehle('beratung', 'whatsapp', { termin: null })} icon={<MessageCircle className="h-5 w-5" />} titel="Per WhatsApp" text="Schreib uns Fotos und Fragen" />
         </>
       )
       break
@@ -901,10 +905,10 @@ export default function VerlegeFunnel() {
     }
     case 'kontakt': {
       const fachmarkt = z.weg === 'beratung' && z.beratung === 'fachmarkt'
-      titel = z.weg === 'aufmass' ? 'Deine Kontaktdaten' : z.weg === 'preis' ? 'Wohin dürfen wir deinen Preisrahmen schicken?' : fachmarkt ? 'Für wen ist der Termin?' : 'Wie erreichen wir dich?'
+      titel = z.weg === 'aufmass' ? 'Deine Kontaktdaten' : z.weg === 'preis' ? 'Fast geschafft: Wer bist du?' : fachmarkt ? 'Für wen ist der Termin?' : 'Wie erreichen wir dich?'
       hinweis =
         z.weg === 'aufmass' ? 'Damit wir den Termin mit dir abstimmen können.'
-          : z.weg === 'preis' ? 'Deinen Preisrahmen siehst du gleich hier. Bei Fragen melden wir uns bei dir.'
+          : z.weg === 'preis' ? 'Deinen Preisrahmen siehst du gleich hier. Bei Fragen melden wir uns kurz bei dir.'
             : fachmarkt ? `Dein Termin: ${terminText(z.termin)}.`
               : 'Mehr brauchen wir nicht. Alles Weitere besprechen wir persönlich.'
       const telefonOptional = z.weg === 'preis' || fachmarkt
@@ -917,7 +921,7 @@ export default function VerlegeFunnel() {
           {(z.weg !== 'beratung' || fachmarkt) && (
             <Feld id="vf-email" label="E-Mail" typ="email" wert={z.email} onChange={(v) => set('email', v)} auto="email" fehler={fehler.email} />
           )}
-          <Feld id="vf-telefon" label={z.beratung === 'whatsapp' && z.weg === 'beratung' ? 'Handynummer (WhatsApp)' : 'Telefon'} typ="tel" inputMode="tel"
+          <Feld id="vf-telefon" label={z.beratung === 'whatsapp' && z.weg === 'beratung' ? 'Handynummer (WhatsApp)' : 'Handynummer'} typ="tel" inputMode="tel"
             wert={z.telefon} onChange={(v) => set('telefon', v)} auto="tel" optional={telefonOptional} fehler={fehler.telefon}
             onBlur={() => {
               const roh = z.telefon.replace(/\s/g, '')
@@ -926,6 +930,12 @@ export default function VerlegeFunnel() {
               if (t.ok) set('telefon', telefonAnzeige(t.e164))
               else setFehler((f) => ({ ...f, telefon: t.fehler }))
             }} />
+          {!(z.weg === 'beratung' && z.beratung === 'whatsapp') && (
+            <label className="-mt-1 flex cursor-pointer items-center gap-2.5 text-sm text-dark">
+              <input type="checkbox" checked={z.whatsapp} onChange={(e) => set('whatsapp', e.target.checked)} className="h-5 w-5 flex-shrink-0 accent-[#ed1b24]" />
+              <span>Ihr dürft mir auch per <b>WhatsApp</b> schreiben</span>
+            </label>
+          )}
           {z.weg === 'beratung' && z.beratung === 'telefon' && (
             <div className="grid gap-1.5">
               <span className="text-sm font-bold text-dark">Wann rufen wir an?</span>
@@ -1037,6 +1047,16 @@ export default function VerlegeFunnel() {
   }
 
   // ── Abschluss-Ansichten ────────────────────────────────────────────────────
+  /** Kunde schreibt uns selbst – mit Vorgangsnummer, damit wir die Nachricht direkt zuordnen */
+  const waAnUns = (leadId: string) =>
+    whatsappLink(BJ_WHATSAPP, `Hallo Bodenjäger, hier ist ${z.vorname.trim()} ${z.nachname.trim()} (Anfrage ${leadId}). Ich habe eine Frage:`)
+  const WaKnopf = ({ leadId, text }: { leadId: string; text: string }) => (
+    <a href={waAnUns(leadId)} target="_blank" rel="noopener noreferrer"
+      className="flex min-h-[52px] items-center justify-center gap-2 rounded-lg border border-ash bg-white px-6 font-bold text-dark hover:border-mid">
+      <MessageCircle className="h-5 w-5 text-[#25D366]" aria-hidden="true" />
+      {text}
+    </a>
+  )
   let abschluss: React.ReactNode = null
   if (ergebnis?.preisrahmen) {
     const r = ergebnis.preisrahmen
@@ -1064,6 +1084,7 @@ export default function VerlegeFunnel() {
         <button type="button" onClick={zurBeratung} className="min-h-[52px] rounded-lg border border-ash bg-white px-6 font-bold text-dark hover:border-mid">
           Lieber erst im Fachmarkt beraten lassen
         </button>
+        <WaKnopf leadId={ergebnis.leadId} text="Fragen? Schreib uns per WhatsApp" />
       </div>
     )
   } else if (ergebnis) {
@@ -1073,13 +1094,14 @@ export default function VerlegeFunnel() {
       : fachmarkt
         ? ['Dein Termin steht.', `Wir erwarten dich am ${terminText(z.termin)} im Fachmarkt. Sag bei uns einfach kurz, dass du einen Beratungstermin hast.`]
         : z.beratung === 'whatsapp'
-          ? ['Wir schreiben dir per WhatsApp.', 'Schick uns gern schon Fotos von deinen Räumen, dann können wir dich noch besser beraten.']
+          ? ['Wir schreiben dir gleich per WhatsApp.', 'Du kannst auch direkt loslegen und uns Fotos von deinen Räumen schicken.']
           : ['Wir rufen dich an.', 'Ein Berater aus unserem Fachmarkt meldet sich zu deiner Wunschzeit.']
     abschluss = (
       <div className="grid gap-4">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success"><Check className="h-8 w-8 text-white" strokeWidth={3} /></span>
         <h2 className="text-[clamp(1.35rem,5.2vw,1.75rem)] font-bold leading-tight text-dark">Danke, {z.vorname}! {kopf}</h2>
         <p className="text-mid">{text}</p>
+        <WaKnopf leadId={ergebnis.leadId} text={z.beratung === 'whatsapp' ? 'Jetzt per WhatsApp schreiben' : 'Fragen? Schreib uns per WhatsApp'} />
         <Hinweis ton="info" titel="Fachmarkt Hückelhoven">Neckarstraße 9 · Mo–Fr 9–18:30 Uhr, Sa 9–14 Uhr · {STANDORT.telefonAnzeige}</Hinweis>
         <p className="text-xs text-mid">Vorgangsnummer: {ergebnis.leadId}</p>
       </div>
