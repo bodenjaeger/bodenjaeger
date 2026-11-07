@@ -63,6 +63,8 @@ export interface FunnelAnfrage {
   datenschutz: boolean
   tracking: VsTracking
   turnstileToken?: string
+  /** Vorgang aus einer früheren Anfrage im selben Besuch */
+  vorgang?: string
   /** Honeypot */
   website?: string
 }
@@ -74,6 +76,8 @@ export interface FunnelErfolg {
   preisrahmen?: { min: number; max: number; enthalten: string[]; hinweise: string[]; boden: string }
   zahlungUrl?: string
   zahlungFehler?: boolean
+  /** Für eine weitere Anfrage im selben Besuch (aktualisiert dieselbe Karte) */
+  vorgang?: string
 }
 export interface FunnelFehler {
   success: false

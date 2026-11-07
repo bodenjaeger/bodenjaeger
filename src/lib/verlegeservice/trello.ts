@@ -105,27 +105,73 @@ export async function karteAnlegen(k: NeueKarte): Promise<string | null> {
       return null
     }
     const karte = (await res.json()) as { id: string }
-    for (const cl of k.checklisten ?? []) {
-      try {
-        const c = await fetch(`${API}/cards/${karte.id}/checklists?${auth(z)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: cl.name }),
-        }).then((r) => r.json() as Promise<{ id: string }>)
-        for (const punkt of cl.punkte) {
-          await fetch(`${API}/checklists/${c.id}/checkItems?${auth(z)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: punkt.slice(0, 500), pos: 'bottom' }),
-          })
-        }
-      } catch (e) {
-        console.error('[verlegeservice/trello] Checkliste fehlgeschlagen:', e)
-      }
-    }
+    await checklistenAnlegen(z, karte.id, k.checklisten ?? [])
     return karte.id
   } catch (e) {
     console.error('[verlegeservice/trello] Netzwerkfehler:', e)
     return null
+  }
+}
+
+async function checklistenAnlegen(z: Zugang, cardId: string, checklisten: Array<{ name: string; punkte: string[] }>): Promise<void> {
+  for (const cl of checklisten) {
+    try {
+      const c = await fetch(`${API}/cards/${cardId}/checklists?${auth(z)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: cl.name }),
+      }).then((r) => r.json() as Promise<{ id: string }>)
+      for (const punkt of cl.punkte) {
+        await fetch(`${API}/checklists/${c.id}/checkItems?${auth(z)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: punkt.slice(0, 500), pos: 'bottom' }),
+        })
+      }
+    } catch (e) {
+      console.error('[verlegeservice/trello] Checkliste fehlgeschlagen:', e)
+    }
+  }
+}
+
+/**
+ * Bestehende Karte mit neuen Angaben überschreiben (z. B. Kunde wechselt vom
+ * Preisrahmen zum Aufmaß). Titel, Beschreibung, Labels, Liste, Fälligkeit und
+ * Checklisten werden ersetzt, dazu ein Kommentar. true = geklappt.
+ */
+export async function karteAktualisieren(cardId: string, k: NeueKarte, kommentar: string): Promise<boolean> {
+  const z = zugang()
+  if (!z || !/^[a-f0-9]{24}$/.test(cardId)) return false
+  const liste = (k.liste === 'termin' && process.env.TRELLO_LIST_ID_TERMIN?.trim()) || z.listeNeu
+  const idLabels = await labelIds(z, k.labels ?? [])
+  try {
+    const res = await fetch(`${API}/cards/${cardId}?${auth(z)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idList: liste,
+        name: k.titel.slice(0, 250),
+        desc: k.beschreibung.slice(0, 16000),
+        pos: 'top',
+        due: k.faellig ?? null,
+        idLabels: idLabels.join(','),
+        closed: false,
+      }),
+    })
+    if (!res.ok) {
+      console.error('[verlegeservice/trello] Karte aktualisieren fehlgeschlagen:', res.status, await res.text().catch(() => ''))
+      return false
+    }
+    // Alte Checklisten ersetzen
+    const alt = await fetch(`${API}/cards/${cardId}/checklists?fields=id&${auth(z)}`).then((r) =>
+      r.ok ? (r.json() as Promise<Array<{ id: string }>>) : [],
+    )
+    for (const c of alt) await fetch(`${API}/checklists/${c.id}?${auth(z)}`, { method: 'DELETE' })
+    await checklistenAnlegen(z, cardId, k.checklisten ?? [])
+    await fetch(`${API}/cards/${cardId}/actions/comments?${auth(z)}&text=${encodeURIComponent(kommentar)}`, { method: 'POST' })
+    return true
+  } catch (e) {
+    console.error('[verlegeservice/trello] Karte aktualisieren Netzwerkfehler:', e)
+    return false
   }
 }

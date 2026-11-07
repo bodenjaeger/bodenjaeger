@@ -37,9 +37,9 @@ import {
   type BodenartKey,
   type Preisrahmen,
 } from '@/lib/verlegeservice/montage'
-import { berlinZuIso, clientIp, heuteBerlin, pruefeTurnstile, teamMail } from '@/lib/verlegeservice/server'
+import { berlinZuIso, clientIp, heuteBerlin, pruefeTurnstile, teamMail, vorgangPruefen, vorgangSignieren } from '@/lib/verlegeservice/server'
 import { preisklassen } from '@/lib/verlegeservice/shop'
-import { karteAnlegen, type KartenLabel } from '@/lib/verlegeservice/trello'
+import { karteAktualisieren, karteAnlegen, type KartenLabel } from '@/lib/verlegeservice/trello'
 
 /**
  * Anfrage aus dem Verlegeservice-Formular mit drei Wegen.
@@ -104,6 +104,7 @@ function normalisiere(r: Record<string, unknown>): FunnelAnfrage {
     datenschutz: r.datenschutz === true,
     tracking: r.tracking && typeof r.tracking === 'object' ? (r.tracking as FunnelAnfrage['tracking']) : {},
     turnstileToken: s(r.turnstileToken, 4096) || undefined,
+    vorgang: s(r.vorgang, 200) || undefined,
     website: s(r.website, 200) || undefined,
   }
 }
@@ -228,7 +229,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   if (a.weg === 'aufmass' && !angebot) return fehler('Für diesen Standort können wir das Aufmaß nicht online buchen.')
 
   // ── Lead ─────────────────────────────────────────────────────────────────
-  const leadId = await naechsteLeadId()
+  // Zweite Anfrage im selben Besuch (z. B. Preisrahmen → Aufmaß): dieselbe
+  // Karte und dieselbe Lead-ID, damit nichts doppelt im Board landet.
+  const vorher = vorgangPruefen(a.vorgang)
+  const leadId = vorher?.leadId ?? (await naechsteLeadId())
   const stufe = leadStufe(a, Number.isFinite(kreis.bisKm), imGebiet)
   const name = `${a.vorname} ${a.nachname}`.trim()
   const termin = a.beratung === 'fachmarkt' ? terminText(a.termin) : ''
@@ -343,8 +347,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   const faellig = a.beratung === 'fachmarkt' && a.termin ? berlinZuIso(...(a.termin.split('T') as [string, string])) : null
 
   const [cardId, mailOk] = await Promise.all([
-    karteAnlegen({ titel, beschreibung, liste: faellig ? 'termin' : 'neu', faellig, labels, checklisten }),
-    teamMail({ name, email: a.email, telefon: a.telefon, text: `${titel}\n\n${alsText(beschreibung)}` }),
+    (async () => {
+      const karte = { titel, beschreibung, liste: faellig ? ('termin' as const) : ('neu' as const), faellig, labels, checklisten }
+      if (vorher && (await karteAktualisieren(vorher.cardId, karte, `🔄 Kunde hat nachgelegt: jetzt ${WEG_NAME[a.weg]}`))) return vorher.cardId
+      return karteAnlegen(karte)
+    })(),
+    teamMail({ name, email: a.email, telefon: a.telefon, text: `${vorher ? '🔄 Aktualisierte Anfrage\n' : ''}${titel}\n\n${alsText(beschreibung)}` }),
   ])
   if (!cardId && !mailOk) {
     console.error('[api/verlegeservice/funnel] Trello und Mail fehlgeschlagen für', leadId)
@@ -400,6 +408,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
     success: true,
     leadId,
     leadStufe: stufe,
+    ...(cardId ? { vorgang: vorgangSignieren(cardId, leadId) } : {}),
     ...(rahmen ? { preisrahmen: { min: rahmen.min, max: rahmen.max, enthalten: rahmen.enthalten, hinweise: rahmen.hinweise, boden: bodenText } } : {}),
     ...(zahlungUrl ? { zahlungUrl } : {}),
     ...(a.weg === 'aufmass' && !zahlungUrl ? { zahlungFehler: true } : {}),

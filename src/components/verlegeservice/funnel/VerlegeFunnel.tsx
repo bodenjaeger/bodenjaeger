@@ -245,6 +245,8 @@ export default function VerlegeFunnel() {
   const [strassen, setStrassen] = useState<string[]>([])
   const [strassenStatus, setStrassenStatus] = useState<'leer' | 'laedt' | 'fertig'>('leer')
   const [ergebnis, setErgebnis] = useState<FunnelErfolg | null>(null)
+  // Karte der ersten Anfrage – eine zweite Anfrage im selben Besuch aktualisiert sie
+  const vorgang = useRef<string | undefined>(undefined)
   const [sendet, setSendet] = useState(false)
   const [sendeFehler, setSendeFehler] = useState<string>()
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
@@ -269,6 +271,11 @@ export default function VerlegeFunnel() {
   }, [])
 
   useEffect(() => {
+    try {
+      vorgang.current = sessionStorage.getItem('vs-vorgang') ?? undefined
+    } catch {
+      /* kein Speicher verfügbar */
+    }
     merkeLandingpage()
     trackFormView()
   }, [])
@@ -468,6 +475,7 @@ export default function VerlegeFunnel() {
       datenschutz: z.datenschutz,
       tracking: sammleTrackingKontext(startZeit.current) as VsTracking,
       turnstileToken: turnstileToken ?? undefined,
+      vorgang: vorgang.current,
     }
     try {
       const res = await fetch('/api/verlegeservice/funnel', {
@@ -492,6 +500,14 @@ export default function VerlegeFunnel() {
           timeline: z.zeitraum,
           naechsterSchritt: z.weg,
         })
+      }
+      if (json.vorgang) {
+        vorgang.current = json.vorgang
+        try {
+          sessionStorage.setItem('vs-vorgang', json.vorgang)
+        } catch {
+          /* ohne Speicher: gilt nur bis zum Neuladen */
+        }
       }
       if (json.zahlungUrl) {
         const ziel = json.zahlungUrl
