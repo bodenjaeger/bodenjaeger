@@ -1241,7 +1241,15 @@ export default function VerlegeFunnel() {
           <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-white/85 backdrop-blur-sm" role="status">
             <BrandLoader className="h-16 w-16" label="Wird gesendet" />
             <p className="font-bold text-dark">
-              {z.weg === 'aufmass' ? 'Du wirst zur Zahlung weitergeleitet …' : z.beratung === 'whatsapp' && z.weg === 'beratung' ? 'WhatsApp wird geöffnet …' : 'Einen Moment …'}
+              {z.weg === 'aufmass'
+                ? 'Du wirst zur Zahlung weitergeleitet …'
+                : z.weg === 'preis'
+                  ? 'Dein Preisrahmen wird berechnet …'
+                  : z.beratung === 'whatsapp'
+                    ? 'WhatsApp wird geöffnet …'
+                    : z.beratung === 'fachmarkt'
+                      ? 'Dein Termin wird eingetragen …'
+                      : 'Deine Anfrage wird gesendet …'}
             </p>
           </div>,
           document.body,

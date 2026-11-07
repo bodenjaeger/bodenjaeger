@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { after, NextRequest, NextResponse } from 'next/server'
 import { formatEuro } from '@/lib/aufmass-kreise'
 import { aufmassAngebot, aufmassBestellungAnlegen, aufmassZahlungStartenSicher } from '@/lib/aufmass'
 import { naechsteLeadId } from '@/lib/leadId'
@@ -397,23 +397,38 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   let beschreibung = baueBeschreibung(vorher ? a.vorgang : undefined)
   const karte = { titel, beschreibung, liste: faellig ? ('termin' as const) : ('neu' as const), faellig, labels, checklisten }
   let cardId: string | null = null
+  let neuAngelegt = false
   if (vorher && (await karteAktualisieren(vorher.cardId, karte, `🔄 Kunde hat nachgelegt: jetzt ${WEG_NAME[a.weg]}`))) {
     cardId = vorher.cardId
   } else {
     cardId = await karteAnlegen(karte)
+    neuAngelegt = !!cardId
     const token = cardId ? vorgangSignieren(cardId, leadId) : undefined
-    if (cardId && token) {
-      beschreibung = baueBeschreibung(token)
-      await beschreibungSetzen(cardId, beschreibung)
+    if (cardId && token) beschreibung = baueBeschreibung(token)
+  }
+  const mailText = `${vorher ? '🔄 Aktualisierte Anfrage\n' : ''}${titel}\n\n${alsText(beschreibung)}`
+
+  // Ohne Karte muss wenigstens die Mail raus, sonst Fehler an den Kunden
+  if (!cardId) {
+    const mailOk = await teamMail({ name, email: a.email, telefon: a.telefon, text: mailText })
+    if (!mailOk) {
+      console.error('[api/verlegeservice/funnel] Trello und Mail fehlgeschlagen für', leadId)
+      return fehler('Deine Anfrage konnte gerade nicht gesendet werden. Bitte versuche es gleich noch einmal oder ruf uns an: 02433 938884.', undefined, 502)
     }
   }
-  const mailOk = await teamMail({ name, email: a.email, telefon: a.telefon, text: `${vorher ? '🔄 Aktualisierte Anfrage\n' : ''}${titel}\n\n${alsText(beschreibung)}` })
-  if (!cardId && !mailOk) {
-    console.error('[api/verlegeservice/funnel] Trello und Mail fehlgeschlagen für', leadId)
-    return fehler('Deine Anfrage konnte gerade nicht gesendet werden. Bitte versuche es gleich noch einmal oder ruf uns an: 02433 938884.', undefined, 502)
-  }
 
-  await sendeMetaLead({
+  // Alles, worauf der Kunde nicht warten muss, läuft nach der Antwort weiter
+  const fertigeKarte = cardId && neuAngelegt ? { id: cardId, beschreibung } : null
+  const ip = clientIp(request)
+  const userAgent = request.headers.get('user-agent') ?? undefined
+  after(async () => {
+    await Promise.all([
+      fertigeKarte ? beschreibungSetzen(fertigeKarte.id, fertigeKarte.beschreibung) : Promise.resolve(),
+      cardId ? teamMail({ name, email: a.email, telefon: a.telefon, text: mailText }) : Promise.resolve(true),
+    ])
+  })
+
+  after(() => sendeMetaLead({
     leadId,
     areaStatus: imGebiet ? 'in_area' : 'out_of_area',
     areaRange: a.weg === 'beratung' ? null : String(a.flaeche),
@@ -428,11 +443,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
     ort: gebiet.ort,
     fbp: t.fbp,
     fbc: t.fbc,
-    clientIp: clientIp(request),
-    userAgent: request.headers.get('user-agent') ?? undefined,
+    clientIp: ip,
+    userAgent,
     eventSourceUrl: t.landingpage,
     zeitpunkt: new Date(),
-  }).catch((e) => console.error('[api/verlegeservice/funnel] Meta CAPI:', e))
+  }).catch((e) => console.error('[api/verlegeservice/funnel] Meta CAPI:', e)))
 
   // ── Aufmaß: Bestellung und Zahlung ───────────────────────────────────────
   let zahlungUrl: string | undefined
