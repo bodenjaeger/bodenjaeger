@@ -74,14 +74,12 @@ async function labelIds(z: Zugang, gewuenscht: KartenLabel[]): Promise<string[]>
 let listenCache: Array<{ id: string; name: string }> | null = null
 async function listeNachName(z: Zugang, teil: string): Promise<string | null> {
   try {
-    let listen = listenCache
-    if (!listen) {
-      const l = await fetch(`${API}/lists/${z.listeNeu}?fields=idBoard&${auth(z)}`).then((r) => r.json() as Promise<{ idBoard: string }>)
-      listen = await fetch(`${API}/boards/${l.idBoard}/lists?fields=name&filter=open&${auth(z)}`).then(
-        (r) => r.json() as Promise<Array<{ id: string; name: string }>>,
-      )
-      listenCache = listen
+    const laden = async (): Promise<Array<{ id: string; name: string }>> => {
+      const l = (await fetch(`${API}/lists/${z.listeNeu}?fields=idBoard&${auth(z)}`).then((r) => r.json())) as { idBoard: string }
+      return (await fetch(`${API}/boards/${l.idBoard}/lists?fields=name&filter=open&${auth(z)}`).then((r) => r.json())) as Array<{ id: string; name: string }>
     }
+    const listen = listenCache ?? (await laden())
+    listenCache = listen
     const t = teil.toLowerCase()
     return listen.find((x) => x.name.toLowerCase().includes(t))?.id ?? null
   } catch (e) {
