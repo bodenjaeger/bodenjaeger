@@ -116,7 +116,8 @@ export async function loadFilteredListing(params: {
   let products: StoreApiProduct[] = [];
   if (withProducts) {
     const ids = matching.slice((page - 1) * perPage, page * perPage).map((product) => product.id);
-    const loaded = await wooCommerceClient.getProductsByIds(ids);
+    // Wie der Filterindex 5 Minuten zwischenspeichern, sonst lädt jeder Filterklick alle Produkte neu
+    const loaded = await wooCommerceClient.getProductsByIds(ids, { revalidate: INDEX_REVALIDATE_SECONDS });
     products = ids.map((id) => loaded.get(id)).filter((p): p is StoreApiProduct => Boolean(p));
   }
 

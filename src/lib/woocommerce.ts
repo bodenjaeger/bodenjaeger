@@ -482,7 +482,7 @@ class WooCommerceClient {
     include?: string; // Comma-separated list of product IDs
     orderby?: 'date' | 'id' | 'include' | 'title' | 'slug' | 'price' | 'popularity' | 'rating' | 'menu_order';
     order?: 'asc' | 'desc';
-  } = {}): Promise<StoreApiProduct[]> {
+  } = {}, cache: { revalidate?: number } = {}): Promise<StoreApiProduct[]> {
     const searchParams = new URLSearchParams();
 
     // Add parameters to the request
@@ -497,7 +497,11 @@ class WooCommerceClient {
     const endpoint = queryString ? `/jaeger/v1/products?${queryString}` : '/jaeger/v1/products';
 
     try {
-      const response = await this.makeRequest<{ products: StoreApiProduct[]; pagination?: unknown } | StoreApiProduct[]>(endpoint);
+      // Optional zwischenspeichern (z. B. gefilterte Kategorielisten), sonst wie bisher frisch
+      const response = await this.makeRequest<{ products: StoreApiProduct[]; pagination?: unknown } | StoreApiProduct[]>(
+        endpoint,
+        cache.revalidate ? { next: { revalidate: cache.revalidate } } : {}
+      );
 
       // Jaeger API returns { products: [...], pagination: {...} }
       // Extract just the products array
@@ -668,7 +672,7 @@ class WooCommerceClient {
    * Uses Store API include parameter to load multiple products efficiently
    * With Redis/KV caching for improved performance
    */
-  async getProductsByIds(ids: number[]): Promise<Map<number, StoreApiProduct>> {
+  async getProductsByIds(ids: number[], cache: { revalidate?: number } = {}): Promise<Map<number, StoreApiProduct>> {
     const productsMap = new Map<number, StoreApiProduct>();
 
     if (ids.length === 0) {
@@ -709,10 +713,13 @@ class WooCommerceClient {
       const batchResults = await Promise.all(
         batches.map(async (batch) => {
           const includeParam = batch.join(',');
-          const products = await this.getProducts({
-            per_page: batchSize,
-            include: includeParam
-          });
+          const products = await this.getProducts(
+            {
+              per_page: batchSize,
+              include: includeParam,
+            },
+            cache
+          );
           return products;
         })
       );
@@ -794,7 +801,8 @@ class WooCommerceClient {
     const endpoint = `/wc/store/v1/products/categories${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 
     try {
-      return await this.makeRequest<StoreApiCategory[]>(endpoint);
+      // Kategorien ändern sich selten: 5 Minuten zwischenspeichern wie die Kategorieseiten
+      return await this.makeRequest<StoreApiCategory[]>(endpoint, { next: { revalidate: 300 } });
     } catch (error) {
       console.error('Error fetching categories:', error);
       throw error;
