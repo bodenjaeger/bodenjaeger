@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable @next/next/no-html-link-for-pages */
 
 /**
  * Verlegeservice-Formular mit drei Wegen (mobil zuerst, eine Frage pro Bildschirm):
