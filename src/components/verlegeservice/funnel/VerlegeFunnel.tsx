@@ -589,7 +589,11 @@ export default function VerlegeFunnel() {
         setErgebnis(json)
         setLeitetWeiter(true)
         setTimeout(() => setLeitetWeiter(false), 4000)
-        window.location.href = waAnUns(json.leadId, 'Ich möchte mich zu meinem Bodenprojekt beraten lassen:')
+        // kurz warten, damit Google Ads und Meta den Lead noch absenden können
+        const ziel = waAnUns(json.leadId, 'Ich möchte mich zu meinem Bodenprojekt beraten lassen:')
+        setTimeout(() => {
+          window.location.href = ziel
+        }, 600)
         return
       }
       if (json.zahlungUrl) {
@@ -597,7 +601,7 @@ export default function VerlegeFunnel() {
         const ziel = json.zahlungUrl
         setTimeout(() => {
           window.location.href = ziel
-        }, 400)
+        }, 600)
         return
       }
       setErgebnis(json)
