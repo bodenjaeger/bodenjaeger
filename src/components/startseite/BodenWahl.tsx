@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import LinkLaedt from './LinkLaedt';
 import { ArrowRight } from 'lucide-react';
 
 interface Zeile {
@@ -72,7 +73,7 @@ export default function BodenWahl({ promoActive }: { promoActive: boolean }) {
           <li key={z.titel}>
             <Link
               href={z.href}
-              className="group flex items-center gap-3 rounded-xl border border-ash bg-white p-3 transition-colors hover:border-mid sm:gap-4 sm:pr-4"
+              className="group relative flex items-center gap-3 rounded-xl border border-ash bg-white p-3 transition-colors hover:border-mid sm:gap-4 sm:pr-4"
             >
               <span className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-ash text-2xl font-bold text-dark sm:h-16 sm:w-16 sm:text-3xl">
                 {z.bild ? (
@@ -99,6 +100,7 @@ export default function BodenWahl({ promoActive }: { promoActive: boolean }) {
               <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-brand sm:h-11 sm:w-11 transition-transform group-hover:translate-x-1">
                 <ArrowRight className="h-5 w-5 text-white" strokeWidth={2.5} aria-hidden="true" />
               </span>
+              <LinkLaedt form="chip" />
             </Link>
           </li>
         ))}

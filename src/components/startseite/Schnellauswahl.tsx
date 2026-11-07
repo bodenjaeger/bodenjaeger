@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { FARBTON_SWATCH } from '@/content/megaMenu';
 import { PROMO_PATH } from '@/lib/black-weeks';
+import LinkLaedt from './LinkLaedt';
 
 /* Schnellauswahl ganz oben auf der Startseite (Vorbild: Laminat-Shop24).
    Mobil sieht man sie sofort, noch vor dem Aktionsbanner: eine Reihe
@@ -75,6 +76,7 @@ export default function Schnellauswahl({ promoActive }: { promoActive: boolean }
                 {k.bild && <Image src={k.bild} alt="" fill sizes="(max-width: 1024px) 64px, 96px" className="object-cover" />}
                 {k.icon && <Image src={k.icon} alt="" width={36} height={36} className="h-8 w-8 object-contain lg:h-11 lg:w-11" />}
                 {k.inhalt}
+                <LinkLaedt form="kreis" />
               </span>
               <span className="text-xs font-bold leading-tight text-dark lg:text-sm">{k.label}</span>
             </Link>
@@ -87,12 +89,13 @@ export default function Schnellauswahl({ promoActive }: { promoActive: boolean }
           <li key={c.label} className="flex-shrink-0">
             <Link
               href={c.href}
-              className="flex h-10 items-center gap-2 whitespace-nowrap rounded-full border border-ash bg-white px-4 text-sm text-dark transition-colors hover:border-mid"
+              className="relative flex h-10 items-center gap-2 whitespace-nowrap rounded-full border border-ash bg-white px-4 text-sm text-dark transition-colors hover:border-mid"
             >
               {c.swatch && (
                 <span className="h-4 w-4 rounded-full border border-black/10" style={{ backgroundColor: c.swatch }} aria-hidden="true" />
               )}
               {c.label}
+              <LinkLaedt form="chip" />
             </Link>
           </li>
         ))}
