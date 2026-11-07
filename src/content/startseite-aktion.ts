@@ -1,45 +1,53 @@
-import { PROMO_DISCOUNT_LABEL, PROMO_PATH } from '@/lib/black-weeks';
+import { PROMO_MAX_DISCOUNT, PROMO_PATH } from '@/lib/black-weeks';
 
 /**
  * Inhalt des Aktionsbanners oben auf der Startseite (`AktionsBanner`).
  *
- * Eine Vorlage für alle Geräte: Es braucht nur EIN Foto ohne Text.
- * Überschrift, Rabatt, Countdown und Buttons setzt der Shop als echten Text
- * darüber. Desktop: Text links, Foto rechts. Mobil: Foto oben, Text darunter.
+ * Eine Vorlage für alle Geräte: Texte, Rabatt, Countdown und Buttons setzt
+ * der Shop als echten Text, dazu EIN freigestelltes Motiv ohne Text
+ * (`bild`). Aufbau wie das Aktionsmotiv: links Text und Button, in der Mitte
+ * das Motiv, rechts Leuchtschild, Rabatt und Bodenarten. Mobil gestapelt.
  *
- * Für eine neue Aktion nur diese Datei anpassen. Foto: Querformat oder
- * Hochformat, mind. 1400 px breit, Motiv in der Mitte (Ränder werden je nach
- * Gerät angeschnitten, `bild.position` verschiebt den Ausschnitt).
+ * Für eine neue Aktion nur diese Datei anpassen. Läuft keine Aktion
+ * (`isPromoActive()`), zeigt die Startseite automatisch den normalen Slider.
  */
 export interface StartseitenAktion {
-  /** kleine Zeile über der Überschrift, z. B. „Black Weeks 2026“ */
+  /** Text im Leuchtschild, z. B. „Black Weeks“ */
+  marke: string;
+  /** kleine Zeile oben links, `kickerAkzent` erscheint rot */
   kicker: string;
+  kickerAkzent?: string;
   /** jede Zeile endet mit einem roten Punkt */
   titel: string[];
-  /** roter Rabatt-Kreis auf dem Foto */
+  /** kurze Zeile unter dem Trennstrich */
+  zeile: string;
   rabatt?: { oben: string; gross: string; unten: string };
-  /** Bodenart-Links neben dem Button (ab Tablet) */
+  /** Bodenart-Links, zugleich die Zeile „Vinyl • Laminat • Parkett“ */
   links: Array<{ label: string; href: string }>;
   button: { label: string; href: string };
-  bild: { src: string; alt: string; position?: string };
-  /** Hintergrund der Textfläche */
+  /** Motiv ohne Text, möglichst quadratisch */
+  bild: { src: string; alt: string };
+  /** Leuchtfarbe für Schild, Punkte und Schein */
+  akzent: string;
   hintergrund: string;
 }
 
 export const BLACK_WEEKS_AKTION: StartseitenAktion = {
-  kicker: 'Black Weeks 2026',
+  marke: 'Black Weeks',
+  kicker: 'Black Weeks',
+  kickerAkzent: '2026',
   titel: ['Dein Traumboden', 'Unser Black-Weeks-Preis'],
-  rabatt: { oben: 'Bis zu', gross: PROMO_DISCOUNT_LABEL, unten: 'sparen' },
+  zeile: 'Nur für kurze Zeit – online & im Fachmarkt.',
+  rabatt: { oben: 'Bis zu', gross: `${PROMO_MAX_DISCOUNT}%`, unten: 'sparen!' },
   links: [
     { label: 'Vinyl', href: `${PROMO_PATH}?art=vinyl` },
     { label: 'Laminat', href: `${PROMO_PATH}?art=laminat` },
     { label: 'Parkett', href: `${PROMO_PATH}?art=parkett` },
   ],
   button: { label: 'Jetzt Angebote entdecken', href: PROMO_PATH },
-  bild: {
-    src: '/images/fachmarkt-hueckelhoven/verlegeservice/projekt-klick-vinyl-wohnzimmer.webp',
-    alt: 'Wohnzimmer mit hellem Holzboden und Weihnachtsbaum',
-    position: '50% 62%',
-  },
-  hintergrund: '#000000',
+  /* Ausschnitt aus dem Black-Weeks-Motiv (nur die Dielen, ohne Schrift).
+     Schärfer wird es mit der Originaldatei ohne Text vom Gestalter. */
+  bild: { src: '/promo/black-weeks-dielen.webp', alt: 'Bodendielen in Holz- und Steinoptik vor rot beleuchteter Wand' },
+  akzent: '#ff2a2a',
+  hintergrund: '#050505',
 };

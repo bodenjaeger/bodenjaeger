@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, type CSSProperties } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { StartseitenAktion } from '@/content/startseite-aktion';
 
 /* Aktionsbanner als Vorlage für alle Geräte (Inhalt: src/content/startseite-aktion.ts).
-   Ein Foto ohne Text, alles Weitere ist echter Text: scharf auf jedem
-   Bildschirm, für Google lesbar und ohne zweite Grafik fürs Handy.
-   Mobil: Foto oben, Text darunter. Ab lg: Text links, Foto rechts. */
+   Optik wie das Black-Weeks-Motiv: schwarzer Grund mit rotem Schein,
+   Leuchtschild, große Rabattzahl, Bodenart-Kacheln, weißer Button.
+   Alles echter Text, nur die Dielen sind ein Bild.
+   Ab lg drei Spalten wie im Motiv, darunter gestapelt und kompakt. */
 
 function zweistellig(n: number) {
   return n < 10 ? `0${n}` : String(n);
@@ -23,101 +24,173 @@ function Restzeit({ ende }: { ende: string }) {
     const timer = setInterval(() => setJetzt(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
-  if (jetzt === null) return null;
+  if (jetzt === null) return <span className="block h-5" />;
   const rest = Math.max(0, new Date(ende).getTime() - jetzt);
   const tage = Math.floor(rest / 864e5);
-  const uhr = `${zweistellig(Math.floor((rest % 864e5) / 36e5))}:${zweistellig(Math.floor((rest % 36e5) / 6e4))}:${zweistellig(
-    Math.floor((rest % 6e4) / 1e3)
-  )}`;
   return (
-    <p className="text-sm leading-tight text-white/75" role="timer">
-      Endet in
-      <span className="block font-bold tabular-nums text-white">
-        {tage} {tage === 1 ? 'Tag' : 'Tagen'} · {uhr}
+    <span className="block text-sm text-white/70" role="timer">
+      Endet in{' '}
+      <span className="font-bold tabular-nums text-white">
+        {tage} {tage === 1 ? 'Tag' : 'Tagen'} · {zweistellig(Math.floor((rest % 864e5) / 36e5))}:
+        {zweistellig(Math.floor((rest % 36e5) / 6e4))}:{zweistellig(Math.floor((rest % 6e4) / 1e3))}
       </span>
-    </p>
+    </span>
   );
 }
 
+function Punkt({ farbe }: { farbe: string }) {
+  return <span style={{ color: farbe }}>.</span>;
+}
+
 export default function AktionsBanner({ aktion, ende }: { aktion: StartseitenAktion; ende: string | null }) {
+  const a = aktion.akzent;
+  const schild: CSSProperties = {
+    borderColor: a,
+    boxShadow: `0 0 22px ${a}b3, inset 0 0 16px ${a}73`,
+    textShadow: '0 0 14px rgba(255,255,255,.35)',
+  };
+  const leuchtZahl: CSSProperties = { textShadow: `0 0 28px ${a}cc, 0 4px 0 rgba(0,0,0,.35)` };
+
+  const schildElement = (klasse: string) => (
+    <p className={`inline-block rounded-md border-[3px] font-bold uppercase leading-none tracking-tight ${klasse}`} style={schild}>
+      {aktion.marke}
+    </p>
+  );
+
+  const rabattElement = (klasse: { oben: string; gross: string; unten: string }) =>
+    aktion.rabatt && (
+      <p className="font-bold leading-none">
+        <span className={`block ${klasse.oben}`}>{aktion.rabatt.oben}</span>
+        <span className={`block tracking-tight ${klasse.gross}`} style={leuchtZahl}>
+          {aktion.rabatt.gross}
+        </span>
+        <span className={`block ${klasse.unten}`}>{aktion.rabatt.unten}</span>
+      </p>
+    );
+
+  const kacheln = (klasse: string) => (
+    <ul className={`flex gap-2 ${klasse}`}>
+      {aktion.links.map((l) => (
+        <li key={l.label} className="min-w-0 flex-1 lg:flex-none">
+          <Link
+            href={l.href}
+            className="flex h-10 -skew-x-6 items-center justify-center gap-1 rounded-md border border-white/20 bg-white/[0.06] px-3 text-sm font-bold uppercase transition-colors hover:border-white lg:h-12 lg:px-5 lg:text-base"
+          >
+            <span className="skew-x-6">{l.label}</span>
+            <ChevronRight className="h-4 w-4 shrink-0 skew-x-6" style={{ color: a }} strokeWidth={3} aria-hidden="true" />
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const button = (
+    <Link
+      href={aktion.button.href}
+      className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-white px-6 text-base font-bold text-dark transition-colors hover:bg-ash lg:inline-flex lg:min-h-14 lg:text-lg"
+      style={{ boxShadow: `0 0 26px ${a}80` }}
+    >
+      {aktion.button.label}
+      <ChevronRight className="h-5 w-5" strokeWidth={3} aria-hidden="true" />
+    </Link>
+  );
+
   return (
     <section aria-label="Aktuelle Aktion" className="content-container pt-4 lg:pt-6">
       <div
-        className="grid overflow-hidden rounded-2xl text-white lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]"
-        style={{ backgroundColor: aktion.hintergrund }}
+        className="relative overflow-hidden rounded-2xl text-white"
+        style={{
+          backgroundColor: aktion.hintergrund,
+          backgroundImage: `radial-gradient(ellipse 60% 70% at 58% 45%, ${a}40 0%, transparent 70%)`,
+        }}
       >
-        {/* Foto: mobil oben, ab lg rechts */}
-        <Link
-          href={aktion.button.href}
-          tabIndex={-1}
-          aria-hidden="true"
-          className="relative block aspect-[16/9] sm:aspect-[2/1] lg:order-2 lg:aspect-auto lg:min-h-[460px]"
-        >
-          <Image
-            src={aktion.bild.src}
-            alt=""
-            fill
-            priority
-            sizes="(max-width: 1024px) 100vw, 760px"
-            className="object-cover"
-            style={{ objectPosition: aktion.bild.position ?? 'center' }}
-          />
-          {/* weicher Übergang zur Textfläche */}
-          <span
-            className="absolute inset-0 hidden lg:block"
-            style={{ background: `linear-gradient(90deg, ${aktion.hintergrund} 0%, transparent 30%)` }}
-          />
-          <span
-            className="absolute inset-0 lg:hidden"
-            style={{ background: `linear-gradient(0deg, ${aktion.hintergrund} 0%, transparent 35%)` }}
-          />
-          {aktion.rabatt && (
-            <span className="absolute right-4 top-4 flex h-24 w-24 -rotate-6 flex-col items-center justify-center rounded-full bg-[#d11820] text-center leading-none shadow-xl sm:h-28 sm:w-28 lg:right-8 lg:top-8 lg:h-40 lg:w-40">
-              <span className="text-xs font-bold uppercase tracking-wide sm:text-sm lg:text-base">{aktion.rabatt.oben}</span>
-              <span className="my-0.5 whitespace-nowrap text-[28px] font-bold tracking-tight sm:text-[32px] lg:my-1 lg:text-5xl">
-                {aktion.rabatt.gross}
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wide sm:text-sm lg:text-base">{aktion.rabatt.unten}</span>
-            </span>
-          )}
-        </Link>
-
-        {/* Text */}
-        <div className="flex flex-col justify-center gap-4 px-5 pb-5 pt-1 sm:px-8 sm:pb-8 lg:order-1 lg:gap-6 lg:p-12 xl:p-14">
-          <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.25em] text-white/80 lg:text-sm">
-            <span className="h-0.5 w-8 bg-brand" aria-hidden="true" />
-            {aktion.kicker}
-          </p>
-          <h2 className="text-[clamp(1.6rem,6.5vw,2.4rem)] font-bold leading-[1.05] tracking-tight lg:text-[clamp(2.4rem,3.6vw,3.4rem)]">
-            {aktion.titel.map((zeile) => (
-              <span key={zeile} className="block">
-                {zeile}
-                <span className="text-brand">.</span>
-              </span>
-            ))}
+        {/* ── Mobil und Tablet ── */}
+        <div className="flex flex-col items-center gap-3 px-4 py-5 text-center sm:px-8 lg:hidden">
+          <h2 className="sr-only">
+            {aktion.titel.join('. ')}. {aktion.rabatt ? `${aktion.rabatt.oben} ${aktion.rabatt.gross} ${aktion.rabatt.unten}` : ''}
           </h2>
-          <ul className="hidden flex-wrap gap-2 sm:flex">
-            {aktion.links.map((l) => (
-              <li key={l.label}>
-                <Link
-                  href={l.href}
-                  className="flex h-10 items-center gap-1 rounded-lg border border-white/25 px-4 text-sm font-bold transition-colors hover:border-white"
-                >
+          {schildElement('px-4 py-2 text-[clamp(1.9rem,9vw,2.6rem)]')}
+          <div className="grid w-full max-w-[520px] grid-cols-2 items-center gap-3">
+            <div className="relative aspect-[388/395] overflow-hidden rounded-xl">
+              <Image src={aktion.bild.src} alt={aktion.bild.alt} fill sizes="(max-width: 640px) 50vw, 260px" className="object-cover" priority />
+            </div>
+            {rabattElement({
+              oben: 'text-lg',
+              gross: 'text-[clamp(3.6rem,17vw,5.5rem)]',
+              unten: 'text-[clamp(1.6rem,7.5vw,2.4rem)]',
+            })}
+          </div>
+          {kacheln('w-full max-w-[520px]')}
+          <div className="mt-1 w-full max-w-[520px]">{button}</div>
+          {ende ? <Restzeit ende={ende} /> : <span className="text-sm text-white/70">{aktion.zeile}</span>}
+        </div>
+
+        {/* ── Desktop: Aufbau wie das Motiv ── */}
+        <div className="hidden min-h-[480px] grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)_minmax(0,1.2fr)] items-center gap-6 px-10 py-12 lg:grid xl:px-14">
+          <div className="flex flex-col gap-5">
+            <p className="flex items-center gap-4 text-sm font-bold uppercase tracking-[0.3em] text-white/85">
+              <span className="h-0.5 w-12" style={{ backgroundColor: a }} aria-hidden="true" />
+              {aktion.kicker}
+              {aktion.kickerAkzent && <span style={{ color: a }}>{aktion.kickerAkzent}</span>}
+            </p>
+            <h2 className="text-[clamp(1.9rem,2.7vw,2.9rem)] font-bold leading-[1.08] tracking-tight">
+              {/* Wörter nie trennen: „Black-Weeks-Preis“ bleibt wie im Motiv zusammen */}
+              {aktion.titel.map((zeile) => (
+                <span key={zeile} className="block">
+                  {zeile.split(' ').map((wort, i, alle) => (
+                    <Fragment key={i}>
+                      <span className="whitespace-nowrap">
+                        {wort}
+                        {i === alle.length - 1 && <Punkt farbe={a} />}
+                      </span>
+                      {i < alle.length - 1 && ' '}
+                    </Fragment>
+                  ))}
+                </span>
+              ))}
+            </h2>
+            <p className="flex flex-wrap items-center gap-x-3 text-[clamp(1.2rem,1.8vw,1.75rem)]">
+              {aktion.links.map((l, i) => (
+                <span key={l.label} className="flex items-center gap-3">
+                  {i > 0 && <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: a }} aria-hidden="true" />}
                   {l.label}
-                  <ChevronRight className="h-4 w-4 text-brand" strokeWidth={3} aria-hidden="true" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-3 lg:gap-x-6">
-            <Link
-              href={aktion.button.href}
-              className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-white px-5 text-[15px] font-bold text-dark transition-colors hover:bg-ash lg:min-h-[52px] lg:px-6 lg:text-base"
-            >
-              {aktion.button.label}
-              <ArrowRight className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
-            </Link>
-            {ende && <Restzeit ende={ende} />}
+                </span>
+              ))}
+            </p>
+            <span className="h-1 w-14 rounded-full" style={{ backgroundColor: a }} aria-hidden="true" />
+            <p className="text-white/80">{aktion.zeile}</p>
+            <div className="flex flex-col items-start gap-3">
+              {button}
+              {ende && <Restzeit ende={ende} />}
+            </div>
+          </div>
+
+          <div className="relative aspect-[388/395] self-end">
+            {/* rote Leuchtleiste wie im Motiv */}
+            <span
+              className="absolute -top-12 bottom-0 left-[8%] w-1 rounded-full"
+              style={{ backgroundColor: a, boxShadow: `0 0 18px 4px ${a}` }}
+              aria-hidden="true"
+            />
+            <Image
+              src={aktion.bild.src}
+              alt={aktion.bild.alt}
+              fill
+              sizes="380px"
+              className="object-contain"
+              style={{ maskImage: 'radial-gradient(ellipse 58% 56% at 50% 50%, #000 70%, transparent 100%)' }}
+              priority
+            />
+          </div>
+
+          <div className="flex flex-col items-center gap-5 text-center">
+            {schildElement('px-6 py-3 text-[clamp(2.2rem,3.8vw,3.6rem)]')}
+            {rabattElement({
+              oben: 'text-[clamp(1.4rem,2vw,2rem)]',
+              gross: 'text-[clamp(6rem,10vw,9.5rem)]',
+              unten: 'text-[clamp(2.4rem,4vw,3.8rem)]',
+            })}
+            {kacheln('flex-wrap justify-center')}
           </div>
         </div>
       </div>
