@@ -138,6 +138,11 @@ details.aufschl .zeile i{font-style:normal;color:var(--mid);display:block;font-s
 .vorschlaege button:first-child{border-top:0}
 .vorschlaege button:hover,.vorschlaege button:focus-visible{background:var(--pale);outline:none}
 .vorschlaege small{color:var(--mid);font-size:12px;white-space:nowrap}
+.vorschlaege .bildchen{flex:none;width:40px;height:40px;border-radius:6px;object-fit:cover;background:var(--pale)}
+.vorschlaege .name{flex:1;min-width:0;display:flex;flex-direction:column}
+.vorschlaege .name i{font-style:normal;font-size:12px;color:var(--mid)}
+.linkbtn{background:none;border:0;padding:6px 0;font:inherit;font-size:14px;color:var(--mid);text-decoration:underline;cursor:pointer;justify-self:start}
+.leer{font-size:14px;color:var(--mid);padding:4px 2px}
 .gewaehlt{display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid var(--brand);background:rgba(237,27,36,.05);border-radius:12px;padding:12px 14px}
 .gewaehlt button{background:none;border:0;font:inherit;font-size:13px;color:var(--mid);text-decoration:underline;cursor:pointer;padding:4px}
 /* Terminwahl */
@@ -285,7 +290,7 @@ const HAKEN='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.
 // Zustand
 // ─────────────────────────────────────────────────────────────────────────────
 const LEER={plz:'',weg:null,besitz:null,bodenart:null,flaeche:40,flaecheUnklar:false,altboden:null,sockel:true,stufen:0,tueren:0,klasse:null,zeitraum:null,
-  wunsch:[],empfehlung:false,beratung:null,rueckruf:null,termin:null,terminTag:null,vorname:'',nachname:'',telefon:'',email:'',strasse:'',strasseOk:false,hausnr:'',produkt:null,produktText:'',zahlart:null,widerruf:false,datenschutz:false,quelle:'Instagram-Anzeige (utm_source=instagram)'};
+  wunsch:[],empfehlung:false,beratung:null,rueckruf:null,termin:null,terminTag:null,vorname:'',nachname:'',telefon:'',email:'',strasse:'',strasseOk:false,hausnr:'',produkt:null,produktText:'',produktNichtGefunden:false,zahlart:null,widerruf:false,datenschutz:false,quelle:'Instagram-Anzeige (utm_source=instagram)'};
 let st={...LEER};
 let verlauf=['plz'];
 const PFADE={
@@ -311,7 +316,11 @@ function aktuellerPfad(){
   if(!st.weg) return ['plz','weg'];
   let p=[...PFADE[st.weg]];
   // Schon bei uns ausgesucht: Boden eintippen statt Bodenart wählen; mit Produkt entfällt die Preisklasse
-  if(st.besitz==='bj'){ p=p.map(x=>x==='bodenart'?'produkt':x); if(st.produkt) p=p.filter(x=>x!=='klasse'); }
+  if(st.besitz==='bj'){
+    p=p.map(x=>x==='bodenart'?'produkt':x);
+    if(st.produktNichtGefunden&&!st.produkt) p.splice(p.indexOf('produkt')+1,0,'bodenart');
+    if(st.produkt&&st.produkt.preis) p=p.filter(x=>x!=='klasse');
+  }
   if(st.weg==='beratung'&&st.beratung==='fachmarkt') p.splice(p.indexOf('beratungsart')+1,0,'termin');
   return p;
 }
@@ -344,8 +353,9 @@ function preisrahmen(){
   if(k.name==='über Kreis 4') bMax+=Math.max(0,(l.fahrt-26))*3;
   add(`Baustellenpauschale (${k.name})`,k.baustelle,bMax,k.name==='über Kreis 4'?'zzgl. Anfahrt ab Kreis 4':'Anfahrt und Einrichtung');
   const vMin=posten.reduce((s,p)=>s+p.min,0), vMax=posten.reduce((s,p)=>s+p.max,0);
-  const klasse=st.produkt?null:(st.klasse==='empfehlung'?'mittel':st.klasse);
-  const mp=st.produkt?[st.produkt.preis,st.produkt.preis]:MATERIAL[st.bodenart][klasse];
+  const mitPreis=st.produkt&&st.produkt.preis;
+  const klasse=mitPreis?null:(!st.klasse||st.klasse==='empfehlung'?'mittel':st.klasse);
+  const mp=mitPreis?[st.produkt.preis,st.produkt.preis]:MATERIAL[st.bodenart][klasse];
   const mMin=mp[0]*m2*1.05, mMax=mp[1]*m2*1.10;
   const offen=[];
   if(ab&&ab.preis===null) offen.push(st.altboden==='unklar'?'Ob und wie der alte Boden entfernt wird, klären wir beim Aufmaß.':`${ab.name} entfernen ist nicht enthalten, das klären wir beim Aufmaß.`);
@@ -391,12 +401,46 @@ function terminText(){
   const [datum,zeit]=st.termin.split('T');const d=new Date(datum+'T00:00');
   return `${WT[d.getDay()]}, ${d.getDate()}.${d.getMonth()+1}. um ${zeit} Uhr`;
 }
-function produktVorschlaege(){
-  const q=st.produktText.trim().toLowerCase(); if(q.length<2) return '';
-  const w=q.split(/\s+/);
-  return SHOP_BEISPIELE.filter(p=>w.every(x=>p.name.toLowerCase().includes(x))).slice(0,6)
-    .map(p=>`<button type="button" data-produkt="${esc(p.name)}"><span>${esc(p.name)}</span><small>${p.preis.toLocaleString('de-DE')} €/m²</small></button>`).join('');
+// Shop-Suche: unter der Shop-Adresse live über /api/products/search, sonst Beispieldaten
+let shopLive=false, treffer=[], suchLaeuft=false, suchTimer=null, letzteSuche='';
+function artAusKategorien(kats){
+  const t=(kats||[]).map(k=>`${k.slug||''} ${k.name||''}`.toLowerCase()).join(' ');
+  if(/klebe/.test(t)) return 'klebe';
+  if(/rigid|klick-vinyl|klick vinyl|klickvinyl/.test(t)) return 'klick';
+  if(/laminat/.test(t)) return 'laminat';
+  if(/parkett/.test(t)) return 'parkett';
+  if(/teppich/.test(t)) return 'teppich';
+  if(/\bcv\b|pvc/.test(t)) return 'cv';
+  if(/vinyl/.test(t)) return 'klick';
+  return null;
 }
+async function shopSuche(q){
+  try{
+    const r=await fetch(`/api/products/search?q=${encodeURIComponent(q)}`,{headers:{Accept:'application/json'}});
+    if(!r.ok) throw new Error(r.status);
+    const daten=await r.json(); if(!Array.isArray(daten)) throw new Error('kein Array');
+    shopLive=true;
+    return daten.map(p=>{const art=artAusKategorien(p.categories);const m2=!p.einheit_short||/m²|m2|qm/i.test(p.einheit_short);
+      return art?{name:p.name,art,preis:m2&&Number(p.price)>0?Number(p.price):null,einheit:p.einheit_short||'m²',bild:p.images&&p.images[0]?p.images[0].src:null}:null;}).filter(Boolean).slice(0,8);
+  }catch(e){
+    const w=q.toLowerCase().split(/\s+/);
+    return SHOP_BEISPIELE.filter(p=>w.every(x=>p.name.toLowerCase().includes(x))).slice(0,6).map(p=>({...p,einheit:'m²',bild:null}));
+  }
+}
+function produktVorschlaege(){
+  const q=st.produktText.trim(); if(q.length<2) return '';
+  if(suchLaeuft&&!treffer.length) return '<div class="leer">Suche läuft …</div>';
+  if(!treffer.length) return letzteSuche===q?'<div class="leer">Nichts gefunden. Probier einen anderen Begriff.</div>':'';
+  return treffer.map((p,i)=>`<button type="button" data-produkt="${i}">${p.bild?`<img class="bildchen" src="${esc(p.bild)}" alt="" loading="lazy">`:''}<span class="name"><span>${esc(p.name)}</span><i>${VERLEGUNG[p.art].name}</i></span>${p.preis?`<small>${p.preis.toLocaleString('de-DE',{minimumFractionDigits:2})} €/${esc(p.einheit)}</small>`:''}</button>`).join('');
+}
+function sucheStarten(){
+  clearTimeout(suchTimer);
+  const q=st.produktText.trim();
+  if(q.length<2){treffer=[];zeigeTreffer();return;}
+  suchLaeuft=true;zeigeTreffer();
+  suchTimer=setTimeout(async()=>{const r=await shopSuche(q);if(st.produktText.trim()!==q)return;treffer=r;suchLaeuft=false;letzteSuche=q;zeigeTreffer();},250);
+}
+function zeigeTreffer(){const v=document.getElementById('produkt-vorschlaege');if(v)v.innerHTML=produktVorschlaege();const h=document.getElementById('beispiel-hinweis');if(h&&shopLive)h.remove();}
 function adressVorschlaege(){
   const q=st.strasse.trim().toLowerCase(); const l=lage(); if(q.length<2||st.strasseOk) return '';
   return STRASSEN.filter(x=>x.toLowerCase().startsWith(q)).slice(0,5)
@@ -451,12 +495,15 @@ const SCREENS={
   produkt:{
     titel:'Welchen Boden hast du ausgesucht?',
     hinweis:'Tipp einfach los, wir schlagen dir Böden aus unserem Shop vor.',
+    auto:true,
+    autoWenn:()=>!st.produkt,
     body:()=>{
       if(st.produkt) return `<div class="gewaehlt"><span><b>${esc(st.produkt.name)}</b><br><span style="font-size:13px;color:var(--mid)">${VERLEGUNG[st.produkt.art].name}</span></span><button type="button" data-aktion="produkt-weg">Ändern</button></div>`;
-      let s=`<div class="feld"><label for="produkt-suche">Produktname oder Dekor</label><input type="text" id="produkt-suche" autocomplete="off" placeholder="z. B. Eiche natur" value="${esc(st.produktText)}"></div><div class="vorschlaege" id="produkt-vorschlaege">${produktVorschlaege()}</div>`;
-      if(st.produktText.trim().length>=3) s+=`<div class="feld"><label>Nicht dabei? Dann sag uns noch die Bodenart:</label><div class="chips">${Object.entries(VERLEGUNG).map(([k,v])=>chip('bodenart',k,v.name)).join('')}</div></div>`;
-      return s+'<p class="beispiel">Entwurf: Beispieldaten. Im Shop kommen die Vorschläge live aus eurer Produktsuche, mit Foto.</p>';},
-    weiter:()=>!!st.produkt||(st.produktText.trim().length>=3&&!!st.bodenart),
+      return `<div class="feld"><label for="produkt-suche">Produktname oder Dekor</label><input type="text" id="produkt-suche" autocomplete="off" placeholder="z. B. Eiche natur" value="${esc(st.produktText)}"></div>
+        <div class="vorschlaege" id="produkt-vorschlaege">${produktVorschlaege()}</div>
+        <button type="button" class="linkbtn" data-aktion="produkt-nicht-gefunden">Meinen Boden finde ich nicht</button>
+        ${shopLive?'':'<p class="beispiel" id="beispiel-hinweis">Entwurf: Hier kommen Beispieldaten. Unter der Shop-Adresse (Vercel-Vorschau) sucht das Feld live in eurem Shop.</p>'}`;},
+    weiter:()=>!!st.produkt,
   },
   flaeche:{
     titel:'Wie viel Fläche ungefähr?',
@@ -577,7 +624,7 @@ const SCREENS={
 // ─────────────────────────────────────────────────────────────────────────────
 function ergebnisPreis(){
   const r=preisrahmen(),v=VERLEGUNG[st.bodenart],l=lage();
-  const boden=st.produkt?st.produkt.name:`${v.name} (${KLASSEN[st.klasse]})`;
+  const boden=st.produkt?st.produkt.name:`${v.name} (${KLASSEN[st.klasse||'mittel']})`;
   const enthalten=[`Boden: ${boden}`,`Verlegung von ca. ${st.flaeche} m²`];
   const ab=ALTBODEN[st.altboden];
   if(ab&&ab.preis) enthalten.push('Alten Boden entfernen und entsorgen');
@@ -619,7 +666,7 @@ function teamAnsicht(){
   if(st.besitz) zeilen.push(`Boden schon? ${({nein:'Nein',bj:'Bei Bodenjäger ausgesucht',fremd:'Woanders gekauft – Hinweis gezeigt, will bei uns aussuchen'})[st.besitz]}`);
   if(st.bodenart) zeilen.push(`Bodenart: ${VERLEGUNG[st.bodenart].name} · Fläche: ${st.flaeche} m²`);
   if(ab) zeilen.push(`Altboden: ${ab}`);
-  if(st.produkt||st.produktText) zeilen.push(`Ausgesuchter Boden: ${st.produkt?st.produkt.name:st.produktText+' (frei eingegeben)'}`);
+  if(st.produkt||st.produktText) zeilen.push(`Ausgesuchter Boden: ${st.produkt?st.produkt.name:(st.produktText||'–')+' (im Shop nicht gefunden)'}`);
   if(weg==='preis'){const r=preisrahmen();zeilen.push(`Extras: ${[st.sockel?'Sockelleisten':null,st.stufen?st.stufen+' Stufen':null,st.tueren?st.tueren+' Türen':null].filter(Boolean).join(', ')||'–'}`,st.produkt?null:`Preisklasse: ${KLASSEN[st.klasse]}`,`Genannter Preisrahmen: ${eur(r.gMin)} – ${eur(r.gMax)}`,'',`**KALKULATION (intern, nicht für den Kunden)**`,...r.posten.map(p=>`${p.name}: ${p.min===p.max?eur(p.min):eur(p.min)+' – '+eur(p.max)}`),`Boden: ${eur(r.mMin)} – ${eur(r.mMax)}`);}
   if(st.zeitraum) zeilen.push(`Zeitraum: ${({asap:'So schnell wie möglich','1-3':'1–3 Monate','3-6':'3–6 Monate',offen:'Noch offen'})[st.zeitraum]}`);
   if(weg==='aufmass') zeilen.push(`Wunschböden: ${[st.produkt?st.produkt.name:null,...st.wunsch,st.empfehlung?'+ Empfehlung':null].filter(Boolean).join(', ')}`,`BEZAHLT: ${eur(l.kreis.aufmass)} – Artikel ${l.kreis.aufmassArt} – ${({paypal:'PayPal',karte:'Karte',klarna:'Klarna'})[st.zahlart]}`);
@@ -704,7 +751,7 @@ karte.addEventListener('click',e=>{
   if(o&&!o.disabled){const k=o.dataset.key,v=o.dataset.val;
     if(k==='weg'&&st.weg!==v){ st.weg=v; }
     else if(k==='beratung'&&st.beratung!==v){ st.beratung=v; st.termin=null; }
-    else if(k==='besitz'&&st.besitz!==v){ st.besitz=v; st.produkt=null; st.produktText=''; }
+    else if(k==='besitz'&&st.besitz!==v){ st.besitz=v; st.produkt=null; st.produktText=''; st.produktNichtGefunden=false; treffer=[]; }
     else st[k]=v;
     const id=verlauf[verlauf.length-1],s=SCREENS[id];
     render();
@@ -716,7 +763,7 @@ karte.addEventListener('click',e=>{
   const w=e.target.closest('[data-wunsch]'); if(w){const n=w.dataset.wunsch,i=st.wunsch.indexOf(n);if(i>-1)st.wunsch.splice(i,1);else if(st.wunsch.length<(st.produkt?2:3))st.wunsch.push(n);render();return;}
   const tg=e.target.closest('[data-tag]'); if(tg){st.terminTag=tg.dataset.tag;render();return;}
   const sl=e.target.closest('[data-slot]'); if(sl){st.termin=sl.dataset.slot;render();return;}
-  const pr=e.target.closest('[data-produkt]'); if(pr){st.produkt=SHOP_BEISPIELE.find(x=>x.name===pr.dataset.produkt);st.bodenart=st.produkt.art;render();setTimeout(weiter,250);return;}
+  const pr=e.target.closest('[data-produkt]'); if(pr){st.produkt=treffer[+pr.dataset.produkt];st.bodenart=st.produkt.art;st.produktNichtGefunden=false;render();setTimeout(weiter,250);return;}
   const ad=e.target.closest('[data-adr]'); if(ad){st.strasse=ad.dataset.adr;st.strasseOk=true;render();setTimeout(()=>document.getElementById('hausnr')?.focus(),50);return;}
   const a=e.target.closest('[data-aktion]'); if(a) aktion(a.dataset.aktion);
 });
@@ -725,9 +772,10 @@ function aktion(was){
   if(was==='zum-aufmass'){ // Umstieg mit allen Angaben: nur noch Wunschboden, Name, Zahlung
     st.weg='aufmass';modus='frage';const pf=aktuellerPfad();verlauf=pf.slice(0,pf.indexOf('wunschboden')+1);render();window.scrollTo({top:0,behavior:'smooth'});}
   if(was==='zur-beratung'){st.weg='beratung';st.beratung='fachmarkt';modus='frage';verlauf=['plz','weg','besitz','beratungsart','termin'];render();window.scrollTo({top:0,behavior:'smooth'});}
-  if(was==='produkt-weg'){st.produkt=null;st.bodenart=null;render();return;}
+  if(was==='produkt-weg'){st.produkt=null;st.bodenart=null;render();setTimeout(()=>{const n=document.getElementById('produkt-suche');if(n){n.focus();sucheStarten();}},30);return;}
+  if(was==='produkt-nicht-gefunden'){st.produktNichtGefunden=true;st.produkt=null;st.bodenart=null;const pf=aktuellerPfad();verlauf.push(pf[pf.indexOf('produkt')+1]);render();window.scrollTo({top:0,behavior:'smooth'});return;}
   if(was==='adresse-weg'){st.strasseOk=false;st.hausnr='';render();return;}
-  if(was==='neu'){st={...LEER,wunsch:[]};verlauf=['plz'];modus='frage';render();window.scrollTo({top:0});}
+  if(was==='neu'){st={...LEER,wunsch:[]};treffer=[];verlauf=['plz'];modus='frage';render();window.scrollTo({top:0});}
 }
 karte.addEventListener('input',e=>{
   const t=e.target;
@@ -738,9 +786,7 @@ karte.addEventListener('input',e=>{
     return;}
   if(t.id==='qm'){st.flaeche=Math.max(0,Math.min(400,+t.value||0));document.getElementById('qm-r').value=Math.min(200,st.flaeche);weiterBtn.disabled=!SCREENS.flaeche.weiter();return;}
   if(t.id==='qm-r'){st.flaeche=+t.value;document.getElementById('qm').value=st.flaeche;karte.querySelectorAll('[data-qm]').forEach(c=>c.classList.toggle('an',+c.dataset.qm===st.flaeche));return;}
-  if(t.id==='produkt-suche'){st.produktText=t.value;const v=document.getElementById('produkt-vorschlaege');if(v)v.innerHTML=produktVorschlaege();
-    const hatChips=!!karte.querySelector('[data-key="bodenart"]');if((st.produktText.trim().length>=3)!==hatChips){const pos=t.selectionStart;render();const n=document.getElementById('produkt-suche');n.focus();n.setSelectionRange(pos,pos);}
-    weiterBtn.disabled=!SCREENS.produkt.weiter();return;}
+  if(t.id==='produkt-suche'){st.produktText=t.value;sucheStarten();return;}
   if(t.id==='strasse'){st.strasse=t.value;st.strasseOk=false;const v=document.getElementById('adr-vorschlaege');if(v)v.innerHTML=adressVorschlaege();const f=document.getElementById('f-strasse');if(f)f.textContent='';return;}
   if(['vorname','nachname','telefon','email','hausnr'].includes(t.id)){st[t.id]=t.value;const f=document.getElementById('f-'+t.id);if(f)f.textContent='';return;}
 });
