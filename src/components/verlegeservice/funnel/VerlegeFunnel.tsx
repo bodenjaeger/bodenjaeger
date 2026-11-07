@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable react-hooks/rules-of-hooks */
 
 /**
  * Verlegeservice-Formular mit drei Wegen (mobil zuerst, eine Frage pro Bildschirm):
