@@ -8,7 +8,6 @@ import { SITE_URL } from '@/lib/site'
 import { wooCommerceClient, type StoreApiProduct } from '@/lib/woocommerce'
 import { strasseBekannt } from '@/lib/verlegeservice/adresse'
 import {
-  BESITZ_NAME,
   KLASSE_NAME,
   RUECKRUF_NAME,
   WEG_NAME,
@@ -116,6 +115,7 @@ const alsText = (md: string) =>
     .replace(/^---$/gm, '')
     .replace(/\*\*|_\(|\)_/g, (m) => (m === '**' ? '' : m === '_(' ? '(' : ')'))
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
+    .replace(/^_|_$/gm, '')
 
 const fehler = (error: string, felder?: Record<string, string>, status = 400) =>
   NextResponse.json<FunnelAntwort>({ success: false, error, ...(felder ? { felder } : {}) }, { status })
@@ -240,98 +240,110 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
     (x): x is string => !!x,
   )
 
-  // ── Trello-Karte: oben das, was jetzt zu tun ist, dann Kontakt, Projekt, intern
+  // ── Trello-Karte ─────────────────────────────────────────────────────────
+  // Oben: was jetzt zu tun ist, mit WhatsApp-Knopf (Text schon drin). Dann der
+  // kurze Ablauf, danach Kunde und Projekt. Kalkulation und Quelle ganz unten.
   const t = a.tracking
   const fachmarkt = a.weg === 'beratung' && a.beratung === 'fachmarkt'
+  const vorname = a.vorname.trim()
+  const bodenWort = a.produkt ? produktName : a.bodenart ? BODENARTEN[a.bodenart].name : 'Boden'
+
+  /** WhatsApp-Link mit fertigem Text (Klammern & Co. kodiert, damit der Trello-Link heil bleibt) */
+  const waLink = (text: string) =>
+    `https://wa.me/${a.telefon.slice(1)}?text=${encodeURIComponent(text).replace(/[()'!*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`
+
+  const hallo = `Hallo ${vorname}, hier ist Bodenjäger aus Hückelhoven 👋`
+  const waText =
+    a.weg === 'aufmass'
+      ? `${hallo} Danke für deine Aufmaß-Buchung! Wann passt es dir, dass wir bei dir vorbeikommen? Schick uns gern zwei, drei Termine, die dir passen. Deine Großmuster bringen wir mit.`
+      : a.weg === 'preis'
+        ? `${hallo} Du hast dir gerade den Preisrahmen für deinen ${bodenWort} berechnet. Hast du noch Fragen dazu? Genau wird es mit einem Aufmaß bei dir vor Ort – wir bringen deine Wunschböden als Großmuster mit. Sollen wir einen Termin machen?`
+        : fachmarkt
+          ? `${hallo} Wir freuen uns auf dich am ${termin} im Fachmarkt, Neckarstraße 9 in Hückelhoven. Falls etwas dazwischenkommt, schreib uns einfach kurz hier.`
+          : a.beratung === 'whatsapp'
+            ? `${hallo} Danke für deine Anfrage! Schick uns gern ein paar Fotos von den Räumen und ungefähr die Quadratmeter, dann beraten wir dich direkt hier.`
+            : `${hallo} Wir wollten dich wegen deiner Anfrage zum Bodenverlegen zurückrufen. Wann passt es dir am besten?`
+  const waNichtErreicht = `${hallo} Wir haben versucht, dich wegen deiner Anfrage anzurufen. Wann können wir dich am besten erreichen? Du kannst uns auch gern direkt hier schreiben.`
+
   const naechsterSchritt =
     a.weg === 'aufmass'
-      ? 'Sobald das Label **Bezahlt** da ist: anrufen und Aufmaßtermin vereinbaren'
+      ? 'Sobald das Label **Bezahlt** da ist: Termin fürs Aufmaß vereinbaren'
       : a.weg === 'preis'
-        ? stufe === 'C' || !a.telefon
-          ? 'Per Mail nachfassen und Aufmaß oder Fachmarkt anbieten'
-          : 'Innerhalb von 1 Tag anrufen und das Aufmaß anbieten'
+        ? 'Heute melden und Aufmaß anbieten'
         : fachmarkt
-          ? `Kunde kommt **${termin}** in den Fachmarkt – passende Böden bereitlegen`
+          ? `Kunde kommt **${termin}** in den Fachmarkt`
           : a.beratung === 'whatsapp'
             ? 'Per WhatsApp melden'
             : `Zurückrufen${a.rueckruf && a.rueckruf !== 'egal' ? ` – **${RUECKRUF_NAME[a.rueckruf].toLowerCase()}**` : ''}`
 
+  const ablauf =
+    a.weg === 'aufmass'
+      ? ['WhatsApp schicken oder anrufen, Termin ausmachen → Karte nach **📏 Aufmaß-Termin steht**', 'Großmuster einpacken (Liste unten), Aufmaß machen', 'Angebot in SAP, Aufmaß gutschreiben → **📄 Angebot erstellt**']
+      : a.weg === 'preis'
+        ? ['WhatsApp schicken oder anrufen', 'Aufmaß oder Fachmarkt-Termin anbieten', 'Kein Interesse → **🗂 Unqualifiziert / später**']
+        : fachmarkt
+          ? ['Bestätigung per WhatsApp schicken', 'Passende Böden bereitlegen', 'Nach dem Termin: Aufmaß buchen lassen oder → **⏳ Wartet auf Kunde**']
+          : a.beratung === 'whatsapp'
+            ? ['WhatsApp schicken', 'Fragen beantworten, Aufmaß oder Fachmarkt-Termin anbieten']
+            : ['Anrufen', 'Nicht erreicht → WhatsApp „nicht erreicht“ schicken und Karte nach **📞 Nicht erreicht**', 'Aufmaß oder Fachmarkt-Termin anbieten']
+
   const z: string[] = []
-  z.push(`## ➡️ ${naechsterSchritt}`, '')
-  z.push('---', '', '## 👤 Kontakt')
-  z.push(`**${name}**`)
-  if (a.telefon) z.push(`📞 ${telefonAnzeige(a.telefon)} · [WhatsApp](https://wa.me/${a.telefon.slice(1)})`)
-  if (a.email) z.push(`✉️ ${a.email}`)
-  z.push(`📍 ${a.weg === 'aufmass' ? `${a.strasse} ${a.hausnummer}, ` : ''}${gebiet.plz} ${gebiet.ort} · ca. ${fahrt} km · ${kreis.name}`)
-  if (a.weg === 'aufmass' && strasseGeprueft === false) z.push('⚠️ Straße nicht im Straßenverzeichnis – Adresse beim Anruf prüfen')
+  z.push(`## ➡️ ${naechsterSchritt}`)
+  if (a.telefon) {
+    z.push(`📞 **${telefonAnzeige(a.telefon)}** · 💬 **[WhatsApp mit Text öffnen](${waLink(waText)})**`)
+    z.push(`_Nicht erreicht? [WhatsApp „nicht erreicht“](${waLink(waNichtErreicht)})_`)
+  } else if (a.email) {
+    z.push(`✉️ **${a.email}** _(keine Telefonnummer angegeben)_`)
+  }
+  z.push('', '**So geht’s weiter**', ...ablauf.map((x, i) => `${i + 1}. ${x}`))
+
+  z.push('', '---', '', `## 👤 ${name}`)
+  const kontakt = [a.telefon && a.email ? `✉️ ${a.email}` : null, `📍 ${a.weg === 'aufmass' ? `${a.strasse} ${a.hausnummer}, ` : ''}${gebiet.plz} ${gebiet.ort} · ca. ${fahrt} km`].filter(Boolean)
+  z.push(kontakt.join(' · '))
+  if (a.weg === 'aufmass' && strasseGeprueft === false) z.push('⚠️ Straße nicht im Straßenverzeichnis – Adresse kurz prüfen')
 
   const projekt: string[] = []
   if (a.produkt) projekt.push(`**Boden:** ${bodenLink(a.produkt.id, produktName)} _(schon ausgesucht)_`)
   else if (a.produktText) projekt.push(`**Boden:** ${a.produktText} _(im Shop nicht gefunden)_`)
   else if (a.bodenart && a.weg !== 'beratung') projekt.push(`**Boden:** ${BODENARTEN[a.bodenart].name} _(noch nicht ausgesucht)_`)
-  else if (a.besitz) projekt.push(`**Boden:** ${BESITZ_NAME[a.besitz]}`)
   if (a.weg !== 'beratung') projekt.push(`**Fläche:** ca. ${a.flaeche} m²`)
   if (a.altboden && a.weg === 'preis') projekt.push(`**Altboden:** ${ALTBOEDEN[a.altboden].name}`)
   if (a.weg === 'preis') {
     const extras = [a.sockelleisten ? 'Sockelleisten' : null, a.stufen ? `${a.stufen} Stufen` : null, a.tueren ? `${a.tueren} Türen kürzen` : null].filter(Boolean)
     if (extras.length) projekt.push(`**Extras:** ${extras.join(', ')}`)
-    if (!a.produkt && a.klasse) projekt.push(`**Preisklasse:** ${KLASSE_NAME[a.klasse]}`)
   }
-  if (a.zeitraum) projekt.push(`**Verlegen:** ${ZEITRAUM_NAME[a.zeitraum]}`)
-  if (projekt.length) z.push('', '## 🏠 Projekt', ...projekt.map((x) => `- ${x}`))
+  if (a.zeitraum) projekt.push(`**Wann:** ${ZEITRAUM_NAME[a.zeitraum]}`)
+  if (rahmen) projekt.push(`**Genannter Preisrahmen:** ${formatEuro(rahmen.min)} – ${formatEuro(rahmen.max)}`)
+  if (projekt.length) z.push('', ...projekt.map((x) => `- ${x}`))
 
   if (a.weg === 'aufmass' && angebot) {
-    z.push('', '## 📦 Großmuster mitnehmen')
+    z.push('', `**📦 Großmuster mitnehmen**`)
     if (a.produkt) z.push(`- ${bodenLink(a.produkt.id, produktName)}`)
     for (const w of a.wunschboeden) z.push(`- ${bodenLink(w.id, w.name)}`)
     if (a.empfehlung) z.push('- Eure Empfehlung')
-    z.push('', `## 💶 Aufmaß ${formatEuro(angebot.preis)}`, `${a.zahlart ? ZAHLART_NAME[a.zahlart] : ''} · ${angebot.kreis.name} (${angebot.kreis.sku}) · wird bei Beauftragung gutgeschrieben`)
+    z.push('', `**💶 Aufmaß ${formatEuro(angebot.preis)}** · ${a.zahlart ? ZAHLART_NAME[a.zahlart] : ''} · wird bei Beauftragung gutgeschrieben`)
   }
-  if (rahmen) z.push('', `## 💶 Genannter Preisrahmen: ${formatEuro(rahmen.min)} – ${formatEuro(rahmen.max)}`)
 
   z.push('', '---', '', '**Intern**')
   if (rahmen) {
     for (const p of rahmen.posten) z.push(`- ${p.name}: ${p.min === p.max ? formatEuro(p.min) : `${formatEuro(p.min)} – ${formatEuro(p.max)}`}`)
     z.push(`- Boden: ${rahmen.boden ? `${formatEuro(rahmen.boden[0])} – ${formatEuro(rahmen.boden[1])} (${bodenText})` : 'nicht enthalten'}`)
+    if (!a.produkt && a.klasse) z.push(`- Preisklasse: ${KLASSE_NAME[a.klasse]}`)
   }
   const quelle = [t.utmSource, t.utmMedium, t.utmCampaign].filter(Boolean).join(' / ') || (t.gclid ? 'Google Ads' : t.fbclid ? 'Meta' : t.referrer ? t.referrer : 'direkt')
-  z.push(`- Vorgang ${leadId} · Lead-Stufe ${stufe} · Quelle: ${quelle}`)
+  z.push(`- Vorgang ${leadId} · Lead-Stufe ${stufe} · ${kreis.name}${angebot ? ` (${angebot.kreis.sku})` : ''} · Quelle: ${quelle}`)
   const beschreibung = z.join('\n')
 
   const labels: KartenLabel[] = [
     { name: `Lead-Stufe ${stufe}`, farbe: stufe === 'A' ? 'green' : stufe === 'B' ? 'orange' : 'black' },
     { name: WEG_NAME[a.weg], farbe: a.weg === 'aufmass' ? 'red' : a.weg === 'preis' ? 'blue' : 'purple' },
   ]
-  if (a.weg === 'beratung' && a.beratung === 'fachmarkt') labels.push({ name: 'Termin Fachmarkt', farbe: 'pink' })
+  if (fachmarkt) labels.push({ name: 'Termin Fachmarkt', farbe: 'pink' })
   if (a.weg === 'aufmass') labels.push({ name: 'Zahlung offen', farbe: 'yellow' })
 
-  const checklisten: Array<{ name: string; punkte: string[] }> = []
-  const gespraech = [
-    'Bodenart / Wunsch?',
-    'Räume und ca. m²?',
-    'Was liegt aktuell? Entfernen?',
-    'Treppe? Türen?',
-    'Wann soll verlegt werden?',
-    'Budget-Rahmen?',
-    'Nächster Schritt: Aufmaß gebucht / Fachmarkttermin / später',
-  ]
-  if (a.weg === 'beratung' && a.beratung === 'fachmarkt') {
-    checklisten.push({ name: 'Beratung im Fachmarkt', punkte: [`Kunde kommt ${termin}`, 'Passende Böden bereitlegen', ...gespraech] })
-  } else if (a.weg === 'beratung') {
-    checklisten.push({ name: a.beratung === 'whatsapp' ? 'WhatsApp-Beratung' : 'Telefonat', punkte: [a.beratung === 'whatsapp' ? 'Per WhatsApp melden' : 'Zurückrufen', ...gespraech] })
-  } else if (a.weg === 'aufmass') {
-    checklisten.push({ name: 'Aufmaß', punkte: ['Bezahlt (wird automatisch abgehakt)', 'Termin vereinbaren', 'Großmuster einpacken (Liste oben)', 'Aufmaß durchführen', 'Angebot in SAP erstellen (Aufmaß gutschreiben)'] })
-  } else {
-    checklisten.push({
-      name: 'Nachfassen Preisrahmen',
-      punkte: [
-        ...(stufe !== 'C' && a.telefon ? ['Tag 2: anrufen und Aufmaß anbieten'] : []),
-        'Tag 3: Mail „Boden in echt sehen" – Fachmarkt oder Musterbox',
-        'Tag 7: Mail Erinnerung Aufmaß',
-        'Tag 14: ohne Reaktion → Liste „Später"',
-      ],
-    })
-  }
+  // Checkliste nur beim Aufmaß – „Bezahlt“ hakt sich nach der Zahlung selbst ab
+  const checklisten: Array<{ name: string; punkte: string[] }> =
+    a.weg === 'aufmass' ? [{ name: 'Aufmaß', punkte: ['Bezahlt', 'Termin vereinbart', 'Angebot erstellt'] }] : []
 
   const titelVorne =
     a.weg === 'aufmass'
