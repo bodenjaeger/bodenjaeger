@@ -316,6 +316,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
       z.push(`_Weitere WhatsApp: ${extra.join(' · ')}_`)
     } else if (a.telefon) {
       z.push(`📞 **${telefonAnzeige(a.telefon)}** _(Festnetz – bitte anrufen)_`)
+    } else if (a.beratung === 'whatsapp') {
+      z.push(`💬 Kunde hat keine Nummer angegeben – seine WhatsApp kommt mit Vorgang **${leadId}**`)
     } else if (a.email) {
       z.push(`✉️ **${a.email}** _(keine Telefonnummer angegeben)_`)
     }

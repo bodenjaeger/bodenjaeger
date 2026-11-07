@@ -233,13 +233,15 @@ export function pruefeKontakt(a: Pick<FunnelAnfrage, 'weg' | 'beratung' | 'vorna
   const e: Record<string, string> = {}
   if (a.vorname.trim().length < 2) e.vorname = 'Bitte gib deinen Vornamen ein.'
   if (a.nachname.trim().length < 2) e.nachname = 'Bitte gib deinen Nachnamen ein.'
-  const telefonPflicht = a.weg === 'aufmass' || a.weg === 'preis' || (a.weg === 'beratung' && a.beratung !== 'fachmarkt')
+  // WhatsApp-Beratung: der Kunde schreibt uns selbst, die Nummer kommt dann mit
+  const telefonPflicht = a.weg !== 'beratung' || a.beratung !== 'whatsapp'
   const telefonLeer = a.telefon.replace(/\s/g, '') === '' || a.telefon.replace(/\s/g, '') === '+49'
   if (telefonPflicht || !telefonLeer) {
     const t = pruefeTelefon(a.telefon)
     if (!t.ok) e.telefon = t.fehler
   }
-  const emailPflicht = a.weg !== 'beratung' || a.beratung === 'fachmarkt'
+  // Fachmarkt: keine Bestätigung per Mail, Nummer reicht
+  const emailPflicht = a.weg !== 'beratung'
   if ((emailPflicht || a.email.trim()) && !istEmail(a.email)) e.email = 'Bitte prüfe deine E-Mail-Adresse.'
   if (!a.datenschutz) e.datenschutz = 'Bitte stimme zu, damit wir dich kontaktieren dürfen.'
   return e
