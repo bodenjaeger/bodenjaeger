@@ -340,7 +340,8 @@ export async function aufmassBezahltNachTrello(cardId: string, text: string): Pr
     console.error('[trello] TRELLO_KEY/TRELLO_TOKEN/TRELLO_LIST_ID fehlt')
     return false
   }
-  const zielListe = process.env.TRELLO_LIST_ID_AUFMASS_BEZAHLT?.trim()
+  // Variable hat Vorrang, sonst die Liste mit „Aufmaß bezahlt“ im Namen
+  const zielListe = process.env.TRELLO_LIST_ID_AUFMASS_BEZAHLT?.trim() || (await listeMitNamen(cfg, cardId, 'aufmaß bezahlt'))
   let ok = true
   if (zielListe) {
     try {
@@ -355,14 +356,27 @@ export async function aufmassBezahltNachTrello(cardId: string, text: string): Pr
       console.error('[trello] Karte verschieben Netzwerkfehler:', e)
     }
   } else {
-    console.warn('[trello] TRELLO_LIST_ID_AUFMASS_BEZAHLT fehlt — Karte bleibt in ihrer Liste.')
+    console.warn('[trello] Liste „Aufmaß bezahlt“ nicht gefunden — Karte bleibt in ihrer Liste.')
   }
   await zahlungsLabelUmstellen(cfg, cardId)
   await kommentar(cfg, cardId, text)
   return ok
 }
 
-/** Label „Zahlung offen“ entfernen und „Bezahlt“ (grün) setzen. */
+/** Liste auf dem Board der Karte per Namensteil finden */
+async function listeMitNamen(cfg: TrelloConfig, cardId: string, teil: string): Promise<string | null> {
+  const auth = `key=${encodeURIComponent(cfg.key)}&token=${encodeURIComponent(cfg.token)}`
+  try {
+    const karte = (await fetch(`${TRELLO_API}/cards/${cardId}?fields=idBoard&${auth}`).then((r) => r.json())) as { idBoard: string }
+    const listen = (await fetch(`${TRELLO_API}/boards/${karte.idBoard}/lists?fields=name&filter=open&${auth}`).then((r) => r.json())) as Array<{ id: string; name: string }>
+    return listen.find((l) => l.name.toLowerCase().includes(teil))?.id ?? null
+  } catch (e) {
+    console.error('[trello] Listen nicht lesbar:', e)
+    return null
+  }
+}
+
+/** Label „Zahlung offen“ entfernen, „Bezahlt“ (grün) setzen und den Checklistenpunkt abhaken. */
 async function zahlungsLabelUmstellen(cfg: TrelloConfig, cardId: string): Promise<void> {
   const auth = `key=${encodeURIComponent(cfg.key)}&token=${encodeURIComponent(cfg.token)}`
   try {
@@ -388,6 +402,16 @@ async function zahlungsLabelUmstellen(cfg: TrelloConfig, cardId: string): Promis
     }
     if (bezahlt && !karte.idLabels.includes(bezahlt)) {
       await fetch(`${TRELLO_API}/cards/${cardId}/idLabels?value=${bezahlt}&${auth}`, { method: 'POST' })
+    }
+    // Checklistenpunkt „Bezahlt …“ abhaken
+    const cRes = await fetch(`${TRELLO_API}/cards/${cardId}/checklists?checkItems=all&${auth}`)
+    if (cRes.ok) {
+      const listen = (await cRes.json()) as Array<{ checkItems: Array<{ id: string; name: string; state: string }> }>
+      for (const punkt of listen.flatMap((l) => l.checkItems)) {
+        if (punkt.state !== 'complete' && /^bezahlt\b/i.test(punkt.name.trim())) {
+          await fetch(`${TRELLO_API}/cards/${cardId}/checkItem/${punkt.id}?state=complete&${auth}`, { method: 'PUT' })
+        }
+      }
     }
   } catch (e) {
     console.error('[trello] Zahlungs-Label umstellen fehlgeschlagen:', e)

@@ -11,13 +11,16 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
-import { Check, ChevronLeft, Loader2, MessageCircle, Phone, Ruler, ShoppingBag, Store, Calculator } from 'lucide-react'
+import { Check, ChevronLeft, MessageCircle, Phone, Ruler, ShoppingBag, Store, Calculator } from 'lucide-react'
+import BrandLoader from '@/components/BrandLoader'
 import { STANDORT } from '@/content/fachmarkt'
 import { formatEuro } from '@/lib/aufmass-kreise'
 import { BODENARTEN, ALTBOEDEN, type AltbodenKey, type BodenartKey } from '@/lib/verlegeservice/montage'
 import {
+  BJ_WHATSAPP,
   RUECKRUF_NAME,
   TELEFON_START,
   WEG_NAME,
@@ -30,6 +33,7 @@ import {
   telefonAnzeige,
   terminSlots,
   terminText,
+  whatsappLink,
   termintage,
   type BeratungKey,
   type BesitzKey,
@@ -131,6 +135,14 @@ function pfadFuer(z: Zustand): ScreenId[] {
   if (z.weg === 'beratung' && z.beratung === 'fachmarkt') p.splice(p.indexOf('beratungsart') + 1, 0, 'termin')
   return p
 }
+
+interface GespeicherterVorgang {
+  v: string
+  name?: string
+  email?: string
+  tel?: string
+}
+const personKey = (vor: string, nach: string) => `${vor} ${nach}`.trim().toLowerCase().replace(/\s+/g, ' ')
 
 // ── Kleine Bausteine ─────────────────────────────────────────────────────────
 
@@ -245,7 +257,21 @@ export default function VerlegeFunnel() {
   const [strassen, setStrassen] = useState<string[]>([])
   const [strassenStatus, setStrassenStatus] = useState<'leer' | 'laedt' | 'fertig'>('leer')
   const [ergebnis, setErgebnis] = useState<FunnelErfolg | null>(null)
+  // Karte der ersten Anfrage – eine zweite Anfrage derselben Person im selben
+  // Besuch aktualisiert sie. Andere Person (Name, Mail und Nummer anders) → neue Karte.
+  const vorgangGespeichert = useRef<GespeicherterVorgang | null>(null)
+  const vorgangFuer = (zst: Zustand): string | undefined => {
+    const g = vorgangGespeichert.current
+    if (!g) return undefined
+    if (!g.name) return g.v
+    const gleich =
+      g.name === personKey(zst.vorname, zst.nachname) ||
+      (!!g.email && g.email === zst.email.trim().toLowerCase()) ||
+      (!!g.tel && g.tel.length > 6 && g.tel === zst.telefon.replace(/\D/g, ''))
+    return gleich ? g.v : undefined
+  }
   const [sendet, setSendet] = useState(false)
+  const [leitetWeiter, setLeitetWeiter] = useState(false)
   const [sendeFehler, setSendeFehler] = useState<string>()
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const turnstileRef = useRef<TurnstileInstance | null>(null)
@@ -269,8 +295,63 @@ export default function VerlegeFunnel() {
   }, [])
 
   useEffect(() => {
+    try {
+      const roh = sessionStorage.getItem('vs-vorgang')
+      if (roh) vorgangGespeichert.current = JSON.parse(roh) as GespeicherterVorgang
+    } catch {
+      /* kein Speicher verfügbar */
+    }
     merkeLandingpage()
     trackFormView()
+
+    // Aufmaß-Link aus WhatsApp/Trello: Angaben übernehmen und direkt beim
+    // ersten fehlenden Schritt (meist Wunschboden) einsteigen.
+    const q = new URLSearchParams(window.location.search)
+    const plz = q.get('plz') ?? ''
+    if (q.get('weg') !== 'aufmass' || !/^\d{5}$/.test(plz)) return
+    const v = q.get('v')
+    if (v) {
+      // Aus dem Aufmaß-Link: gehört sicher zu dieser Anfrage, ohne Abgleich
+      vorgangGespeichert.current = { v }
+      try {
+        sessionStorage.setItem('vs-vorgang', JSON.stringify({ v }))
+      } catch {
+        /* ohne Speicher: gilt bis zum Neuladen */
+      }
+    }
+    const artRoh = q.get('art') ?? ''
+    const art = artRoh in BODENARTEN ? (artRoh as BodenartKey) : null
+    const m2 = Number(q.get('m2'))
+    const flaecheOk = m2 >= 5 && m2 <= 400
+    const wannRoh = q.get('wann') ?? ''
+    const wann = (['asap', '1-3', '3-6', 'offen'] as const).find((x) => x === wannRoh) ?? null
+    const basis: Zustand = { ...LEER, plz, weg: 'aufmass', besitz: 'nein', bodenart: art, flaeche: flaecheOk ? m2 : LEER.flaeche, zeitraum: wann }
+
+    const starten = (zst: Zustand) => {
+      const p = pfadFuer(zst)
+      const fehlt = p.find(
+        (s) =>
+          (s === 'bodenart' && !zst.bodenart) ||
+          (s === 'produkt' && !zst.produkt) ||
+          (s === 'flaeche' && !flaecheOk) ||
+          (s === 'zeitraum' && !zst.zeitraum),
+      )
+      const ziel: ScreenId = fehlt ?? 'wunschboden'
+      setZ(zst)
+      setVerlauf(p.slice(0, p.indexOf(ziel) + 1))
+    }
+    const bodenId = Number(q.get('boden'))
+    if (Number.isInteger(bodenId) && bodenId > 0) {
+      fetch(`/api/verlegeservice/boeden?id=${bodenId}`)
+        .then((r) => r.json())
+        .then((d: { boeden: Boden[] }) => {
+          const b = d.boeden?.[0]
+          starten(b ? { ...basis, besitz: 'bj', produkt: b, bodenart: b.art } : basis)
+        })
+        .catch(() => starten(basis))
+    } else {
+      starten(basis)
+    }
   }, [])
 
   const nachOben = () => kopfRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -468,6 +549,7 @@ export default function VerlegeFunnel() {
       datenschutz: z.datenschutz,
       tracking: sammleTrackingKontext(startZeit.current) as VsTracking,
       turnstileToken: turnstileToken ?? undefined,
+      vorgang: vorgangFuer(z),
     }
     try {
       const res = await fetch('/api/verlegeservice/funnel', {
@@ -493,7 +575,25 @@ export default function VerlegeFunnel() {
           naechsterSchritt: z.weg,
         })
       }
+      if (json.vorgang) {
+        const g: GespeicherterVorgang = { v: json.vorgang, name: personKey(z.vorname, z.nachname), email: z.email.trim().toLowerCase(), tel: z.telefon.replace(/\D/g, '') }
+        vorgangGespeichert.current = g
+        try {
+          sessionStorage.setItem('vs-vorgang', JSON.stringify(g))
+        } catch {
+          /* ohne Speicher: gilt nur bis zum Neuladen */
+        }
+      }
+      // Beratung per WhatsApp: direkt in den Chat mit uns, nicht warten
+      if (z.weg === 'beratung' && z.beratung === 'whatsapp' && json.leadId) {
+        setErgebnis(json)
+        setLeitetWeiter(true)
+        setTimeout(() => setLeitetWeiter(false), 4000)
+        window.location.href = waAnUns(json.leadId, 'Ich möchte mich zu meinem Bodenprojekt beraten lassen:')
+        return
+      }
       if (json.zahlungUrl) {
+        setLeitetWeiter(true)
         const ziel = json.zahlungUrl
         setTimeout(() => {
           window.location.href = ziel
@@ -560,7 +660,7 @@ export default function VerlegeFunnel() {
               className="min-h-[60px] w-full rounded-lg border-2 border-ash bg-white px-4 text-center text-[26px] font-bold tracking-[0.12em] text-dark outline-none focus:ring-[3px] focus:ring-brand/30"
             />
           </div>
-          {plzStatus === 'laedt' && <p className="text-sm text-mid">Wir prüfen deinen Standort …</p>}
+          {plzStatus === 'laedt' && <p className="flex items-center gap-2.5 text-sm text-mid"><BrandLoader className="h-7 w-7" label="Standort wird geprüft" />Wir prüfen deinen Standort …</p>}
           {plzStatus === 'unbekannt' && <Hinweis ton="warn" titel="Diese PLZ kennen wir nicht.">Bitte prüfe die Eingabe.</Hinweis>}
           {plzStatus === 'ok' && plzInfo && plzInfo.imGebiet && (
             <Hinweis ton="gut" titel="Super, wir verlegen bei dir.">
@@ -584,16 +684,16 @@ export default function VerlegeFunnel() {
         <>
           <Option gross aktiv={z.weg === 'aufmass'} onClick={() => waehle('weg', 'aufmass')} icon={<Ruler className="h-5 w-5" />}
             titel="Aufmaß mit deinem Wunschboden" text="Wir bringen deine 3 Favoriten als Großmuster mit, messen aus und machen dir ein genaues Angebot."
-            preis={aufmassPreis ?? undefined} badge="Wird bei Beauftragung gutgeschrieben" />
+            preis={aufmassPreis ?? undefined} badge="Bei Beauftragung komplett gutgeschrieben" />
           <Option gross aktiv={z.weg === 'preis'} onClick={() => waehle('weg', 'preis')} icon={<Calculator className="h-5 w-5" />}
             titel="Preisrahmen berechnen" text="Sofort eine Von-bis-Summe für Boden und Verlegung, kostenlos." />
           <Option gross aktiv={z.weg === 'beratung'} onClick={() => waehle('weg', 'beratung')} icon={<Phone className="h-5 w-5" />}
-            titel="Erst persönlich beraten lassen" text="Telefonisch oder im Fachmarkt, kostenlos." />
+            titel="Erst persönlich beraten lassen" text="Per WhatsApp, Telefon oder im Fachmarkt – kostenlos." />
         </>
       ) : (
         <>
           <Option gross aktiv={z.weg === 'beratung'} onClick={() => waehle('weg', 'beratung')} icon={<Phone className="h-5 w-5" />}
-            titel="Persönlich beraten lassen" text="Telefonisch oder im Fachmarkt in Hückelhoven" />
+            titel="Persönlich beraten lassen" text="Per WhatsApp, Telefon oder im Fachmarkt in Hückelhoven" />
           <Link href="/" className={`${KARTE} min-h-[84px] items-start ${KARTE_AUS}`}>
             <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-pale text-brand"><ShoppingBag className="h-5 w-5" /></span>
             <span className="flex flex-col gap-0.5"><span className="font-bold text-dark">Boden im Shop bestellen</span><span className="text-[13px] text-mid">Lieferung deutschlandweit, Set mit Dämmung und Sockelleiste</span></span>
@@ -632,7 +732,7 @@ export default function VerlegeFunnel() {
           <Feld id="vf-produkt" label="Produktname oder Dekor" wert={z.produktText} onChange={(v) => set('produktText', v)} auto="off" placeholder="z. B. Eiche natur" />
           {z.produktText.trim().length >= 2 && (
             <div className="grid max-h-[320px] overflow-y-auto overscroll-contain rounded-lg border border-ash bg-white">
-              {sucht && !treffer.length && <p className="px-3.5 py-3 text-sm text-mid">Suche läuft …</p>}
+              {sucht && !treffer.length && <p className="flex items-center gap-2.5 px-3.5 py-3 text-sm text-mid"><BrandLoader className="h-7 w-7" label="Suche läuft" />Suche läuft …</p>}
               {!sucht && !treffer.length && <p className="px-3.5 py-3 text-sm text-mid">Nichts gefunden. Probier einen anderen Begriff.</p>}
               {treffer.map((b) => (
                 <button key={b.id} type="button"
@@ -734,7 +834,7 @@ export default function VerlegeFunnel() {
       const spanne = (k: 'guenstig' | 'mittel' | 'premium') => (klassen ? `ca. ${klassen[k][0]}–${klassen[k][1]} €/m²` : undefined)
       inhalt = (
         <>
-          {klassen === undefined && <p className="text-sm text-mid">Preise werden geladen …</p>}
+          {klassen === undefined && <p className="flex items-center gap-2.5 text-sm text-mid"><BrandLoader className="h-7 w-7" label="Preise werden geladen" />Preise werden geladen …</p>}
           <Option aktiv={z.klasse === 'guenstig'} onClick={() => waehle('klasse', 'guenstig')} titel="Günstig" text={spanne('guenstig')} />
           <Option aktiv={z.klasse === 'mittel'} onClick={() => waehle('klasse', 'mittel')} titel="Mittelklasse" text={spanne('mittel')} />
           <Option aktiv={z.klasse === 'premium'} onClick={() => waehle('klasse', 'premium')} titel="Premium" text={spanne('premium')} />
@@ -808,7 +908,7 @@ export default function VerlegeFunnel() {
                 </div>
               )}
               <div className="grid max-h-[320px] overflow-y-auto overscroll-contain rounded-lg border border-ash bg-white">
-                {auswahlLaedt && !auswahl.length && <p className="px-3.5 py-3 text-sm text-mid">Böden werden geladen …</p>}
+                {auswahlLaedt && !auswahl.length && <p className="flex items-center gap-2.5 px-3.5 py-3 text-sm text-mid"><BrandLoader className="h-7 w-7" label="Böden werden geladen" />Böden werden geladen …</p>}
                 {!auswahlLaedt && !auswahl.length && (
                   <p className="px-3.5 py-3 text-sm text-mid">{suche ? `Zu „${auswahlSuche.trim()}" haben wir nichts gefunden. Probier einen anderen Begriff.` : 'Gerade keine Böden verfügbar.'}</p>
                 )}
@@ -840,9 +940,9 @@ export default function VerlegeFunnel() {
       titel = 'Wie möchtest du beraten werden?'
       inhalt = (
         <>
+          <Option aktiv={z.beratung === 'whatsapp'} onClick={() => waehle('beratung', 'whatsapp', { termin: null })} icon={<MessageCircle className="h-5 w-5" />} titel="Per WhatsApp" text="Schick uns Fotos und Fragen, wir antworten schnell" badge="Am schnellsten" />
+          <Option aktiv={z.beratung === 'fachmarkt'} onClick={() => waehle('beratung', 'fachmarkt')} icon={<Store className="h-5 w-5" />} titel="Termin im Fachmarkt" text="Alle Böden in echt sehen. Neckarstraße 9, Hückelhoven" />
           <Option aktiv={z.beratung === 'telefon'} onClick={() => waehle('beratung', 'telefon', { termin: null })} icon={<Phone className="h-5 w-5" />} titel="Rückruf am Telefon" text="Wir rufen dich zur Wunschzeit an" />
-          <Option aktiv={z.beratung === 'fachmarkt'} onClick={() => waehle('beratung', 'fachmarkt')} icon={<Store className="h-5 w-5" />} titel="Termin im Fachmarkt" text="Such dir einen Termin aus und sieh alle Böden in echt. Neckarstraße 9, Hückelhoven" />
-          <Option aktiv={z.beratung === 'whatsapp'} onClick={() => waehle('beratung', 'whatsapp', { termin: null })} icon={<MessageCircle className="h-5 w-5" />} titel="Per WhatsApp" text="Schreib uns Fotos und Fragen" />
         </>
       )
       break
@@ -885,24 +985,23 @@ export default function VerlegeFunnel() {
     }
     case 'kontakt': {
       const fachmarkt = z.weg === 'beratung' && z.beratung === 'fachmarkt'
-      titel = z.weg === 'aufmass' ? 'Deine Kontaktdaten' : z.weg === 'preis' ? 'Wohin dürfen wir deinen Preisrahmen schicken?' : fachmarkt ? 'Für wen ist der Termin?' : 'Wie erreichen wir dich?'
+      titel = z.weg === 'aufmass' ? 'Deine Kontaktdaten' : z.weg === 'preis' ? 'Fast geschafft: Wer bist du?' : fachmarkt ? 'Für wen ist der Termin?' : z.beratung === 'whatsapp' ? 'Fast geschafft: Wer bist du?' : 'Wie erreichen wir dich?'
       hinweis =
         z.weg === 'aufmass' ? 'Damit wir den Termin mit dir abstimmen können.'
-          : z.weg === 'preis' ? 'Deinen Preisrahmen siehst du gleich hier. Bei Fragen melden wir uns bei dir.'
+          : z.weg === 'preis' ? 'Deinen Preisrahmen siehst du gleich hier. Danach melden wir uns bei dir.'
             : fachmarkt ? `Dein Termin: ${terminText(z.termin)}.`
-              : 'Mehr brauchen wir nicht. Alles Weitere besprechen wir persönlich.'
-      const telefonOptional = z.weg === 'preis' || fachmarkt
+              : z.beratung === 'whatsapp' ? 'Danach öffnet sich WhatsApp, du musst nur noch auf Senden tippen.'
+                : 'Mehr brauchen wir nicht. Alles Weitere besprechen wir persönlich.'
+      const emailOptional = z.weg === 'beratung' && z.beratung === 'whatsapp'
       inhalt = (
         <>
           <div className="grid grid-cols-2 gap-2.5">
             <Feld id="vf-vorname" label="Vorname" wert={z.vorname} onChange={(v) => set('vorname', v)} auto="given-name" fehler={fehler.vorname} />
             <Feld id="vf-nachname" label="Nachname" wert={z.nachname} onChange={(v) => set('nachname', v)} auto="family-name" fehler={fehler.nachname} />
           </div>
-          {(z.weg !== 'beratung' || fachmarkt) && (
-            <Feld id="vf-email" label="E-Mail" typ="email" wert={z.email} onChange={(v) => set('email', v)} auto="email" fehler={fehler.email} />
-          )}
-          <Feld id="vf-telefon" label={z.beratung === 'whatsapp' && z.weg === 'beratung' ? 'Handynummer (WhatsApp)' : 'Telefon'} typ="tel" inputMode="tel"
-            wert={z.telefon} onChange={(v) => set('telefon', v)} auto="tel" optional={telefonOptional} fehler={fehler.telefon}
+          <Feld id="vf-email" optional={emailOptional} label="E-Mail" typ="email" wert={z.email} onChange={(v) => set('email', v)} auto="email" fehler={fehler.email} />
+          <Feld id="vf-telefon" label={z.beratung === 'whatsapp' && z.weg === 'beratung' ? 'Handynummer (WhatsApp)' : 'Handynummer'} typ="tel" inputMode="tel"
+            wert={z.telefon} onChange={(v) => set('telefon', v)} auto="tel" fehler={fehler.telefon}
             onBlur={() => {
               const roh = z.telefon.replace(/\s/g, '')
               if (!roh || roh === '+49') return
@@ -920,7 +1019,7 @@ export default function VerlegeFunnel() {
           )}
           <label className="flex cursor-pointer items-start gap-2.5 text-[13px] text-mid">
             <input type="checkbox" checked={z.datenschutz} onChange={(e) => set('datenschutz', e.target.checked)} className="mt-0.5 h-5 w-5 flex-shrink-0 accent-[#ed1b24]" />
-            <span>Ich bin einverstanden, dass Bodenjäger meine Angaben zur Bearbeitung meiner Anfrage verarbeitet und mich dazu kontaktiert. <a href="/datenschutz" target="_blank" className="text-dark underline">Datenschutz</a></span>
+            <span>Ich bin einverstanden, dass Bodenjäger meine Angaben zur Bearbeitung meiner Anfrage verarbeitet und mich dazu per Telefon, E-Mail oder WhatsApp kontaktiert. <a href="/datenschutz" target="_blank" className="text-dark underline">Datenschutz</a></span>
           </label>
           {fehler.datenschutz && <p className="text-sm font-bold text-brand">{fehler.datenschutz}</p>}
         </>
@@ -937,7 +1036,7 @@ export default function VerlegeFunnel() {
         }
       } else {
         button = {
-          text: z.weg === 'preis' ? 'Preisrahmen anzeigen' : fachmarkt ? 'Termin buchen' : z.beratung === 'whatsapp' ? 'WhatsApp-Beratung anfragen' : 'Rückruf anfordern',
+          text: z.weg === 'preis' ? 'Preisrahmen anzeigen' : fachmarkt ? 'Termin buchen' : z.beratung === 'whatsapp' ? 'Weiter zu WhatsApp' : 'Rückruf anfordern',
           aktiv: !sendet,
           onClick: absenden,
         }
@@ -946,7 +1045,7 @@ export default function VerlegeFunnel() {
     }
     case 'zahlung': {
       titel = 'Aufmaß buchen'
-      hinweis = 'Nach der Zahlung rufen wir dich an und vereinbaren den Termin.'
+      hinweis = 'Nach der Zahlung melden wir uns bei dir und vereinbaren den Termin.'
       const anzahl = z.wunschboeden.length + (z.empfehlung ? 1 : 0) + (z.produkt ? 1 : 0)
       inhalt = (
         <>
@@ -956,7 +1055,7 @@ export default function VerlegeFunnel() {
               <dd className="font-bold tabular-nums">{aufmassPreis}</dd>
             </div>
             <div className="flex justify-between gap-3 border-t border-ash py-3 text-sm"><dt>Dein Wunschboden als Großmuster</dt><dd>{anzahl}×</dd></div>
-            <div className="flex justify-between gap-3 border-t border-ash py-3 text-sm text-success"><dt>Gutschrift bei Beauftragung</dt><dd>vollständig</dd></div>
+            <div className="flex justify-between gap-3 border-t border-ash py-3 text-sm font-bold text-success"><dt>Bei Beauftragung bekommst du zurück</dt><dd className="tabular-nums">{aufmassPreis}</dd></div>
             <div className="flex justify-between gap-3 border-t border-ash py-3"><dt>Jetzt zu zahlen <span className="text-sm text-mid">inkl. MwSt.</span></dt><dd className="font-bold tabular-nums">{aufmassPreis}</dd></div>
           </dl>
           <p className="text-[13px] text-mid">Kostenlos absagen oder verschieben bis 24 Stunden vor dem Termin.</p>
@@ -982,7 +1081,7 @@ export default function VerlegeFunnel() {
                     ))}
                   </div>
                 )}
-                {strassenStatus === 'laedt' && strassen.length === 0 && <p className="text-[13px] text-mid">Suche Straßen in {z.plz} …</p>}
+                {strassenStatus === 'laedt' && strassen.length === 0 && <p className="flex items-center gap-2.5 text-[13px] text-mid"><BrandLoader className="h-6 w-6" label="Straßen werden gesucht" />Suche Straßen in {z.plz} …</p>}
                 {strassenStatus === 'fertig' && z.strasse.trim().length >= 3 && (
                   <p className="text-[13px] text-mid">
                     {strassen.length === 0 ? `Keine passende Straße in ${z.plz} gefunden. Prüf bitte die Schreibweise oder ` : 'Deine Straße ist nicht dabei? '}
@@ -1021,6 +1120,16 @@ export default function VerlegeFunnel() {
   }
 
   // ── Abschluss-Ansichten ────────────────────────────────────────────────────
+  /** Kunde schreibt uns selbst – mit Vorgangsnummer, damit wir die Nachricht direkt zuordnen */
+  const waAnUns = (leadId: string, anliegen = 'Ich habe eine Frage:') =>
+    whatsappLink(BJ_WHATSAPP, `Hallo Bodenjäger, hier ist ${z.vorname.trim()} ${z.nachname.trim()} (Anfrage ${leadId}). ${anliegen}`)
+  const WaKnopf = ({ leadId, text }: { leadId: string; text: string }) => (
+    <a href={waAnUns(leadId, z.beratung === 'whatsapp' && z.weg === 'beratung' ? 'Ich möchte mich zu meinem Bodenprojekt beraten lassen:' : undefined)} target="_blank" rel="noopener noreferrer"
+      className="flex min-h-[52px] items-center justify-center gap-2 rounded-lg border border-ash bg-white px-6 font-bold text-dark hover:border-mid">
+      <MessageCircle className="h-5 w-5 text-[#25D366]" aria-hidden="true" />
+      {text}
+    </a>
+  )
   let abschluss: React.ReactNode = null
   if (ergebnis?.preisrahmen) {
     const r = ergebnis.preisrahmen
@@ -1037,17 +1146,24 @@ export default function VerlegeFunnel() {
           <ul className="mt-2 grid gap-2.5">{r.enthalten.map((x) => <li key={x} className="flex gap-2.5 text-[15px]"><Haken />{x}</li>)}</ul>
         </div>
         <p className="text-[13px] text-mid">{r.hinweise.join(' ')}</p>
+        <p className="text-sm text-dark">Wir melden uns in Kürze bei dir. Oder du buchst gleich hier:</p>
         {aufmassPreis && (
-          <>
+          <div className="grid gap-3 rounded-xl border-2 border-success/30 bg-success/10 p-4">
+            <p className="flex gap-2.5 text-[15px] text-dark">
+              <Haken />
+              <span>
+                <b>Das Aufmaß kostet dich am Ende nichts:</b> Die {aufmassPreis} bekommst du bei Beauftragung komplett gutgeschrieben.
+              </span>
+            </p>
             <button type="button" onClick={zumAufmass} className="min-h-[52px] rounded-lg bg-brand px-6 font-bold text-white hover:bg-[#c8161e]">
               Aufmaß mit Wunschboden buchen · {aufmassPreis}
             </button>
-            <p className="-mt-2 text-center text-xs text-mid">Wird bei Beauftragung vollständig gutgeschrieben</p>
-          </>
+          </div>
         )}
         <button type="button" onClick={zurBeratung} className="min-h-[52px] rounded-lg border border-ash bg-white px-6 font-bold text-dark hover:border-mid">
           Lieber erst im Fachmarkt beraten lassen
         </button>
+        <WaKnopf leadId={ergebnis.leadId} text="Fragen? Schreib uns per WhatsApp" />
       </div>
     )
   } else if (ergebnis) {
@@ -1057,13 +1173,14 @@ export default function VerlegeFunnel() {
       : fachmarkt
         ? ['Dein Termin steht.', `Wir erwarten dich am ${terminText(z.termin)} im Fachmarkt. Sag bei uns einfach kurz, dass du einen Beratungstermin hast.`]
         : z.beratung === 'whatsapp'
-          ? ['Wir schreiben dir per WhatsApp.', 'Schick uns gern schon Fotos von deinen Räumen, dann können wir dich noch besser beraten.']
+          ? ['Wir schreiben dir gleich per WhatsApp.', 'Du kannst auch direkt loslegen und uns Fotos von deinen Räumen schicken.']
           : ['Wir rufen dich an.', 'Ein Berater aus unserem Fachmarkt meldet sich zu deiner Wunschzeit.']
     abschluss = (
       <div className="grid gap-4">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success"><Check className="h-8 w-8 text-white" strokeWidth={3} /></span>
         <h2 className="text-[clamp(1.35rem,5.2vw,1.75rem)] font-bold leading-tight text-dark">Danke, {z.vorname}! {kopf}</h2>
         <p className="text-mid">{text}</p>
+        <WaKnopf leadId={ergebnis.leadId} text={z.beratung === 'whatsapp' ? 'Jetzt per WhatsApp schreiben' : 'Fragen? Schreib uns per WhatsApp'} />
         <Hinweis ton="info" titel="Fachmarkt Hückelhoven">Neckarstraße 9 · Mo–Fr 9–18:30 Uhr, Sa 9–14 Uhr · {STANDORT.telefonAnzeige}</Hinweis>
         <p className="text-xs text-mid">Vorgangsnummer: {ergebnis.leadId}</p>
       </div>
@@ -1076,7 +1193,7 @@ export default function VerlegeFunnel() {
   const zeigeZurueck = !ergebnis ? verlauf.length > 1 : !!ergebnis.preisrahmen
 
   return (
-    <div ref={kopfRef} className="mx-auto w-full max-w-[560px] scroll-mt-24 px-4 pb-32 pt-4">
+    <div ref={kopfRef} className="mx-auto w-full max-w-[560px] scroll-mt-24 px-4 pb-12 pt-4">
       <div className="mb-3.5 flex min-h-10 items-center gap-3">
         <button type="button" onClick={zurueck} aria-label="Zurück"
           className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-ash bg-white hover:border-mid ${zeigeZurueck ? '' : 'invisible'}`}>
@@ -1108,22 +1225,39 @@ export default function VerlegeFunnel() {
               </div>
             )}
             {sendeFehler && <p className="mt-4 text-sm font-bold text-brand">{sendeFehler}</p>}
+            {button && (
+              <div className="mt-6">
+                <button type="button" onClick={button.onClick} disabled={!button.aktiv}
+                  className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-brand px-6 font-bold text-white hover:bg-[#c8161e] disabled:cursor-not-allowed disabled:opacity-50">
+                  {button.text}
+                </button>
+                {istLetzter && z.weg !== 'aufmass' && <p className="mt-1.5 text-center text-xs text-mid">Kostenlos und unverbindlich</p>}
+              </div>
+            )}
           </>
         )}
       </section>
 
-      {button && !abschluss && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ash bg-white/95 px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3">
-          <div className="mx-auto max-w-[560px]">
-            <button type="button" onClick={button.onClick} disabled={!button.aktiv}
-              className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-brand px-6 font-bold text-white hover:bg-[#c8161e] disabled:cursor-not-allowed disabled:opacity-50">
-              {sendet && <Loader2 className="h-5 w-5 animate-spin" />}
-              {button.text}
-            </button>
-            {istLetzter && z.weg !== 'aufmass' && <p className="mt-1.5 text-center text-xs text-mid">Kostenlos und unverbindlich</p>}
-          </div>
-        </div>
-      )}
+      {(sendet || leitetWeiter) &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-white/85 backdrop-blur-sm" role="status">
+            <BrandLoader className="h-16 w-16" label="Wird gesendet" />
+            <p className="font-bold text-dark">
+              {z.weg === 'aufmass'
+                ? 'Du wirst zur Zahlung weitergeleitet …'
+                : z.weg === 'preis'
+                  ? 'Dein Preisrahmen wird berechnet …'
+                  : z.beratung === 'whatsapp'
+                    ? 'WhatsApp wird geöffnet …'
+                    : z.beratung === 'fachmarkt'
+                      ? 'Dein Termin wird eingetragen …'
+                      : 'Deine Anfrage wird gesendet …'}
+            </p>
+          </div>,
+          document.body,
+        )}
+
     </div>
   )
 }

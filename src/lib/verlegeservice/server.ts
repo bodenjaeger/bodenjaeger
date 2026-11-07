@@ -2,6 +2,7 @@
  * Gemeinsame Server-Helfer für das Verlegeservice-Formular: Spam-Schutz,
  * Team-Mail über WordPress, Zeitzone für Termine.
  */
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import type { NextRequest } from 'next/server'
 
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
@@ -92,4 +93,31 @@ export function berlinZuIso(datum: string, zeit: string): string | null {
 /** Heutiges Datum in Hückelhoven als „YYYY-MM-DD". */
 export function heuteBerlin(): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' }).format(new Date())
+}
+
+// ── Vorgang: dieselbe Anfrage im selben Besuch erkennen ─────────────────────
+// Der Browser bekommt nach dem Absenden „<Karte>.<Lead-ID>.<Signatur>“ zurück.
+// Schickt er später erneut ab (z. B. Umstieg Preisrahmen → Aufmaß), wird die
+// vorhandene Karte aktualisiert statt eine zweite angelegt. Die Signatur
+// verhindert, dass jemand fremde Karten überschreibt.
+
+const vorgangsSchluessel = () => process.env.TRELLO_TOKEN?.trim() || process.env.WC_CONSUMER_SECRET?.trim() || ''
+
+export function vorgangSignieren(cardId: string, leadId: string): string | undefined {
+  const k = vorgangsSchluessel()
+  if (!k) return undefined
+  const sig = createHmac('sha256', k).update(`${cardId}.${leadId}`).digest('base64url')
+  return `${cardId}.${leadId}.${sig}`
+}
+
+export function vorgangPruefen(token: string | undefined): { cardId: string; leadId: string } | null {
+  const k = vorgangsSchluessel()
+  if (!k || !token) return null
+  const teile = token.split('.')
+  if (teile.length !== 3) return null
+  const [cardId, leadId, sig] = teile
+  const erwartet = createHmac('sha256', k).update(`${cardId}.${leadId}`).digest('base64url')
+  const a = Buffer.from(sig)
+  const b = Buffer.from(erwartet)
+  return a.length === b.length && timingSafeEqual(a, b) ? { cardId, leadId } : null
 }

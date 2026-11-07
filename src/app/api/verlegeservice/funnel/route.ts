@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { after, NextRequest, NextResponse } from 'next/server'
 import { formatEuro } from '@/lib/aufmass-kreise'
 import { aufmassAngebot, aufmassBestellungAnlegen, aufmassZahlungStartenSicher } from '@/lib/aufmass'
 import { naechsteLeadId } from '@/lib/leadId'
@@ -8,7 +8,6 @@ import { SITE_URL } from '@/lib/site'
 import { wooCommerceClient, type StoreApiProduct } from '@/lib/woocommerce'
 import { strasseBekannt } from '@/lib/verlegeservice/adresse'
 import {
-  BESITZ_NAME,
   KLASSE_NAME,
   RUECKRUF_NAME,
   WEG_NAME,
@@ -17,10 +16,13 @@ import {
   istGueltigerTermin,
   leadStufe,
   pruefeKontakt,
+  aufmassLink,
+  grossAnfang,
   pruefeTelefon,
   pruefeZahlung,
   telefonAnzeige,
   terminText,
+  whatsappLink,
   type FunnelAnfrage,
   type FunnelAntwort,
   type ProduktWahl,
@@ -37,9 +39,9 @@ import {
   type BodenartKey,
   type Preisrahmen,
 } from '@/lib/verlegeservice/montage'
-import { berlinZuIso, clientIp, heuteBerlin, pruefeTurnstile, teamMail } from '@/lib/verlegeservice/server'
+import { berlinZuIso, clientIp, heuteBerlin, pruefeTurnstile, teamMail, vorgangPruefen, vorgangSignieren } from '@/lib/verlegeservice/server'
 import { preisklassen } from '@/lib/verlegeservice/shop'
-import { karteAnlegen, type KartenLabel } from '@/lib/verlegeservice/trello'
+import { beschreibungSetzen, karteAktualisieren, karteAnlegen, type KartenLabel } from '@/lib/verlegeservice/trello'
 
 /**
  * Anfrage aus dem Verlegeservice-Formular mit drei Wegen.
@@ -104,6 +106,7 @@ function normalisiere(r: Record<string, unknown>): FunnelAnfrage {
     datenschutz: r.datenschutz === true,
     tracking: r.tracking && typeof r.tracking === 'object' ? (r.tracking as FunnelAnfrage['tracking']) : {},
     turnstileToken: s(r.turnstileToken, 4096) || undefined,
+    vorgang: s(r.vorgang, 200) || undefined,
     website: s(r.website, 200) || undefined,
   }
 }
@@ -115,6 +118,7 @@ const alsText = (md: string) =>
     .replace(/^---$/gm, '')
     .replace(/\*\*|_\(|\)_/g, (m) => (m === '**' ? '' : m === '_(' ? '(' : ')'))
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
+    .replace(/^_|_$/gm, '')
 
 const fehler = (error: string, felder?: Record<string, string>, status = 400) =>
   NextResponse.json<FunnelAntwort>({ success: false, error, ...(felder ? { felder } : {}) }, { status })
@@ -169,7 +173,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
 
   // Adresse gegen das Straßenverzeichnis der PLZ prüfen. Nicht gefundene
   // Straßen (z. B. Neubaugebiet) werden angenommen, aber auf der Karte markiert.
-  const strasseGeprueft = a.weg === 'aufmass' ? await strasseBekannt(a.strasse, gebiet.plz, gebiet.ort) : null
+  // Unabhängige Abfragen gleichzeitig starten, damit der Kunde nicht wartet
+  const vorher = vorgangPruefen(a.vorgang)
+  const leadIdP = vorher ? Promise.resolve(vorher.leadId) : naechsteLeadId()
+  const angebotP = a.weg === 'aufmass' ? aufmassAngebot(a.plz) : Promise.resolve(null)
+  const strasseP = a.weg === 'aufmass' ? strasseBekannt(a.strasse, gebiet.plz, gebiet.ort) : Promise.resolve(null)
 
   // ── Produkt und Preisrahmen ──────────────────────────────────────────────
   let produktPreis: number | null = null
@@ -224,11 +232,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   }
 
   // ── Aufmaß-Angebot ───────────────────────────────────────────────────────
-  const angebot = a.weg === 'aufmass' ? await aufmassAngebot(a.plz) : null
+  const [angebot, strasseGeprueft] = await Promise.all([angebotP, strasseP])
   if (a.weg === 'aufmass' && !angebot) return fehler('Für diesen Standort können wir das Aufmaß nicht online buchen.')
 
   // ── Lead ─────────────────────────────────────────────────────────────────
-  const leadId = await naechsteLeadId()
+  // Zweite Anfrage im selben Besuch (z. B. Preisrahmen → Aufmaß): dieselbe
+  // Karte und dieselbe Lead-ID, damit nichts doppelt im Board landet.
+  const leadId = await leadIdP
   const stufe = leadStufe(a, Number.isFinite(kreis.bisKm), imGebiet)
   const name = `${a.vorname} ${a.nachname}`.trim()
   const termin = a.beratung === 'fachmarkt' ? terminText(a.termin) : ''
@@ -236,98 +246,140 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
     (x): x is string => !!x,
   )
 
-  // ── Trello-Karte: oben das, was jetzt zu tun ist, dann Kontakt, Projekt, intern
+  // ── Trello-Karte ─────────────────────────────────────────────────────────
+  // Oben: was jetzt zu tun ist, mit WhatsApp-Knopf (Text schon drin). Dann der
+  // kurze Ablauf, danach Kunde und Projekt. Kalkulation und Quelle ganz unten.
   const t = a.tracking
   const fachmarkt = a.weg === 'beratung' && a.beratung === 'fachmarkt'
-  const naechsterSchritt =
-    a.weg === 'aufmass'
-      ? 'Sobald das Label **Bezahlt** da ist: anrufen und Aufmaßtermin vereinbaren'
-      : a.weg === 'preis'
-        ? stufe === 'C' || !a.telefon
-          ? 'Per Mail nachfassen und Aufmaß oder Fachmarkt anbieten'
-          : 'Innerhalb von 1 Tag anrufen und das Aufmaß anbieten'
-        : fachmarkt
-          ? `Kunde kommt **${termin}** in den Fachmarkt – passende Böden bereitlegen`
-          : a.beratung === 'whatsapp'
-            ? 'Per WhatsApp melden'
-            : `Zurückrufen${a.rueckruf && a.rueckruf !== 'egal' ? ` – **${RUECKRUF_NAME[a.rueckruf].toLowerCase()}**` : ''}`
+  const vorname = grossAnfang(a.vorname)
+  const bodenWort = a.produkt ? produktName : a.bodenart ? BODENARTEN[a.bodenart].name : ''
+  // WhatsApp nur bei Handynummern (Festnetz hat kein WhatsApp); Ausland: zulassen
+  const perWhatsapp = !!a.telefon && (/^\+491[5-7]/.test(a.telefon) || !a.telefon.startsWith('+49'))
+  const wa = (text: string) => whatsappLink(a.telefon.slice(1), text)
 
-  const z: string[] = []
-  z.push(`## ➡️ ${naechsterSchritt}`, '')
-  z.push('---', '', '## 👤 Kontakt')
-  z.push(`**${name}**`)
-  if (a.telefon) z.push(`📞 ${telefonAnzeige(a.telefon)} · [WhatsApp](https://wa.me/${a.telefon.slice(1)})`)
-  if (a.email) z.push(`✉️ ${a.email}`)
-  z.push(`📍 ${a.weg === 'aufmass' ? `${a.strasse} ${a.hausnummer}, ` : ''}${gebiet.plz} ${gebiet.ort} · ca. ${fahrt} km · ${kreis.name}`)
-  if (a.weg === 'aufmass' && strasseGeprueft === false) z.push('⚠️ Straße nicht im Straßenverzeichnis – Adresse beim Anruf prüfen')
+  /** Beschreibung der Karte; mit Vorgang enthält der Aufmaß-Link die Karte, damit eine Buchung dort landet */
+  const baueBeschreibung = (vorgang?: string): string => {
+    // In der Vorschau auf die Vorschau verlinken, damit man den Link testen kann
+    const basis = process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : SITE_URL
+    const link = aufmassLink(basis, {
+      plz: gebiet.plz,
+      produktId: a.produkt?.id,
+      bodenart: a.bodenart,
+      flaeche: a.weg === 'beratung' ? null : a.flaeche,
+      zeitraum: a.zeitraum,
+      vorgang,
+    })
 
-  const projekt: string[] = []
-  if (a.produkt) projekt.push(`**Boden:** ${bodenLink(a.produkt.id, produktName)} _(schon ausgesucht)_`)
-  else if (a.produktText) projekt.push(`**Boden:** ${a.produktText} _(im Shop nicht gefunden)_`)
-  else if (a.bodenart && a.weg !== 'beratung') projekt.push(`**Boden:** ${BODENARTEN[a.bodenart].name} _(noch nicht ausgesucht)_`)
-  else if (a.besitz) projekt.push(`**Boden:** ${BESITZ_NAME[a.besitz]}`)
-  if (a.weg !== 'beratung') projekt.push(`**Fläche:** ca. ${a.flaeche} m²`)
-  if (a.altboden && a.weg === 'preis') projekt.push(`**Altboden:** ${ALTBOEDEN[a.altboden].name}`)
-  if (a.weg === 'preis') {
-    const extras = [a.sockelleisten ? 'Sockelleisten' : null, a.stufen ? `${a.stufen} Stufen` : null, a.tueren ? `${a.tueren} Türen kürzen` : null].filter(Boolean)
-    if (extras.length) projekt.push(`**Extras:** ${extras.join(', ')}`)
-    if (!a.produkt && a.klasse) projekt.push(`**Preisklasse:** ${KLASSE_NAME[a.klasse]}`)
+    // Nachrichten: danken, Hilfe anbieten, eine klare Frage zum nächsten Schritt
+    const hallo = `Hallo ${vorname},\n\nhier ist Bodenjäger aus Hückelhoven.`
+    const gruss = 'Viele Grüße\ndein Bodenjäger-Team'
+    const hilfe = 'wir unterstützen dich gern bei deinem Projekt!'
+    const waText =
+      a.weg === 'aufmass'
+        ? `${hallo} Vielen Dank für deine Aufmaß-Buchung, wir freuen uns auf dein Projekt!\n\nWann passt es dir, dass wir bei dir vorbeikommen? Schick uns gern zwei, drei Termine. Deine Großmuster bringen wir mit.\n\n${gruss}`
+        : a.weg === 'preis'
+          ? `${hallo} Vielen Dank für deine Anfrage${bodenWort ? ` zu ${bodenWort}` : ''}, ${hilfe}\n\nDen genauen Preis bekommst du nach einem Aufmaß bei dir zu Hause. Deine Wunschböden bringen wir als Großmuster mit, damit du sie im echten Licht siehst. Deine Angaben sind schon eingetragen, du musst nur noch buchen:\n${link}\n\nOder hast du vorher noch Fragen? Schreib uns einfach hier.\n\n${gruss}`
+          : fachmarkt
+            ? `${hallo} Vielen Dank für deine Terminbuchung! Wir freuen uns auf dich am ${termin} bei uns im Fachmarkt, Neckarstraße 9, und legen passende Böden für dich bereit.\n\nFalls etwas dazwischenkommt, schreib uns einfach hier.\n\nBis bald\ndein Bodenjäger-Team`
+            : a.beratung === 'whatsapp'
+              ? `${hallo} Vielen Dank für deine Anfrage, ${hilfe}\n\nSchick uns gern ein paar Fotos von den Räumen und ungefähr die Quadratmeter, dann beraten wir dich direkt hier im Chat.\n\n${gruss}`
+              : `${hallo} Vielen Dank für deine Anfrage, ${hilfe}\n\nDu wolltest einen Rückruf. Wann passt es dir am besten? Gern können wir auch direkt hier schreiben.\n\n${gruss}`
+    const waNichtErreicht = `${hallo} Vielen Dank für deine Anfrage! Wir haben gerade versucht, dich anzurufen. Wann passt es dir besser? Oder schreib uns einfach hier, was du vorhast, wir helfen dir gern weiter.\n\n${gruss}`
+    const waAufmass = `Hallo ${vorname},\n\nhier kannst du dein Aufmaß direkt buchen, deine Angaben sind schon eingetragen:\n${link}\n\nDie Kosten schreiben wir dir bei Beauftragung vollständig gut. Wir freuen uns auf dein Projekt!\n\n${gruss}`
+
+    const kanal = perWhatsapp ? 'WhatsApp schicken' : 'Anrufen'
+    const naechsterSchritt =
+      a.weg === 'aufmass'
+        ? 'Sobald das Label **Bezahlt** da ist: Termin fürs Aufmaß ausmachen'
+        : a.weg === 'preis'
+          ? 'Heute melden und Aufmaß anbieten'
+          : fachmarkt
+            ? `Kunde kommt **${termin}** in den Fachmarkt – keine Bestätigung nötig`
+            : a.beratung === 'whatsapp'
+              ? 'Kunde schreibt uns per WhatsApp – dort antworten'
+              : `Zurückrufen${a.rueckruf && a.rueckruf !== 'egal' ? ` – **${RUECKRUF_NAME[a.rueckruf].toLowerCase()}**` : ''}`
+
+    const ablauf =
+      a.weg === 'aufmass'
+        ? [`${kanal}, Termin ausmachen → Karte nach **📏 Aufmaß-Termin steht**`, 'Großmuster einpacken (Liste unten), Aufmaß machen', 'Angebot in SAP, Aufmaß gutschreiben → **📄 Angebot erstellt**']
+        : a.weg === 'preis'
+          ? [`${kanal} (Aufmaß-Link ist schon im Text)`, 'Fragen beantworten, sonst Fachmarkt-Termin anbieten', 'Kein Interesse → **🗂 Unqualifiziert / später**']
+          : fachmarkt
+            ? ['Passende Böden bereitlegen', 'Nach dem Termin: Aufmaß-Link schicken oder → **⏳ Wartet auf Kunde**']
+            : a.beratung === 'whatsapp'
+              ? ['Im WhatsApp-Chat antworten (seine Nachricht enthält die Vorgangsnummer)', 'Kam keine Nachricht? Selbst schreiben über den Link oben', 'Aufmaß gewünscht → WhatsApp „Aufmaß-Link“ schicken']
+              : ['Anrufen', perWhatsapp ? 'Nicht erreicht → WhatsApp „nicht erreicht“ und Karte nach **📞 Nicht erreicht**' : 'Nicht erreicht → Karte nach **📞 Nicht erreicht**', 'Aufmaß gewünscht → Aufmaß-Link schicken']
+
+    const z: string[] = []
+    z.push(`## ➡️ ${naechsterSchritt}`)
+    if (perWhatsapp) {
+      z.push(`💬 **[WhatsApp mit Text öffnen](${wa(waText)})** · 📞 ${telefonAnzeige(a.telefon)}`)
+      const extra = [`[„nicht erreicht“](${wa(waNichtErreicht)})`]
+      if (a.weg !== 'aufmass') extra.push(`[„Aufmaß-Link“](${wa(waAufmass)})`)
+      z.push(`_Weitere WhatsApp: ${extra.join(' · ')}_`)
+    } else if (a.telefon) {
+      z.push(`📞 **${telefonAnzeige(a.telefon)}** _(Festnetz – bitte anrufen)_`)
+    } else if (a.beratung === 'whatsapp') {
+      z.push(`💬 Kunde hat keine Nummer angegeben – seine WhatsApp kommt mit Vorgang **${leadId}**`)
+    } else if (a.email) {
+      z.push(`✉️ **${a.email}** _(keine Telefonnummer angegeben)_`)
+    }
+    z.push('', '**So geht’s weiter**', ...ablauf.map((x, i) => `${i + 1}. ${x}`))
+    if (a.weg !== 'aufmass') z.push('', `🔗 Aufmaß-Link für den Kunden: ${link}`)
+
+    z.push('', '---', '', `## 👤 ${name}`)
+    const kontakt = [a.telefon && a.email ? `✉️ ${a.email}` : null, `📍 ${a.weg === 'aufmass' ? `${a.strasse} ${a.hausnummer}, ` : ''}${gebiet.plz} ${gebiet.ort} · ca. ${fahrt} km`].filter(Boolean)
+    z.push(kontakt.join(' · '))
+    if (a.weg === 'aufmass' && strasseGeprueft === false) z.push('⚠️ Straße nicht im Straßenverzeichnis – Adresse kurz prüfen')
+
+    const projekt: string[] = []
+    if (a.produkt) projekt.push(`**Boden:** ${bodenLink(a.produkt.id, produktName)} _(schon ausgesucht)_`)
+    else if (a.produktText) projekt.push(`**Boden:** ${a.produktText} _(im Shop nicht gefunden)_`)
+    else if (a.bodenart && a.weg !== 'beratung') projekt.push(`**Boden:** ${BODENARTEN[a.bodenart].name} _(noch nicht ausgesucht)_`)
+    if (a.weg !== 'beratung') projekt.push(`**Fläche:** ca. ${a.flaeche} m²`)
+    if (a.altboden && a.weg === 'preis') projekt.push(`**Altboden:** ${ALTBOEDEN[a.altboden].name}`)
+    if (a.weg === 'preis') {
+      const extras = [a.sockelleisten ? 'Sockelleisten' : null, a.stufen ? `${a.stufen} Stufen` : null, a.tueren ? `${a.tueren} Türen kürzen` : null].filter(Boolean)
+      if (extras.length) projekt.push(`**Extras:** ${extras.join(', ')}`)
+    }
+    if (a.zeitraum) projekt.push(`**Wann:** ${ZEITRAUM_NAME[a.zeitraum]}`)
+    if (rahmen) projekt.push(`**Genannter Preisrahmen:** ${formatEuro(rahmen.min)} – ${formatEuro(rahmen.max)}`)
+    if (projekt.length) z.push('', ...projekt.map((x) => `- ${x}`))
+
+    if (a.weg === 'aufmass' && angebot) {
+      z.push('', `**📦 Großmuster mitnehmen**`)
+      if (a.produkt) z.push(`- ${bodenLink(a.produkt.id, produktName)}`)
+      for (const w of a.wunschboeden) z.push(`- ${bodenLink(w.id, w.name)}`)
+      if (a.empfehlung) z.push('- Eure Empfehlung')
+      z.push('', `**💶 Aufmaß ${formatEuro(angebot.preis)}** · ${a.zahlart ? ZAHLART_NAME[a.zahlart] : ''} · wird bei Beauftragung gutgeschrieben`)
+    }
+
+    z.push('', '---', '', '**Intern**')
+    if (rahmen) {
+      for (const p of rahmen.posten) z.push(`- ${p.name}: ${p.min === p.max ? formatEuro(p.min) : `${formatEuro(p.min)} – ${formatEuro(p.max)}`}`)
+      z.push(`- Boden: ${rahmen.boden ? `${formatEuro(rahmen.boden[0])} – ${formatEuro(rahmen.boden[1])} (${bodenText})` : 'nicht enthalten'}`)
+      if (!a.produkt && a.klasse) z.push(`- Preisklasse: ${KLASSE_NAME[a.klasse]}`)
+    }
+    const quelle = [t.utmSource, t.utmMedium, t.utmCampaign].filter(Boolean).join(' / ') || (t.gclid ? 'Google Ads' : t.fbclid ? 'Meta' : t.referrer ? t.referrer : 'direkt')
+    z.push(`- Vorgang ${leadId} · Lead-Stufe ${stufe} · ${kreis.name}${angebot ? ` (${angebot.kreis.sku})` : ''} · Quelle: ${quelle}`)
+    return z.join('\n')
   }
-  if (a.zeitraum) projekt.push(`**Verlegen:** ${ZEITRAUM_NAME[a.zeitraum]}`)
-  if (projekt.length) z.push('', '## 🏠 Projekt', ...projekt.map((x) => `- ${x}`))
-
-  if (a.weg === 'aufmass' && angebot) {
-    z.push('', '## 📦 Großmuster mitnehmen')
-    if (a.produkt) z.push(`- ${bodenLink(a.produkt.id, produktName)}`)
-    for (const w of a.wunschboeden) z.push(`- ${bodenLink(w.id, w.name)}`)
-    if (a.empfehlung) z.push('- Eure Empfehlung')
-    z.push('', `## 💶 Aufmaß ${formatEuro(angebot.preis)}`, `${a.zahlart ? ZAHLART_NAME[a.zahlart] : ''} · ${angebot.kreis.name} (${angebot.kreis.sku}) · wird bei Beauftragung gutgeschrieben`)
-  }
-  if (rahmen) z.push('', `## 💶 Genannter Preisrahmen: ${formatEuro(rahmen.min)} – ${formatEuro(rahmen.max)}`)
-
-  z.push('', '---', '', '**Intern**')
-  if (rahmen) {
-    for (const p of rahmen.posten) z.push(`- ${p.name}: ${p.min === p.max ? formatEuro(p.min) : `${formatEuro(p.min)} – ${formatEuro(p.max)}`}`)
-    z.push(`- Boden: ${rahmen.boden ? `${formatEuro(rahmen.boden[0])} – ${formatEuro(rahmen.boden[1])} (${bodenText})` : 'nicht enthalten'}`)
-  }
-  const quelle = [t.utmSource, t.utmMedium, t.utmCampaign].filter(Boolean).join(' / ') || (t.gclid ? 'Google Ads' : t.fbclid ? 'Meta' : t.referrer ? t.referrer : 'direkt')
-  z.push(`- Vorgang ${leadId} · Lead-Stufe ${stufe} · Quelle: ${quelle}`)
-  const beschreibung = z.join('\n')
 
   const labels: KartenLabel[] = [
     { name: `Lead-Stufe ${stufe}`, farbe: stufe === 'A' ? 'green' : stufe === 'B' ? 'orange' : 'black' },
     { name: WEG_NAME[a.weg], farbe: a.weg === 'aufmass' ? 'red' : a.weg === 'preis' ? 'blue' : 'purple' },
   ]
-  if (a.weg === 'beratung' && a.beratung === 'fachmarkt') labels.push({ name: 'Termin Fachmarkt', farbe: 'pink' })
+  if (fachmarkt) labels.push({ name: 'Termin Fachmarkt', farbe: 'pink' })
   if (a.weg === 'aufmass') labels.push({ name: 'Zahlung offen', farbe: 'yellow' })
 
-  const checklisten: Array<{ name: string; punkte: string[] }> = []
-  const gespraech = [
-    'Bodenart / Wunsch?',
-    'Räume und ca. m²?',
-    'Was liegt aktuell? Entfernen?',
-    'Treppe? Türen?',
-    'Wann soll verlegt werden?',
-    'Budget-Rahmen?',
-    'Nächster Schritt: Aufmaß gebucht / Fachmarkttermin / später',
-  ]
-  if (a.weg === 'beratung' && a.beratung === 'fachmarkt') {
-    checklisten.push({ name: 'Beratung im Fachmarkt', punkte: [`Kunde kommt ${termin}`, 'Passende Böden bereitlegen', ...gespraech] })
-  } else if (a.weg === 'beratung') {
-    checklisten.push({ name: a.beratung === 'whatsapp' ? 'WhatsApp-Beratung' : 'Telefonat', punkte: [a.beratung === 'whatsapp' ? 'Per WhatsApp melden' : 'Zurückrufen', ...gespraech] })
-  } else if (a.weg === 'aufmass') {
-    checklisten.push({ name: 'Aufmaß', punkte: ['Bezahlt (Label wechselt automatisch)', 'Termin vereinbaren', 'Großmuster einpacken (Liste oben)', 'Aufmaß durchführen', 'Angebot in SAP erstellen (Aufmaß gutschreiben)'] })
-  } else {
-    checklisten.push({
-      name: 'Nachfassen Preisrahmen',
-      punkte: [
-        ...(stufe !== 'C' && a.telefon ? ['Tag 2: anrufen und Aufmaß anbieten'] : []),
-        'Tag 3: Mail „Boden in echt sehen" – Fachmarkt oder Musterbox',
-        'Tag 7: Mail Erinnerung Aufmaß',
-        'Tag 14: ohne Reaktion → Liste „Später"',
-      ],
-    })
-  }
+  // Kleine Checkliste: ein Klick statt Kommentar. Beim Aufmaß hakt sich „Bezahlt“ selbst ab.
+  const erstkontakt = a.beratung === 'whatsapp' || (a.weg === 'preis' && perWhatsapp) ? 'WhatsApp geschrieben' : a.weg === 'preis' ? 'Angerufen' : 'Angerufen / geschrieben'
+  const checklisten: Array<{ name: string; punkte: string[] }> =
+    a.weg === 'aufmass'
+      ? [{ name: 'Aufmaß', punkte: ['Bezahlt', 'Termin vereinbart', 'Angebot erstellt'] }]
+      : fachmarkt
+        ? [{ name: 'Termin', punkte: ['Kunde war da'] }]
+        : [{ name: 'Kontakt', punkte: [erstkontakt, 'Nach 2 Tagen nachgefasst'] }]
 
   const titelVorne =
     a.weg === 'aufmass'
@@ -342,16 +394,44 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   const titel = `${titelVorne} · ${name} · ${gebiet.ort}`
   const faellig = a.beratung === 'fachmarkt' && a.termin ? berlinZuIso(...(a.termin.split('T') as [string, string])) : null
 
-  const [cardId, mailOk] = await Promise.all([
-    karteAnlegen({ titel, beschreibung, liste: faellig ? 'termin' : 'neu', faellig, labels, checklisten }),
-    teamMail({ name, email: a.email, telefon: a.telefon, text: `${titel}\n\n${alsText(beschreibung)}` }),
-  ])
-  if (!cardId && !mailOk) {
-    console.error('[api/verlegeservice/funnel] Trello und Mail fehlgeschlagen für', leadId)
-    return fehler('Deine Anfrage konnte gerade nicht gesendet werden. Bitte versuche es gleich noch einmal oder ruf uns an: 02433 938884.', undefined, 502)
+  // Karte anlegen bzw. aktualisieren. Bei einer neuen Karte kennen wir die ID
+  // erst danach, deshalb wird die Beschreibung mit dem fertigen Aufmaß-Link
+  // (inkl. Vorgang) direkt nachgetragen.
+  let beschreibung = baueBeschreibung(vorher ? a.vorgang : undefined)
+  const karte = { titel, beschreibung, liste: faellig ? ('termin' as const) : ('neu' as const), faellig, labels, checklisten }
+  let cardId: string | null = null
+  let neuAngelegt = false
+  if (vorher && (await karteAktualisieren(vorher.cardId, karte, `🔄 Kunde hat nachgelegt: jetzt ${WEG_NAME[a.weg]}`))) {
+    cardId = vorher.cardId
+  } else {
+    cardId = await karteAnlegen(karte)
+    neuAngelegt = !!cardId
+    const token = cardId ? vorgangSignieren(cardId, leadId) : undefined
+    if (cardId && token) beschreibung = baueBeschreibung(token)
+  }
+  const mailText = `${vorher ? '🔄 Aktualisierte Anfrage\n' : ''}${titel}\n\n${alsText(beschreibung)}`
+
+  // Ohne Karte muss wenigstens die Mail raus, sonst Fehler an den Kunden
+  if (!cardId) {
+    const mailOk = await teamMail({ name, email: a.email, telefon: a.telefon, text: mailText })
+    if (!mailOk) {
+      console.error('[api/verlegeservice/funnel] Trello und Mail fehlgeschlagen für', leadId)
+      return fehler('Deine Anfrage konnte gerade nicht gesendet werden. Bitte versuche es gleich noch einmal oder ruf uns an: 02433 938884.', undefined, 502)
+    }
   }
 
-  await sendeMetaLead({
+  // Alles, worauf der Kunde nicht warten muss, läuft nach der Antwort weiter
+  const fertigeKarte = cardId && neuAngelegt ? { id: cardId, beschreibung } : null
+  const ip = clientIp(request)
+  const userAgent = request.headers.get('user-agent') ?? undefined
+  after(async () => {
+    await Promise.all([
+      fertigeKarte ? beschreibungSetzen(fertigeKarte.id, fertigeKarte.beschreibung) : Promise.resolve(),
+      cardId ? teamMail({ name, email: a.email, telefon: a.telefon, text: mailText }) : Promise.resolve(true),
+    ])
+  })
+
+  after(() => sendeMetaLead({
     leadId,
     areaStatus: imGebiet ? 'in_area' : 'out_of_area',
     areaRange: a.weg === 'beratung' ? null : String(a.flaeche),
@@ -366,11 +446,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
     ort: gebiet.ort,
     fbp: t.fbp,
     fbc: t.fbc,
-    clientIp: clientIp(request),
-    userAgent: request.headers.get('user-agent') ?? undefined,
+    clientIp: ip,
+    userAgent,
     eventSourceUrl: t.landingpage,
     zeitpunkt: new Date(),
-  }).catch((e) => console.error('[api/verlegeservice/funnel] Meta CAPI:', e))
+  }).catch((e) => console.error('[api/verlegeservice/funnel] Meta CAPI:', e)))
 
   // ── Aufmaß: Bestellung und Zahlung ───────────────────────────────────────
   let zahlungUrl: string | undefined
@@ -400,6 +480,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
     success: true,
     leadId,
     leadStufe: stufe,
+    ...(cardId ? { vorgang: vorgangSignieren(cardId, leadId) } : {}),
     ...(rahmen ? { preisrahmen: { min: rahmen.min, max: rahmen.max, enthalten: rahmen.enthalten, hinweise: rahmen.hinweise, boden: bodenText } } : {}),
     ...(zahlungUrl ? { zahlungUrl } : {}),
     ...(a.weg === 'aufmass' && !zahlungUrl ? { zahlungFehler: true } : {}),

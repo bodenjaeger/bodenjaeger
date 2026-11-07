@@ -63,6 +63,8 @@ export interface FunnelAnfrage {
   datenschutz: boolean
   tracking: VsTracking
   turnstileToken?: string
+  /** Vorgang aus einer früheren Anfrage im selben Besuch */
+  vorgang?: string
   /** Honeypot */
   website?: string
 }
@@ -74,6 +76,8 @@ export interface FunnelErfolg {
   preisrahmen?: { min: number; max: number; enthalten: string[]; hinweise: string[]; boden: string }
   zahlungUrl?: string
   zahlungFehler?: boolean
+  /** Für eine weitere Anfrage im selben Besuch (aktualisiert dieselbe Karte) */
+  vorgang?: string
 }
 export interface FunnelFehler {
   success: false
@@ -157,6 +161,40 @@ export const istEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim(
 
 export const TELEFON_START = '+49 '
 
+/** WhatsApp-Nummer von Bodenjäger (ohne +) */
+export const BJ_WHATSAPP = '4915567017510'
+
+/** wa.me-Link mit fertigem Text. Klammern & Co. werden kodiert, damit Markdown-Links heil bleiben. */
+export function whatsappLink(nummerOhnePlus: string, text: string): string {
+  const kodiert = encodeURIComponent(text).replace(/[()'!*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
+  return `https://wa.me/${nummerOhnePlus}?text=${kodiert}`
+}
+
+/** Seite des Formulars */
+export const FORMULAR_PFAD = '/fachmarkt-hueckelhoven/service/verlegeservice-anfrage'
+
+/**
+ * Link, mit dem der Kunde das Aufmaß direkt buchen kann. Enthält nur
+ * Projektangaben (keine Kontaktdaten) und den Vorgang, damit die Buchung auf
+ * derselben Trello-Karte landet.
+ */
+export function aufmassLink(
+  basis: string,
+  a: { plz: string; produktId?: number | null; bodenart?: string | null; flaeche?: number | null; zeitraum?: string | null; vorgang?: string },
+): string {
+  const p = new URLSearchParams({ weg: 'aufmass', plz: a.plz })
+  if (a.produktId) p.set('boden', String(a.produktId))
+  if (a.bodenart) p.set('art', a.bodenart)
+  if (a.flaeche) p.set('m2', String(a.flaeche))
+  if (a.zeitraum) p.set('wann', a.zeitraum)
+  if (a.vorgang) p.set('v', a.vorgang)
+  return `${basis}${FORMULAR_PFAD}?${p.toString()}`
+}
+
+/** „max mustermann“ → „Max Mustermann“ */
+export const grossAnfang = (s: string) =>
+  s.trim().split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+
 export type TelefonPruefung = { ok: true; e164: string } | { ok: false; fehler: string }
 
 export function pruefeTelefon(eingabe: string): TelefonPruefung {
@@ -195,13 +233,15 @@ export function pruefeKontakt(a: Pick<FunnelAnfrage, 'weg' | 'beratung' | 'vorna
   const e: Record<string, string> = {}
   if (a.vorname.trim().length < 2) e.vorname = 'Bitte gib deinen Vornamen ein.'
   if (a.nachname.trim().length < 2) e.nachname = 'Bitte gib deinen Nachnamen ein.'
-  const telefonPflicht = a.weg === 'aufmass' || (a.weg === 'beratung' && a.beratung !== 'fachmarkt')
+  // Nummer immer Pflicht (auch bei WhatsApp, damit wir nachfassen können)
+  const telefonPflicht = true
   const telefonLeer = a.telefon.replace(/\s/g, '') === '' || a.telefon.replace(/\s/g, '') === '+49'
   if (telefonPflicht || !telefonLeer) {
     const t = pruefeTelefon(a.telefon)
     if (!t.ok) e.telefon = t.fehler
   }
-  const emailPflicht = a.weg !== 'beratung' || a.beratung === 'fachmarkt'
+  // E-Mail Pflicht, nur bei WhatsApp-Beratung freiwillig
+  const emailPflicht = !(a.weg === 'beratung' && a.beratung === 'whatsapp')
   if ((emailPflicht || a.email.trim()) && !istEmail(a.email)) e.email = 'Bitte prüfe deine E-Mail-Adresse.'
   if (!a.datenschutz) e.datenschutz = 'Bitte stimme zu, damit wir dich kontaktieren dürfen.'
   return e

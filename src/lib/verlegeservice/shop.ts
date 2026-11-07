@@ -79,6 +79,12 @@ export async function beliebteBoeden(art: BodenartKey, anzahl = 12): Promise<Sho
   return (await kategorieBoeden(art)).slice(0, anzahl)
 }
 
+/** Einzelner Boden per Produkt-ID (für den Aufmaß-Link aus WhatsApp) */
+export async function bodenPerId(id: number): Promise<ShopBoden | null> {
+  const p = (await wooCommerceClient.getProductsByIds([id])).get(id)
+  return p ? alsBoden(p) : null
+}
+
 export type PreisklassenKey = 'guenstig' | 'mittel' | 'premium'
 export type Preisklassen = Record<PreisklassenKey, [number, number]>
 
