@@ -147,7 +147,7 @@ if (!WC_CONSUMER_KEY || !WC_CONSUMER_SECRET) {
 /**
  * Generiert die Authorization Header für WooCommerce REST API
  */
-function getWCAuthHeaders(): HeadersInit {
+export function getWCAuthHeaders(): HeadersInit {
   const credentials = Buffer.from(
     `${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}`
   ).toString('base64');

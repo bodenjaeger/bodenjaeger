@@ -14,8 +14,14 @@
  */
 
 // ── Schritte / Fortschritt ────────────────────────────────────────────────────
-export const VS_SCHRITTE = ['Standort', 'Projekt', 'Altboden', 'Kontakt'] as const
+export const VS_SCHRITTE = ['Standort', 'Projekt', 'Altboden', 'Ablauf', 'Kontakt'] as const
 export type VsSchritt = (typeof VS_SCHRITTE)[number]
+/**
+ * Zusätzlicher Schritt, nur wenn „Aufmaß vor Ort" gewählt wurde. Er erscheint
+ * im Fortschritt erst ab dem Kontakt-Schritt, damit Interessenten nicht schon
+ * zu Beginn einen Bezahlschritt sehen.
+ */
+export const VS_SCHRITT_ZAHLUNG = 'Zahlung'
 
 // ── Schritt 1: Standort ───────────────────────────────────────────────────────
 export const VS_STANDORT = {
@@ -164,7 +170,42 @@ export const VS_ALTBODEN = {
   weiter: 'Weiter zu Kontakt und Unterlagen',
 } as const
 
-// ── Schritt 4: Kontakt und Unterlagen ─────────────────────────────────────────
+// ── Schritt 4: Ablauf („Wie soll es weitergehen?") ────────────────────────────
+export const VS_WEGE = [
+  {
+    key: 'aufmass',
+    label: 'Aufmaß vor Ort vereinbaren',
+    text: 'Wir messen bei dir aus, beraten dich und erstellen dein genaues Angebot. Du bezahlst das Aufmaß direkt online und wir rufen dich nur noch für den Termin an. Erteilst du uns den Auftrag mit Verlegung, schreiben wir dir den Betrag vollständig gut.',
+    badge: 'Schnellster Weg zum Angebot',
+  },
+  {
+    key: 'telefon',
+    label: 'Erst telefonisch beraten lassen',
+    text: 'Kostenlos. Wir rufen dich an und besprechen dein Projekt.',
+    badge: null,
+  },
+  {
+    key: 'preis',
+    label: 'Grobe Preiseinschätzung vorab',
+    text: 'Kostenlos und auf Basis deiner Angaben. Das verbindliche Angebot erstellen wir nach dem Aufmaß vor Ort.',
+    badge: null,
+  },
+] as const
+export type VsWegKey = (typeof VS_WEGE)[number]['key']
+export const VS_WEG_AUFMASS: VsWegKey = 'aufmass'
+
+export const VS_ABLAUF = {
+  ueberschrift: 'Wie soll es weitergehen?',
+  hinweis: 'Wähle, was dir gerade am meisten hilft. Du kannst dich später immer noch anders entscheiden.',
+  frage: 'Dein nächster Schritt',
+  aufmassNichtMoeglich:
+    'Ein Aufmaß vor Ort bieten wir im Umkreis von ca. 50 km um Hückelhoven an. Wähle gern die telefonische Beratung oder die Preiseinschätzung.',
+  aufmassNichtOnline:
+    'Für deinen Standort können wir das Aufmaß gerade nicht online buchen. Wähle gern die telefonische Beratung, wir vereinbaren das Aufmaß dann persönlich.',
+  weiter: 'Weiter zu Kontakt und Unterlagen',
+} as const
+
+// ── Schritt 5: Kontakt und Unterlagen ─────────────────────────────────────────
 export const VS_KONTAKTART = [
   { key: 'telefon', label: 'Telefon' },
   { key: 'email', label: 'E-Mail' },
@@ -214,6 +255,77 @@ export const VS_KONTAKT = {
   absenden: 'Verlegeservice unverbindlich anfragen',
   absendenLaeuft: 'Anfrage wird gesendet …',
   absendenHinweis: 'Kostenlos und unverbindlich. Wir melden uns persönlich bei dir.',
+  /** Bei „Aufmaß vor Ort": erst zur Zahlung, abgeschickt wird dort. */
+  weiterZurZahlung: 'Weiter zur Zahlung',
+} as const
+
+// ── Schritt 6: Zahlung (nur „Aufmaß vor Ort") ─────────────────────────────────
+/**
+ * Zahlarten für das Aufmaß. Vorkasse ist bewusst nicht dabei: Der Termin soll
+ * nicht auf einen Zahlungseingang warten. Apple Pay und Google Pay bietet
+ * Stripe auf der Kartenseite automatisch an, sofern sie im Stripe-Konto aktiv
+ * sind.
+ */
+export const VS_ZAHLARTEN = [
+  { key: 'paypal', label: 'PayPal' },
+  { key: 'stripe', label: 'Kredit- oder Debitkarte, Apple Pay, Google Pay' },
+  { key: 'klarna', label: 'Klarna' },
+] as const
+export type VsZahlartKey = (typeof VS_ZAHLARTEN)[number]['key']
+
+export const VS_ZAHLUNG = {
+  ueberschrift: 'Aufmaß bezahlen',
+  hinweis: 'Nach der Zahlung rufen wir dich an und vereinbaren deinen Aufmaßtermin.',
+  position: 'Aufmaß + Beratung + Angebot',
+  gutschrift: 'Gutschrift bei Auftrag mit Verlegung',
+  gutschriftWert: 'vollständig',
+  summe: 'Jetzt zu zahlen',
+  summeZusatz: 'inkl. MwSt.',
+  storno: 'Kostenlos absagen oder verschieben bis 24 Stunden vor dem Termin.',
+  strasseLabel: 'Straße und Hausnummer',
+  strasseHinweis: 'Hier findet das Aufmaß statt.',
+  zahlartFrage: 'Zahlungsart',
+  widerrufText:
+    'Ich verlange ausdrücklich, dass Bodenjäger vor Ablauf der Widerrufsfrist mit dem Aufmaß beginnt. Mir ist bekannt, dass mein Widerrufsrecht mit vollständiger Erbringung des Aufmaßes erlischt.',
+  agbText: 'Es gelten unsere AGB. Hinweise zu deinem Widerrufsrecht findest du in der Widerrufsbelehrung.',
+  agbHref: '/agb',
+  widerrufHref: '/widerruf',
+  /** Der Betrag wird eingesetzt, z. B. „Jetzt 69 € bezahlen". */
+  bezahlen: (preis: string) => `Jetzt ${preis} bezahlen`,
+  bezahlenLaeuft: 'Du wirst zur Zahlung weitergeleitet …',
+} as const
+
+/** Texte der Seite, auf die Stripe und PayPal nach der Zahlung zurückleiten. */
+export const VS_AUFMASS_BEZAHLT = {
+  ueberschrift: (vorname: string) => (vorname ? `Danke, ${vorname}! Dein Aufmaß ist bezahlt.` : 'Danke! Dein Aufmaß ist bezahlt.'),
+  text: 'Wir rufen dich an und vereinbaren den Termin für dein Aufmaß. Die Zahlungsbestätigung bekommst du per E-Mail.',
+  gutschrift: (preis: string) => `Bei Beauftragung schreiben wir dir ${preis} vollständig gut.`,
+  boeden: (liste: string) => `Wir bringen ${liste} als Großmuster mit.`,
+  schritte: [
+    'Wir rufen dich an und vereinbaren deinen Aufmaßtermin.',
+    'Aufmaß vor Ort: Wir messen aus und prüfen Untergrund, Türen und Übergänge.',
+    'Du bekommst dein genaues Angebot mit Boden, Zubehör und Verlegung.',
+    'Verlegung zum Wunschtermin und gemeinsame Abnahme.',
+  ],
+  wartetTitel: 'Deine Zahlung wird noch bestätigt',
+  wartetText:
+    'Das dauert manchmal einen Moment. Sobald die Zahlung bestätigt ist, bekommst du eine E-Mail und wir rufen dich für den Termin an.',
+  offenTitel: 'Die Zahlung wurde nicht abgeschlossen',
+  offenText:
+    'Deine Anfrage ist bei uns angekommen. Du kannst das Aufmaß jetzt noch bezahlen oder wir melden uns bei dir und klären alles persönlich.',
+  nochmal: 'Jetzt bezahlen',
+  nichtGefunden:
+    'Diese Bestellung konnten wir nicht finden. Ruf uns gern an, wir helfen dir weiter.',
+} as const
+
+/** Bestätigungstexte für die kostenlosen Wege (Telefon, Preiseinschätzung). */
+export const VS_BESTAETIGUNG_WEG = {
+  telefon:
+    'Ein Berater aus unserem Fachmarkt ruft dich an und bespricht dein Projekt mit dir. Kostenlos und unverbindlich.',
+  preis:
+    'Wir schätzen die Kosten anhand deiner Angaben grob ein und melden uns bei dir. Das verbindliche Angebot erstellen wir nach dem Aufmaß vor Ort.',
+  zahlungNichtGestartet:
+    'Deine Anfrage ist angekommen, die Zahlung konnte aber gerade nicht gestartet werden. Wir melden uns bei dir und vereinbaren das Aufmaß persönlich.',
 } as const
 
 // ── Upload-Grenzen ────────────────────────────────────────────────────────────
@@ -269,6 +381,11 @@ export const VS_FEHLER = {
   emailPflicht: 'Bitte gib eine E-Mail-Adresse an.',
   emailFormat: 'Diese E-Mail-Adresse sieht nicht korrekt aus.',
   datenschutzPflicht: 'Bitte stimme der Verarbeitung deiner Angaben zu.',
+  wegPflicht: 'Bitte wähle, wie es weitergehen soll.',
+  aufmassNichtMoeglich: 'Für diesen Standort können wir das Aufmaß nicht online buchen.',
+  strassePflicht: 'Bitte gib Straße und Hausnummer an, damit wir zum Aufmaß kommen können.',
+  zahlartPflicht: 'Bitte wähle eine Zahlungsart.',
+  widerrufPflicht: 'Bitte bestätige den Hinweis zum Widerrufsrecht.',
   dateiFormat: 'Erlaubt sind JPG, PNG, HEIC und PDF.',
   dateiGroesse: 'Jede Datei darf höchstens 10 MB groß sein.',
   dateiAnzahl: 'Es sind höchstens 8 Dateien möglich.',
@@ -280,5 +397,5 @@ export const VS_FEHLER = {
 export const VS_META = {
   title: 'Verlegeservice anfragen | Bodenjäger Hückelhoven',
   description:
-    'Verlegeservice unverbindlich anfragen: In vier Schritten erfassen wir Standort, Projekt und Altboden. Wir prüfen deine Angaben und melden uns persönlich.',
+    'Verlegeservice anfragen: In wenigen Schritten erfassen wir Standort, Projekt und Altboden. Wir prüfen deine Angaben und melden uns persönlich.',
 } as const

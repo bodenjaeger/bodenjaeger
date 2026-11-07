@@ -48,6 +48,13 @@ export interface CreateCheckoutSessionParams {
   customerEmail: string;
   paymentMethod: 'card' | 'sofort' | 'klarna';
   shippingCost?: number;
+  /**
+   * Abweichende Rückkehr-Adressen (z. B. für das Aufmaß aus dem
+   * Verlegeservice-Formular). Ohne Angabe gelten die Checkout-Seiten.
+   * `{CHECKOUT_SESSION_ID}` ersetzt Stripe durch die Session-ID.
+   */
+  successUrl?: string;
+  cancelUrl?: string;
 }
 
 export interface StripeCheckoutSession {
@@ -106,7 +113,7 @@ export async function createStripeCheckoutSession(
 ): Promise<StripeCheckoutSession> {
   checkProxyConfig();
 
-  const { orderId, orderKey, lineItems, customerEmail, paymentMethod, shippingCost } = params;
+  const { orderId, orderKey, lineItems, customerEmail, paymentMethod, shippingCost, successUrl, cancelUrl } = params;
 
   // Line Items für Stripe formatieren (price_data mit unit_amount in Cent)
   const stripeLineItems = lineItems.map((item) => ({
@@ -136,8 +143,10 @@ export async function createStripeCheckoutSession(
       headers: proxyHeaders(),
       body: JSON.stringify({
         line_items: stripeLineItems,
-        success_url: `${NEXT_PUBLIC_SITE_URL}/checkout/success?order=${orderId}&key=${orderKey}&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${NEXT_PUBLIC_SITE_URL}/checkout?cancelled=true&order=${orderId}`,
+        success_url:
+          successUrl ??
+          `${NEXT_PUBLIC_SITE_URL}/checkout/success?order=${orderId}&key=${orderKey}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: cancelUrl ?? `${NEXT_PUBLIC_SITE_URL}/checkout?cancelled=true&order=${orderId}`,
         metadata: {
           order_id: orderId.toString(), // Feld-Name identisch zum Original
           order_key: orderKey,

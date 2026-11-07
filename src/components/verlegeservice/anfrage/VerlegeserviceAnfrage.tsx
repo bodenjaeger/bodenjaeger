@@ -1,7 +1,9 @@
 'use client'
 
 /**
- * Formular „Verlegeservice anfragen" — vier Schritte plus Bestätigung.
+ * Formular „Verlegeservice anfragen" — fünf Schritte plus Bestätigung, bei
+ * „Aufmaß vor Ort" zusätzlich ein Zahlungsschritt (Weiterleitung zu Stripe
+ * bzw. PayPal, Rückkehr auf …/verlegeservice-anfrage/bezahlt).
  *
  * Ausschließlich für Interessenten, die eine Verlegung durch Bodenjäger
  * möchten. „Nur Material kaufen" und „Ich verlege selbst" kommen bewusst nicht
@@ -18,12 +20,14 @@ import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import { CheckCircle2, Loader2, Phone } from 'lucide-react'
 import { STANDORT } from '@/content/fachmarkt'
 import {
+  VS_ABLAUF,
   VS_ALTBODEN,
   VS_ALTBODEN_BELAG,
   VS_ALTBODEN_ENTFERNEN,
   VS_ALTBODEN_VERLEGEART,
   VS_BELAG_SONSTIGER,
   VS_BESTAETIGUNG,
+  VS_BESTAETIGUNG_WEG,
   VS_BODENART_BERATUNG,
   VS_BODENARTEN,
   VS_ERREICHBARKEIT,
@@ -34,12 +38,18 @@ import {
   VS_PROJEKT,
   VS_RAEUME,
   VS_RAUM_SONSTIGER,
+  VS_SCHRITT_ZAHLUNG,
   VS_SCHRITTE,
   VS_STANDORT,
+  VS_WEG_AUFMASS,
+  VS_WEGE,
+  VS_ZAHLARTEN,
+  VS_ZAHLUNG,
   VS_ZEITRAEUME,
   VS_ZEITRAUM_SPAETER,
   type VsBodenartKey,
 } from '@/content/verlegeservice-anfrage'
+import { formatEuro } from '@/lib/aufmass-kreise'
 import { formatEntfernung, type AreaStatus } from '@/lib/servicegebiet'
 import {
   labelAltbodenBelag,
@@ -47,11 +57,14 @@ import {
   labelBodenarten,
   labelFlaeche,
   labelVerlegeart,
+  labelWeg,
   labelZeitraum,
+  pruefeAblauf,
   pruefeAltboden,
   pruefeKontakt,
   pruefeProjekt,
   pruefeStandort,
+  pruefeZahlung,
   type Feldfehler,
 } from '@/lib/verlegeservice-validierung'
 import {
@@ -61,6 +74,7 @@ import {
   trackFormView,
   trackLeadAbschluss,
   trackLocationChecked,
+  trackStepAblauf,
   trackStepAltboden,
   trackStepProject,
 } from '@/lib/tracking/verlegeservice-events'
@@ -78,6 +92,7 @@ import {
   SchrittKopf,
   Textbereich,
   Textfeld,
+  WegKarte,
 } from './felder'
 
 const ENTWURF_KEY = 'vs-anfrage-entwurf'
@@ -122,13 +137,20 @@ const LEER: Entwurf = {
   preisvorstellung: '',
   freitext: '',
   datenschutz: false,
+  weg: null,
+  aufmass: { strasse: '', zahlart: null, widerruf: false },
 }
+
+/** Schrittnummern (nullbasiert), damit die Sprünge lesbar bleiben. */
+const S = { standort: 0, projekt: 1, altboden: 2, ablauf: 3, kontakt: 4, zahlung: 5 } as const
 
 interface PlzErgebnis {
   gefunden: boolean
   ort?: string
   distanceKm?: number
   areaStatus?: AreaStatus
+  /** Preis für das Aufmaß; null = hier nicht online buchbar. */
+  aufmass?: { preis: number; kreis: string } | null
 }
 
 interface Ergebnis {
@@ -138,6 +160,8 @@ interface Ergebnis {
   ort: string
   dateienUebertragen: number
   dateienGesamt: number
+  /** Aufmaß gewählt, Zahlung konnte aber nicht gestartet werden. */
+  zahlungFehler?: boolean
 }
 
 export default function VerlegeserviceAnfrage() {
@@ -189,6 +213,9 @@ export default function VerlegeserviceAnfrage() {
           ...LEER,
           ...gesichert,
           bodenarten: Array.isArray(gesichert.bodenarten) ? gesichert.bodenarten : [],
+          // Die Bestätigung zum Widerrufsrecht wird nie aus einem Entwurf
+          // übernommen — sie muss bei jeder Buchung frisch gegeben werden.
+          aufmass: { ...LEER.aufmass!, ...gesichert.aufmass, widerruf: false },
         })
       }
     } catch {
@@ -246,6 +273,31 @@ export default function VerlegeserviceAnfrage() {
   /** Bei „Noch nicht genau bekannt" wird keine Quadratmeterzahl verlangt. */
   const braucheQm = !!staffel && staffel.min !== null
 
+  const istAufmass = d.weg === VS_WEG_AUFMASS
+  const aufmassPreis = plzErgebnis?.aufmass?.preis ?? null
+  const aufmassMoeglich = aufmassPreis !== null
+  const schritte = istAufmass && schritt >= S.kontakt ? [...VS_SCHRITTE, VS_SCHRITT_ZAHLUNG] : VS_SCHRITTE
+
+  // Wird das Aufmaß durch eine neue PLZ unmöglich, die Wahl zurücknehmen.
+  useEffect(() => {
+    if (plzErgebnis && !plzErgebnis.aufmass && d.weg === VS_WEG_AUFMASS) {
+      setD((v) => ({ ...v, weg: null }))
+    }
+  }, [plzErgebnis, d.weg])
+
+  const setzeAufmass = <K extends keyof NonNullable<Entwurf['aufmass']>>(
+    feld: K,
+    wert: NonNullable<Entwurf['aufmass']>[K],
+  ) => {
+    setD((v) => ({ ...v, aufmass: { ...LEER.aufmass!, ...v.aufmass, [feld]: wert } }))
+    setFehler((f) => {
+      if (!(feld in f)) return f
+      const kopie = { ...f }
+      delete kopie[feld as string]
+      return kopie
+    })
+  }
+
   const weiter = (pruefung: Feldfehler, danach?: () => void) => {
     if (Object.keys(pruefung).length > 0) {
       setFehler(pruefung)
@@ -290,7 +342,7 @@ export default function VerlegeserviceAnfrage() {
   }
 
   async function absenden() {
-    const pruefung = pruefeKontakt(d)
+    const pruefung = { ...pruefeKontakt(d), ...(istAufmass ? pruefeZahlung(d.aufmass) : {}) }
     if (Object.keys(pruefung).length > 0) {
       setFehler(pruefung)
       return
@@ -308,6 +360,7 @@ export default function VerlegeserviceAnfrage() {
     const payload: VsAnfrage = {
       ...d,
       qm: braucheQm ? d.qm : null,
+      aufmass: istAufmass ? d.aufmass : undefined,
       dateien: dateien.map(({ filename, mime, dataBase64 }) => ({ filename, mime, dataBase64 })),
       tracking,
       turnstileToken: turnstileToken ?? undefined,
@@ -324,6 +377,11 @@ export default function VerlegeserviceAnfrage() {
 
       if (!json.success) {
         if (json.felder) setFehler(json.felder)
+        // Aufmaß hier nicht buchbar: zurück zur Auswahl des nächsten Schritts.
+        if (json.felder?.weg) {
+          setSchritt(S.ablauf)
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
         setSendeFehler(json.error)
         turnstileRef.current?.reset()
         setTurnstileToken(null)
@@ -339,7 +397,23 @@ export default function VerlegeserviceAnfrage() {
           areaRange: d.flaecheStaffel,
           floorType: d.bodenarten.join(',') || null,
           timeline: d.zeitraum,
+          naechsterSchritt: d.weg,
         })
+      }
+
+      // Aufmaß: weiter zu Stripe bzw. PayPal. Kurz warten, damit Pixel und
+      // Google-Tag die Lead-Conversion noch verschicken können.
+      if (json.zahlungUrl) {
+        try {
+          sessionStorage.removeItem(ENTWURF_KEY)
+        } catch {
+          // egal
+        }
+        const ziel = json.zahlungUrl
+        setTimeout(() => {
+          window.location.href = ziel
+        }, 400)
+        return
       }
 
       setErgebnis({
@@ -349,6 +423,7 @@ export default function VerlegeserviceAnfrage() {
         ort: json.ort,
         dateienUebertragen: json.dateienUebertragen,
         dateienGesamt: json.dateienGesamt,
+        zahlungFehler: json.zahlungFehler,
       })
       try {
         sessionStorage.removeItem(ENTWURF_KEY)
@@ -373,7 +448,7 @@ export default function VerlegeserviceAnfrage() {
   return (
     <section className="pt-10">
       <div className="content-container mx-auto max-w-3xl">
-        <Fortschritt schritte={VS_SCHRITTE} aktiv={schritt} />
+        <Fortschritt schritte={schritte} aktiv={schritt} />
 
         <div className="mt-10 rounded-3xl border border-ash bg-white p-6 shadow-sm md:p-10">
           {/* ── Schritt 1: Standort ─────────────────────────────────────────── */}
@@ -649,8 +724,52 @@ export default function VerlegeserviceAnfrage() {
             </>
           )}
 
-          {/* ── Schritt 4: Kontakt und Unterlagen ───────────────────────────── */}
-          {schritt === 3 && (
+          {/* ── Schritt 4: Ablauf ───────────────────────────────────────────── */}
+          {schritt === S.ablauf && (
+            <>
+              <SchrittKopf ueberschrift={VS_ABLAUF.ueberschrift} hinweis={VS_ABLAUF.hinweis} />
+
+              <Frage text={VS_ABLAUF.frage} pflicht fehler={fehler.weg}>
+                <div className="grid gap-3" role="radiogroup" aria-label={VS_ABLAUF.frage}>
+                  {VS_WEGE.map((w) => {
+                    const aufmass = w.key === VS_WEG_AUFMASS
+                    return (
+                      <WegKarte
+                        key={w.key}
+                        titel={w.label}
+                        text={w.text}
+                        badge={w.badge}
+                        preis={aufmass && aufmassPreis !== null ? formatEuro(aufmassPreis) : null}
+                        aktiv={d.weg === w.key}
+                        gesperrt={aufmass && !aufmassMoeglich}
+                        onClick={() => setzen('weg', w.key)}
+                      />
+                    )
+                  })}
+                </div>
+              </Frage>
+
+              {plzErgebnis && !aufmassMoeglich && (
+                <Hinweisbox
+                  ton="neutral"
+                  text={
+                    plzErgebnis.areaStatus === 'in_area'
+                      ? VS_ABLAUF.aufmassNichtOnline
+                      : VS_ABLAUF.aufmassNichtMoeglich
+                  }
+                />
+              )}
+
+              <NaviLeiste
+                zurueck={zurueck}
+                weiter={() => weiter(pruefeAblauf(d), () => trackStepAblauf(d.weg))}
+                weiterLabel={VS_ABLAUF.weiter}
+              />
+            </>
+          )}
+
+          {/* ── Schritt 5: Kontakt und Unterlagen ───────────────────────────── */}
+          {schritt === S.kontakt && (
             <>
               <SchrittKopf ueberschrift={VS_KONTAKT.ueberschrift} hinweis={VS_KONTAKT.hinweis} />
 
@@ -786,6 +905,149 @@ export default function VerlegeserviceAnfrage() {
                 <Fehler text={fehler.datenschutz} />
               </div>
 
+              {istAufmass ? (
+                <button
+                  type="button"
+                  onClick={() => weiter(pruefeKontakt(d))}
+                  className="mt-6 flex min-h-[56px] w-full items-center justify-center gap-3 rounded-xl bg-brand px-8 text-lg font-bold text-white shadow-sm transition-colors hover:bg-[#c8161e]"
+                >
+                  {VS_KONTAKT.weiterZurZahlung}
+                </button>
+              ) : (
+                <>
+                  {siteKey && (
+                    <div className="mt-6">
+                      <Turnstile
+                        ref={turnstileRef}
+                        siteKey={siteKey}
+                        options={{ language: 'de', theme: 'light' }}
+                        onSuccess={setTurnstileToken}
+                        onExpire={() => setTurnstileToken(null)}
+                        onError={() => setTurnstileToken(null)}
+                      />
+                    </div>
+                  )}
+
+                  <Fehler text={sendeFehler} />
+
+                  <button
+                    type="button"
+                    onClick={absenden}
+                    disabled={sendet}
+                    className="mt-6 flex min-h-[56px] w-full items-center justify-center gap-3 rounded-xl bg-brand px-8 text-lg font-bold text-white shadow-sm transition-colors hover:bg-[#c8161e] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {sendet ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        {VS_KONTAKT.absendenLaeuft}
+                      </>
+                    ) : (
+                      VS_KONTAKT.absenden
+                    )}
+                  </button>
+                  <p className="mt-3 text-center text-sm text-mid">{VS_KONTAKT.absendenHinweis}</p>
+                </>
+              )}
+
+              <div className="mt-6 flex justify-center">
+                <button
+                  type="button"
+                  onClick={zurueck}
+                  className="min-h-[48px] font-bold text-mid transition-colors hover:text-dark"
+                >
+                  Zurück
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── Schritt 6: Zahlung (nur Aufmaß) ─────────────────────────────── */}
+          {schritt === S.zahlung && istAufmass && (
+            <>
+              <SchrittKopf ueberschrift={VS_ZAHLUNG.ueberschrift} hinweis={VS_ZAHLUNG.hinweis} />
+
+              {aufmassPreis === null ? (
+                <Hinweisbox ton="warnung" text={VS_ABLAUF.aufmassNichtOnline} />
+              ) : (
+                <dl className="rounded-2xl border border-ash bg-pale px-5">
+                  <div className="flex items-start justify-between gap-4 py-4">
+                    <dt>
+                      <span className="block font-bold text-dark">{VS_ZAHLUNG.position}</span>
+                      <span className="block text-sm text-mid">
+                        {[d.ort || plzErgebnis?.ort, plzErgebnis?.distanceKm !== undefined ? `ca. ${formatEntfernung(plzErgebnis.distanceKm)}` : null]
+                          .filter(Boolean)
+                          .join(', ')}
+                      </span>
+                    </dt>
+                    <dd className="font-bold tabular-nums text-dark">{formatEuro(aufmassPreis)}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4 border-t border-ash py-4 text-sm text-success">
+                    <dt>{VS_ZAHLUNG.gutschrift}</dt>
+                    <dd>{VS_ZAHLUNG.gutschriftWert}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4 border-t border-ash py-4 text-lg">
+                    <dt className="text-dark">
+                      {VS_ZAHLUNG.summe} <span className="text-sm text-mid">{VS_ZAHLUNG.summeZusatz}</span>
+                    </dt>
+                    <dd className="font-bold tabular-nums text-dark">{formatEuro(aufmassPreis)}</dd>
+                  </div>
+                </dl>
+              )}
+              <p className="mt-3 text-sm text-mid">{VS_ZAHLUNG.storno}</p>
+
+              <div className="mt-8">
+                <Textfeld
+                  id="vs-strasse"
+                  label={VS_ZAHLUNG.strasseLabel}
+                  wert={d.aufmass?.strasse ?? ''}
+                  onChange={(v) => setzeAufmass('strasse', v)}
+                  fehler={fehler.strasse}
+                  pflicht
+                  autoComplete="street-address"
+                  hinweis={VS_ZAHLUNG.strasseHinweis}
+                  maxLength={120}
+                />
+              </div>
+
+              <Frage text={VS_ZAHLUNG.zahlartFrage} pflicht fehler={fehler.zahlart}>
+                <KartenRaster spalten={1}>
+                  {VS_ZAHLARTEN.map((z) => (
+                    <EinzelKarte
+                      key={z.key}
+                      label={z.label}
+                      aktiv={d.aufmass?.zahlart === z.key}
+                      onClick={() => setzeAufmass('zahlart', z.key)}
+                    />
+                  ))}
+                </KartenRaster>
+              </Frage>
+
+              <div className="mt-8 rounded-2xl border border-ash bg-pale p-4">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={d.aufmass?.widerruf ?? false}
+                    onChange={(e) => setzeAufmass('widerruf', e.target.checked)}
+                    className="mt-1 h-5 w-5 flex-shrink-0 accent-[#ed1b24]"
+                  />
+                  <span className="text-sm text-mid">
+                    {VS_ZAHLUNG.widerrufText}
+                    <span className="ml-1 text-brand">*</span>
+                  </span>
+                </label>
+                <Fehler text={fehler.widerruf} />
+              </div>
+              <p className="mt-3 text-sm text-mid">
+                {VS_ZAHLUNG.agbText}{' '}
+                <Link href={VS_ZAHLUNG.agbHref} target="_blank" className="font-bold text-dark underline">
+                  AGB
+                </Link>
+                {' · '}
+                <Link href={VS_ZAHLUNG.widerrufHref} target="_blank" className="font-bold text-dark underline">
+                  Widerrufsbelehrung
+                </Link>
+              </p>
+
               {siteKey && (
                 <div className="mt-6">
                   <Turnstile
@@ -804,19 +1066,18 @@ export default function VerlegeserviceAnfrage() {
               <button
                 type="button"
                 onClick={absenden}
-                disabled={sendet}
+                disabled={sendet || aufmassPreis === null}
                 className="mt-6 flex min-h-[56px] w-full items-center justify-center gap-3 rounded-xl bg-brand px-8 text-lg font-bold text-white shadow-sm transition-colors hover:bg-[#c8161e] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {sendet ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    {VS_KONTAKT.absendenLaeuft}
+                    {VS_ZAHLUNG.bezahlenLaeuft}
                   </>
                 ) : (
-                  VS_KONTAKT.absenden
+                  VS_ZAHLUNG.bezahlen(aufmassPreis !== null ? formatEuro(aufmassPreis) : '')
                 )}
               </button>
-              <p className="mt-3 text-center text-sm text-mid">{VS_KONTAKT.absendenHinweis}</p>
 
               <div className="mt-6 flex justify-center">
                 <button
@@ -864,7 +1125,15 @@ function Bestaetigung({ d, ergebnis }: { d: Entwurf; ergebnis: Ergebnis }) {
             {VS_BESTAETIGUNG.ueberschrift}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-mid">
-            {inArea ? VS_BESTAETIGUNG.textInArea : VS_BESTAETIGUNG.textOutOfArea}
+            {ergebnis.zahlungFehler
+              ? VS_BESTAETIGUNG_WEG.zahlungNichtGestartet
+              : !inArea
+                ? VS_BESTAETIGUNG.textOutOfArea
+                : d.weg === 'telefon'
+                  ? VS_BESTAETIGUNG_WEG.telefon
+                  : d.weg === 'preis'
+                    ? VS_BESTAETIGUNG_WEG.preis
+                    : VS_BESTAETIGUNG.textInArea}
           </p>
           {ergebnis.leadId && (
             <p className="mt-4 text-sm text-mid">
@@ -913,6 +1182,7 @@ function Bestaetigung({ d, ergebnis }: { d: Entwurf; ergebnis: Ergebnis }) {
                 }
               />
               <Zeile bez="Altboden entfernen" wert={labelAltbodenEntfernen(d.altbodenEntfernen)} />
+              <Zeile bez="Nächster Schritt" wert={labelWeg(d.weg)} />
               {d.altbodenEntfernen === 'ja' && (
                 <>
                   <Zeile bez="Vorhandener Boden" wert={labelAltbodenBelag(d.altbodenBelag)} />

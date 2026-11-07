@@ -13,6 +13,8 @@ import type {
   VsFlaecheKey,
   VsKontaktartKey,
   VsVerlegeartKey,
+  VsWegKey,
+  VsZahlartKey,
   VsZeitraumKey,
 } from '@/content/verlegeservice-anfrage'
 import type { AreaStatus } from '@/lib/servicegebiet'
@@ -78,7 +80,11 @@ export interface VsAnfrage {
   /** Optional, auch bei „Ja" — viele Kunden kennen die Verlegeart nicht. */
   altbodenVerlegeart: VsVerlegeartKey | null
 
-  // Schritt 4 — Kontakt und Unterlagen
+  // Schritt 4 — Ablauf
+  /** Gewünschter nächster Schritt: Aufmaß (kostenpflichtig), Telefon, Preiseinschätzung. */
+  weg: VsWegKey | null
+
+  // Schritt 5 — Kontakt und Unterlagen
   vorname: string
   nachname: string
   telefon: string
@@ -89,12 +95,23 @@ export interface VsAnfrage {
   freitext: string
   datenschutz: boolean
 
+  // Schritt 6 — Zahlung, nur bei weg === 'aufmass'
+  aufmass?: VsAufmassBuchung
+
   // Technik
   dateien: VsDatei[]
   tracking: VsTracking
   turnstileToken?: string
   /** Honeypot — muss leer bleiben. */
   website?: string
+}
+
+/** Angaben aus dem Zahlungsschritt. Der Preis kommt nie vom Client. */
+export interface VsAufmassBuchung {
+  strasse: string
+  zahlart: VsZahlartKey | null
+  /** Ausdrücklicher Wunsch nach Beginn vor Ablauf der Widerrufsfrist. */
+  widerruf: boolean
 }
 
 /** Antwort des Endpunkts bei Erfolg. */
@@ -107,6 +124,13 @@ export interface VsAnfrageErfolg {
   /** Wie viele Dateien tatsächlich an Trello übertragen wurden. */
   dateienUebertragen: number
   dateienGesamt: number
+  /** Nur bei Aufmaß: Weiterleitung zu Stripe bzw. PayPal. */
+  zahlungUrl?: string
+  /**
+   * Nur bei Aufmaß: Die Anfrage ist angekommen, die Zahlung konnte aber nicht
+   * gestartet werden. Das Formular zeigt dann die Bestätigung mit Hinweis.
+   */
+  zahlungFehler?: boolean
 }
 
 export interface VsAnfrageFehler {

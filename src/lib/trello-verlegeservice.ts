@@ -20,9 +20,11 @@ import {
   labelFlaeche,
   labelKontaktart,
   labelVerlegeart,
+  labelWeg,
   labelZeitraum,
 } from '@/lib/verlegeservice-validierung'
-import { VS_BELAG_SONSTIGER, VS_RAUM_SONSTIGER } from '@/content/verlegeservice-anfrage'
+import { VS_BELAG_SONSTIGER, VS_RAUM_SONSTIGER, VS_WEG_AUFMASS } from '@/content/verlegeservice-anfrage'
+import { formatEuro } from '@/lib/aufmass-kreise'
 import type { VsAnfrage, VsDatei } from '@/types/verlegeservice-anfrage'
 
 const TRELLO_API = 'https://api.trello.com/1'
@@ -45,6 +47,13 @@ function config(): TrelloConfig | null {
   const idList = process.env.TRELLO_LIST_ID?.trim()
   if (!key || !token || !idList) return null
   return { key, token, idList }
+}
+
+/** Angaben zum bezahlten Aufmaß, falls der Interessent es gebucht hat. */
+export interface TrelloAufmassInfo {
+  preis: number
+  kreis: string
+  sku: string
 }
 
 /** „In Area" / „Out of Area" für die menschenlesbare Anzeige. */
@@ -88,6 +97,7 @@ export function kartenBeschreibung(
     distanceKm: number | null
     ort: string
     eingang: Date
+    aufmass?: TrelloAufmassInfo | null
   },
 ): string {
   const abschnitte: string[] = ['**VERLEGESERVICE-ANFRAGE**']
@@ -99,6 +109,18 @@ export function kartenBeschreibung(
     status.push(`Entfernung: ca. ${formatEntfernung(opts.distanceKm)}`)
   }
   abschnitte.push(`**STATUS**\n${status.join('\n')}`)
+
+  const weg = labelWeg(a.weg)
+  if (weg) {
+    const zeilen = [weg]
+    if (a.weg === VS_WEG_AUFMASS && opts.aufmass) {
+      zeilen.push(
+        `Aufmaß: ${formatEuro(opts.aufmass.preis)} (${opts.aufmass.kreis}, Artikel ${opts.aufmass.sku})`,
+        'Zahlung offen – nach erfolgreicher Zahlung wandert die Karte in die Liste „Aufmaß bezahlt".',
+      )
+    }
+    abschnitte.push(`**NÄCHSTER SCHRITT**\n${zeilen.join('\n')}`)
+  }
 
   const kontakt = [
     `Name: ${a.vorname} ${a.nachname}`.trim(),
@@ -269,6 +291,7 @@ export async function leadNachTrello(
     distanceKm: number | null
     ort: string
     eingang: Date
+    aufmass?: TrelloAufmassInfo | null
   },
 ): Promise<TrelloErgebnis> {
   const gesamt = a.dateien.length
@@ -303,4 +326,77 @@ export async function leadNachTrello(
   }
 
   return { cardId, dateienUebertragen: uebertragen, dateienGesamt: gesamt }
+}
+
+/**
+ * Nach bezahltem Aufmaß: Karte in die Liste „Aufmaß bezahlt – Termin
+ * vereinbaren" verschieben (TRELLO_LIST_ID_AUFMASS_BEZAHLT) und die Zahlung als
+ * Kommentar vermerken. Fehlt die Listen-ID, bleibt die Karte, wo sie ist, und
+ * bekommt nur den Kommentar.
+ */
+export async function aufmassBezahltNachTrello(cardId: string, text: string): Promise<boolean> {
+  const cfg = config()
+  if (!cfg) {
+    console.error('[trello] TRELLO_KEY/TRELLO_TOKEN/TRELLO_LIST_ID fehlt')
+    return false
+  }
+  const zielListe = process.env.TRELLO_LIST_ID_AUFMASS_BEZAHLT?.trim()
+  let ok = true
+  if (zielListe) {
+    try {
+      const params = new URLSearchParams({ key: cfg.key, token: cfg.token, idList: zielListe, pos: 'top' })
+      const res = await fetch(`${TRELLO_API}/cards/${cardId}?${params.toString()}`, { method: 'PUT' })
+      if (!res.ok) {
+        ok = false
+        console.error('[trello] Karte verschieben fehlgeschlagen:', res.status, await res.text().catch(() => ''))
+      }
+    } catch (e) {
+      ok = false
+      console.error('[trello] Karte verschieben Netzwerkfehler:', e)
+    }
+  } else {
+    console.warn('[trello] TRELLO_LIST_ID_AUFMASS_BEZAHLT fehlt — Karte bleibt in ihrer Liste.')
+  }
+  await zahlungsLabelUmstellen(cfg, cardId)
+  await kommentar(cfg, cardId, text)
+  return ok
+}
+
+/** Label „Zahlung offen“ entfernen und „Bezahlt“ (grün) setzen. */
+async function zahlungsLabelUmstellen(cfg: TrelloConfig, cardId: string): Promise<void> {
+  const auth = `key=${encodeURIComponent(cfg.key)}&token=${encodeURIComponent(cfg.token)}`
+  try {
+    const kRes = await fetch(`${TRELLO_API}/cards/${cardId}?fields=idBoard,idLabels&${auth}`)
+    if (!kRes.ok) throw new Error(`Karte ${kRes.status}`)
+    const karte = (await kRes.json()) as { idBoard: string; idLabels: string[] }
+    const lRes = await fetch(`${TRELLO_API}/boards/${karte.idBoard}/labels?fields=name&limit=1000&${auth}`)
+    if (!lRes.ok) throw new Error(`Labels ${lRes.status}`)
+    const labels = (await lRes.json()) as Array<{ id: string; name: string }>
+    const name = (l: { name: string }) => l.name.trim().toLowerCase()
+
+    for (const l of labels.filter((x) => name(x) === 'zahlung offen' && karte.idLabels.includes(x.id))) {
+      await fetch(`${TRELLO_API}/cards/${cardId}/idLabels/${l.id}?${auth}`, { method: 'DELETE' })
+    }
+    let bezahlt = labels.find((x) => name(x) === 'bezahlt')?.id
+    if (!bezahlt) {
+      const neu = await fetch(`${TRELLO_API}/labels?${auth}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Bezahlt', color: 'green', idBoard: karte.idBoard }),
+      })
+      if (neu.ok) bezahlt = ((await neu.json()) as { id: string }).id
+    }
+    if (bezahlt && !karte.idLabels.includes(bezahlt)) {
+      await fetch(`${TRELLO_API}/cards/${cardId}/idLabels?value=${bezahlt}&${auth}`, { method: 'POST' })
+    }
+  } catch (e) {
+    console.error('[trello] Zahlungs-Label umstellen fehlgeschlagen:', e)
+  }
+}
+
+/** Kommentar an eine bestehende Karte, ohne sie zu verschieben. */
+export async function kommentarAnKarte(cardId: string, text: string): Promise<void> {
+  const cfg = config()
+  if (!cfg) return
+  await kommentar(cfg, cardId, text)
 }

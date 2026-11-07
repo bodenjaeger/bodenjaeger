@@ -2,9 +2,8 @@ import type { Metadata } from 'next'
 import { JsonLd } from '@/components/JsonLd'
 import { buildBreadcrumbSchema } from '@/lib/schema'
 import { SITE_URL } from '@/lib/site'
-import { VERLEGE_ANFRAGE } from '@/content/verlegeservice'
 import { VS_META } from '@/content/verlegeservice-anfrage'
-import VerlegeserviceAnfrage from '@/components/verlegeservice/anfrage/VerlegeserviceAnfrage'
+import VerlegeFunnel from '@/components/verlegeservice/funnel/VerlegeFunnel'
 
 const PAGE_URL = `${SITE_URL}/fachmarkt-hueckelhoven/service/verlegeservice-anfrage`
 
@@ -31,20 +30,10 @@ export default function VerlegeserviceAnfragePage() {
   ])
 
   return (
-    <main className="pb-16">
+    <main className="min-h-screen bg-pale pt-6 md:pt-10">
       <JsonLd data={breadcrumb} />
-
-      {/* Kurzer Intro-Kopf */}
-      <section className="pt-16 md:pt-20">
-        <div className="content-container mx-auto max-w-3xl text-center">
-          <h1 className="font-bold leading-[1.1] text-dark" style={{ fontSize: 'clamp(2rem, 4.5vw, 3.25rem)' }}>
-            {VERLEGE_ANFRAGE.hero.headline}
-          </h1>
-          <p className="mt-4 text-lg text-mid">{VERLEGE_ANFRAGE.hero.subline}</p>
-        </div>
-      </section>
-
-      <VerlegeserviceAnfrage />
+      <h1 className="sr-only">Verlegeservice anfragen – Bodenjäger Hückelhoven</h1>
+      <VerlegeFunnel />
     </main>
   )
 }

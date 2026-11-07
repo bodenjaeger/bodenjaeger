@@ -3,11 +3,20 @@ import {
   VS_BODENARTEN,
   VS_FEHLER,
   VS_FLAECHE_STAFFELN,
+  VS_WEG_AUFMASS,
+  VS_WEGE,
+  VS_ZAHLARTEN,
   VS_ZEITRAEUME,
 } from '@/content/verlegeservice-anfrage'
+import {
+  aufmassAngebot,
+  aufmassBestellungAnlegen,
+  aufmassZahlungStartenSicher,
+  type AufmassAngebot,
+} from '@/lib/aufmass'
 import { naechsteLeadId } from '@/lib/leadId'
 import { pruefeServicegebiet, type AreaStatus } from '@/lib/servicegebiet'
-import { kartenBeschreibung, leadNachTrello } from '@/lib/trello-verlegeservice'
+import { kartenBeschreibung, kommentarAnKarte, leadNachTrello } from '@/lib/trello-verlegeservice'
 import { sendeMetaLead } from '@/lib/tracking/meta-capi'
 import { pruefeAnfrage } from '@/lib/verlegeservice-validierung'
 import type {
@@ -24,6 +33,12 @@ import type {
  *
  * Ablauf: validieren → Spam-Schutz → Servicegebiet serverseitig bestimmen →
  * Lead-ID → Trello (Karte + Anhänge) → E-Mail → Meta CAPI → Antwort.
+ *
+ * Bei „Aufmaß vor Ort" (weg = 'aufmass') kommt danach die Zahlung: Preis und
+ * Produkt bestimmt der Server aus der PLZ (siehe lib/aufmass.ts), legt eine
+ * WooCommerce-Bestellung an und gibt die Weiterleitung zu Stripe/PayPal
+ * zurück. Der Lead entsteht trotzdem zuerst — bricht jemand die Zahlung ab,
+ * liegt die Anfrage dem Team bereits vor.
  *
  * Zustellgarantie: Trello UND E-Mail werden versucht. Erfolg wird gemeldet,
  * sobald MINDESTENS EIN Kanal funktioniert hat — ein Lead mit Auftragswert soll
@@ -78,6 +93,17 @@ function normalisiere(rohdaten: Partial<VsAnfrage>): VsAnfrage {
     preisvorstellung: s(rohdaten.preisvorstellung).trim(),
     freitext: s(rohdaten.freitext).trim(),
     datenschutz: rohdaten.datenschutz === true,
+    weg: VS_WEGE.some((w) => w.key === rohdaten.weg) ? (rohdaten.weg as VsAnfrage['weg']) : null,
+    aufmass:
+      rohdaten.aufmass && typeof rohdaten.aufmass === 'object'
+        ? {
+            strasse: s(rohdaten.aufmass.strasse).trim().slice(0, 120),
+            zahlart: VS_ZAHLARTEN.some((z) => z.key === rohdaten.aufmass?.zahlart)
+              ? (rohdaten.aufmass.zahlart as NonNullable<VsAnfrage['aufmass']>['zahlart'])
+              : null,
+            widerruf: rohdaten.aufmass.widerruf === true,
+          }
+        : undefined,
     dateien: Array.isArray(rohdaten.dateien) ? rohdaten.dateien : [],
     tracking: rohdaten.tracking && typeof rohdaten.tracking === 'object' ? rohdaten.tracking : {},
     turnstileToken: typeof rohdaten.turnstileToken === 'string' ? rohdaten.turnstileToken : undefined,
@@ -200,10 +226,37 @@ export async function POST(request: NextRequest): Promise<NextResponse<VsAnfrage
   const distanceKm = gebiet?.distanceKm ?? null
   const ort = gebiet?.ort ?? a.ort
 
+  // Aufmaß: Preis und Produkt vor dem Lead bestimmen. Ist das Aufmaß hier
+  // nicht buchbar (außerhalb, Produkt fehlt), soll der Nutzer das sofort sehen
+  // und einen anderen Weg wählen können — ohne halben Lead in Trello.
+  let angebot: AufmassAngebot | null = null
+  if (a.weg === VS_WEG_AUFMASS) {
+    angebot = await aufmassAngebot(a.plz)
+    if (!angebot) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: VS_FEHLER.aufmassNichtMoeglich,
+          felder: { weg: VS_FEHLER.aufmassNichtMoeglich },
+        },
+        { status: 400 },
+      )
+    }
+  }
+
   const leadId = await naechsteLeadId()
   const eingang = new Date()
 
-  const trelloOpts = { leadId, areaStatus, distanceKm, ort, eingang }
+  const trelloOpts = {
+    leadId,
+    areaStatus,
+    distanceKm,
+    ort,
+    eingang,
+    aufmass: angebot
+      ? { preis: angebot.preis, kreis: angebot.kreis.name, sku: angebot.kreis.sku }
+      : null,
+  }
   // Für die Mail dieselbe Struktur, nur ohne Markdown-Sternchen.
   const klartext = kartenBeschreibung(a, trelloOpts).replace(/\*\*/g, '')
 
@@ -233,6 +286,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<VsAnfrage
     // bestehende Auswertungen weiterlaufen.
     floorType: a.bodenarten.join(',') || null,
     timeline: zeitraum?.key ?? null,
+    naechsterSchritt: a.weg,
     email: a.email,
     telefon: a.telefon,
     vorname: a.vorname,
@@ -253,6 +307,42 @@ export async function POST(request: NextRequest): Promise<NextResponse<VsAnfrage
     return false
   })
 
+  // Aufmaß: Bestellung anlegen und Zahlung starten. Scheitert das, ist die
+  // Anfrage trotzdem angekommen — das Formular zeigt dann einen Hinweis und das
+  // Team sieht auf der Karte, dass die Zahlung nicht gestartet wurde.
+  let zahlungUrl: string | undefined
+  let zahlungFehler = false
+  if (angebot && a.aufmass?.zahlart) {
+    try {
+      const order = await aufmassBestellungAnlegen({
+        angebot,
+        leadId,
+        trelloCardId: trello.cardId,
+        vorname: a.vorname,
+        nachname: a.nachname,
+        email: a.email,
+        telefon: a.telefon,
+        strasse: a.aufmass.strasse,
+        ort,
+        zahlart: a.aufmass.zahlart,
+        tracking: a.tracking,
+      })
+      zahlungUrl = (await aufmassZahlungStartenSicher(order, a.aufmass.zahlart)) ?? undefined
+    } catch (e) {
+      console.error('[api/verlegeservice] Aufmaß-Bestellung fehlgeschlagen für', leadId, e)
+    }
+    if (!zahlungUrl) {
+      zahlungFehler = true
+      if (trello.cardId) {
+        // Nur Kommentar, die Karte bleibt in der Eingangsliste.
+        await kommentarAnKarte(
+          trello.cardId,
+          '⚠️ Aufmaß gewählt, aber die Zahlung konnte nicht gestartet werden. Bitte Kunden anrufen und das Aufmaß persönlich vereinbaren.',
+        )
+      }
+    }
+  }
+
   return NextResponse.json({
     success: true,
     leadId,
@@ -261,5 +351,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<VsAnfrage
     ort,
     dateienUebertragen: trello.dateienUebertragen,
     dateienGesamt: trello.dateienGesamt,
+    ...(zahlungUrl ? { zahlungUrl } : {}),
+    ...(zahlungFehler ? { zahlungFehler: true } : {}),
   })
 }
