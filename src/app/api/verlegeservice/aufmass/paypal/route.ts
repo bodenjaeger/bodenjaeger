@@ -16,7 +16,11 @@ import { addOrderNote } from '@/lib/woocommerce-checkout'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL
+// In der Vorschau zurück auf die Vorschau, damit ein Test komplett dort läuft
+const SITE_URL =
+  process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_BRANCH_URL
+    ? `https://${process.env.VERCEL_BRANCH_URL}`
+    : process.env.NEXT_PUBLIC_SITE_URL
 
 function zurSeite(orderId: number, key: string, abgebrochen = false) {
   const url = `${SITE_URL}${AUFMASS_BEZAHLT_PFAD}?order=${orderId}&key=${encodeURIComponent(key)}${abgebrochen ? '&abgebrochen=1' : ''}`

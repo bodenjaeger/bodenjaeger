@@ -33,7 +33,11 @@ import type { VsZahlartKey } from '@/content/verlegeservice-anfrage'
 import type { VsTracking } from '@/types/verlegeservice-anfrage'
 
 const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL
+// In der Vorschau zurück auf die Vorschau, damit ein Test komplett dort läuft
+const SITE_URL =
+  process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_BRANCH_URL
+    ? `https://${process.env.VERCEL_BRANCH_URL}`
+    : process.env.NEXT_PUBLIC_SITE_URL
 
 /** Pfad der Seite, auf die Stripe und PayPal zurückleiten. */
 export const AUFMASS_BEZAHLT_PFAD = '/fachmarkt-hueckelhoven/service/verlegeservice-anfrage/bezahlt'
