@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unused-expressions */
 
 /**
  * Verlegeservice-Formular mit drei Wegen (mobil zuerst, eine Frage pro Bildschirm):
