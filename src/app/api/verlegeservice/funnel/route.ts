@@ -431,7 +431,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
     ])
   })
 
-  after(() => sendeMetaLead({
+  // Nur live an Meta melden, Tests aus der Vorschau verfälschen sonst die Kampagnen
+  if (process.env.VERCEL_ENV === 'production') after(() => sendeMetaLead({
     leadId,
     areaStatus: imGebiet ? 'in_area' : 'out_of_area',
     areaRange: a.weg === 'beratung' ? null : String(a.flaeche),
