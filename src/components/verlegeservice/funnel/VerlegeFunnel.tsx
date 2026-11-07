@@ -227,12 +227,6 @@ function Haken() {
   )
 }
 
-function BodenBild({ src }: { src: string | null }) {
-  if (!src) return <div className="aspect-[4/3] w-full bg-pale" />
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" loading="lazy" className="aspect-[4/3] w-full object-cover" />
-}
-
 // ── Hauptkomponente ──────────────────────────────────────────────────────────
 
 export default function VerlegeFunnel() {
@@ -249,6 +243,7 @@ export default function VerlegeFunnel() {
   const [auswahlLaedt, setAuswahlLaedt] = useState(false)
   const [klassen, setKlassen] = useState<Klassen | undefined>(undefined)
   const [strassen, setStrassen] = useState<string[]>([])
+  const [strassenStatus, setStrassenStatus] = useState<'leer' | 'laedt' | 'fertig'>('leer')
   const [ergebnis, setErgebnis] = useState<FunnelErfolg | null>(null)
   const [sendet, setSendet] = useState(false)
   const [sendeFehler, setSendeFehler] = useState<string>()
@@ -404,21 +399,35 @@ export default function VerlegeFunnel() {
     const q = z.strasse.trim()
     if (id !== 'zahlung' || z.strasseGewaehlt || q.length < 2) {
       setStrassen([])
+      setStrassenStatus('leer')
       return
     }
+    let aktiv = true
+    setStrassenStatus('laedt')
     const t = setTimeout(() => {
       fetch(`/api/verlegeservice/adresse?plz=${z.plz}&q=${encodeURIComponent(q)}`)
         .then((r) => r.json())
-        .then((d: { vorschlaege: Array<{ strasse: string }> }) => setStrassen((d.vorschlaege ?? []).map((v) => v.strasse)))
-        .catch(() => setStrassen([]))
+        .then((d: { vorschlaege: Array<{ strasse: string }> }) => aktiv && setStrassen((d.vorschlaege ?? []).map((v) => v.strasse)))
+        .catch(() => aktiv && setStrassen([]))
+        .finally(() => aktiv && setStrassenStatus('fertig'))
     }, 250)
-    return () => clearTimeout(t)
+    return () => {
+      aktiv = false
+      clearTimeout(t)
+    }
   }, [z.strasse, z.strasseGewaehlt, z.plz, id])
+
+  /** Straße übernehmen; eine mitgetippte Hausnummer wandert ins Hausnummernfeld */
+  function strasseUebernehmen(strasse: string) {
+    const nummer = z.strasse.trim().match(/\s(\d+\s*[a-zA-Z]?)$/)?.[1] ?? ''
+    const name = strasse === z.strasse.trim() && nummer ? strasse.slice(0, -nummer.length).trim() : strasse
+    setZ({ ...z, strasse: name, strasseGewaehlt: true, hausnummer: z.hausnummer || nummer.replace(/\s/g, '') })
+  }
 
   // ── Absenden ───────────────────────────────────────────────────────────────
   async function absenden() {
     const pruefung = { ...pruefeKontakt({ ...z, weg: z.weg! }), ...(z.weg === 'aufmass' ? pruefeZahlung(z) : {}) }
-    if (z.weg === 'aufmass' && !z.strasseGewaehlt) pruefung.strasse = 'Bitte wähle deine Straße aus den Vorschlägen.'
+    if (z.weg === 'aufmass' && !z.strasseGewaehlt) pruefung.strasse = 'Bitte wähle deine Straße aus den Vorschlägen oder übernimm sie.'
     if (Object.keys(pruefung).length) {
       setFehler(pruefung)
       return
@@ -574,7 +583,7 @@ export default function VerlegeFunnel() {
       inhalt = plzInfo?.imGebiet ? (
         <>
           <Option gross aktiv={z.weg === 'aufmass'} onClick={() => waehle('weg', 'aufmass')} icon={<Ruler className="h-5 w-5" />}
-            titel="Aufmaß mit deinem Wunschboden" text="Wir kommen mit deinen 3 Favoriten als Original-Dielen, messen aus und machen dir ein genaues Angebot."
+            titel="Aufmaß mit deinem Wunschboden" text="Wir bringen deine 3 Favoriten als Großmuster mit, messen aus und machen dir ein genaues Angebot."
             preis={aufmassPreis ?? undefined} badge="Wird bei Beauftragung gutgeschrieben" />
           <Option gross aktiv={z.weg === 'preis'} onClick={() => waehle('weg', 'preis')} icon={<Calculator className="h-5 w-5" />}
             titel="Preisrahmen berechnen" text="Sofort eine Von-bis-Summe für Boden und Verlegung, kostenlos." />
@@ -750,54 +759,72 @@ export default function VerlegeFunnel() {
     }
     case 'wunschboden': {
       titel = z.produkt ? 'Möchtest du noch Böden zum Vergleich?' : 'Such dir bis zu 3 Böden aus'
-      hinweis = 'Diese bringen wir dir als Original-Dielen zum Aufmaß mit, damit du sie bei dir zu Hause im Licht siehst.'
+      hinweis = 'Diese bringen wir dir als Großmuster zum Aufmaß mit, damit du sie bei dir zu Hause im Licht siehst.'
       const umschalten = (b: Boden) => {
         const da = z.wunschboeden.some((x) => x.id === b.id)
         if (da) set('wunschboeden', z.wunschboeden.filter((x) => x.id !== b.id))
         else if (z.wunschboeden.length < maxWunsch) set('wunschboeden', [...z.wunschboeden, b])
       }
+      const voll = z.wunschboeden.length >= maxWunsch
+      const preisText = (b: Boden) => `${BODENARTEN[b.art].name}${b.preis ? ` · ${b.preis.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €/m²` : ''}`
+      const suche = auswahlSuche.trim().length >= 2
       inhalt = (
         <>
-          {z.produkt && (
-            <div className="rounded-xl border-2 border-brand bg-brand/5 px-4 py-3">
-              <span className="block font-bold text-dark">{z.produkt.name}</span>
-              <span className="text-[13px] text-mid">kommt auf jeden Fall mit</span>
+          {(z.produkt || z.wunschboeden.length > 0) && (
+            <div className="grid gap-2">
+              <span className="text-sm font-bold text-dark">Deine Großmuster</span>
+              {z.produkt && (
+                <div className="flex items-center gap-3 rounded-xl border-2 border-brand bg-brand/5 px-4 py-3">
+                  <Haken />
+                  <span className="min-w-0 flex-1"><span className="block font-bold text-dark">{z.produkt.name}</span><span className="text-[13px] text-mid">kommt auf jeden Fall mit</span></span>
+                </div>
+              )}
+              {z.wunschboeden.map((b, i) => (
+                <div key={b.id} className="flex items-center gap-3 rounded-xl border-2 border-brand bg-brand/5 px-4 py-3">
+                  <span className="flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">{i + 1}</span>
+                  <span className="min-w-0 flex-1"><span className="block font-bold text-dark">{b.name}</span><span className="text-[13px] text-mid">{preisText(b)}</span></span>
+                  <button type="button" onClick={() => umschalten(b)} className="p-1 text-[13px] text-mid underline">Entfernen</button>
+                </div>
+              ))}
             </div>
           )}
-          <Feld id="vf-auswahl" label="Alle Böden durchsuchen" wert={auswahlSuche} onChange={setAuswahlSuche} auto="off" placeholder="z. B. Baja, Eiche grau, Fischgrät" />
-          {auswahlSuche.trim().length < 2 && (
-            <div className="grid gap-1.5">
-              <span className="text-sm text-mid">Noch unentschlossen? Du kannst auch Böden verschiedener Arten mischen.</span>
-              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                {(Object.keys(BODENARTEN) as BodenartKey[]).map((k) => (
-                  <span key={k} className="flex-shrink-0">
-                    <Chip aktiv={auswahlArtAktiv === k} onClick={() => setAuswahlArt(k)}>{BODENARTEN[k].name}</Chip>
-                  </span>
+          {voll ? (
+            <p className="text-sm text-mid">
+              Du hast {maxWunsch} {z.produkt ? 'weitere Böden' : 'Böden'} ausgewählt. Zum Tauschen entferne einfach einen.
+            </p>
+          ) : (
+            <>
+              <Feld id="vf-auswahl" label={z.wunschboeden.length || z.produkt ? 'Weiteren Boden suchen' : 'Boden suchen'} wert={auswahlSuche} onChange={setAuswahlSuche} auto="off" placeholder="Name oder Dekor, z. B. Baja, Eiche grau" />
+              {!suche && (
+                <div className="grid gap-1.5">
+                  <span className="text-sm text-mid">Oder stöbern, auch gemischt:</span>
+                  <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                    {(Object.keys(BODENARTEN) as BodenartKey[]).map((k) => (
+                      <span key={k} className="flex-shrink-0">
+                        <Chip aktiv={auswahlArtAktiv === k} onClick={() => setAuswahlArt(k)}>{BODENARTEN[k].name}</Chip>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="grid max-h-[320px] overflow-y-auto overscroll-contain rounded-lg border border-ash bg-white">
+                {auswahlLaedt && !auswahl.length && <p className="px-3.5 py-3 text-sm text-mid">Böden werden geladen …</p>}
+                {!auswahlLaedt && !auswahl.length && (
+                  <p className="px-3.5 py-3 text-sm text-mid">{suche ? `Zu „${auswahlSuche.trim()}" haben wir nichts gefunden. Probier einen anderen Begriff.` : 'Gerade keine Böden verfügbar.'}</p>
+                )}
+                {auswahl.filter((b) => !z.wunschboeden.some((x) => x.id === b.id)).map((b) => (
+                  <button key={b.id} type="button" onClick={() => { umschalten(b); setAuswahlSuche('') }}
+                    className="flex items-center gap-3 border-t border-ash px-3.5 py-2.5 text-left first:border-t-0 hover:bg-pale">
+                    {b.bild ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={b.bild} alt="" loading="lazy" className="h-10 w-10 flex-shrink-0 rounded-md object-cover" />
+                    ) : <span className="h-10 w-10 flex-shrink-0 rounded-md bg-pale" />}
+                    <span className="min-w-0 flex-1"><span className="block text-[15px] text-dark">{b.name}</span><span className="text-xs text-mid">{preisText(b)}</span></span>
+                    <span className="flex-shrink-0 text-xl leading-none text-brand" aria-hidden="true">+</span>
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
-          <p className="text-sm text-mid"><b className="text-dark">{z.wunschboeden.length} von {maxWunsch}</b> {z.produkt ? 'weitere ' : ''}ausgewählt</p>
-          {/* Gewählte Böden bleiben sichtbar, auch wenn die Suche sie nicht mehr zeigt */}
-          <div className="grid max-h-[520px] grid-cols-2 gap-2.5 overflow-y-auto overscroll-contain rounded-xl">
-            {[...z.wunschboeden, ...auswahl.filter((b) => !z.wunschboeden.some((x) => x.id === b.id))].map((b) => {
-              const nr = z.wunschboeden.findIndex((x) => x.id === b.id)
-              return (
-                <button key={b.id} type="button" onClick={() => umschalten(b)} aria-pressed={nr > -1}
-                  className={`relative overflow-hidden rounded-xl border-2 bg-white text-left ${nr > -1 ? 'border-brand' : 'border-ash hover:border-mid'}`}>
-                  <BodenBild src={b.bild} />
-                  {nr > -1 && <span className="absolute right-2 top-2 flex h-[26px] w-[26px] items-center justify-center rounded-full bg-brand text-[13px] font-bold text-white">{nr + 1}</span>}
-                  <span className="grid gap-0.5 px-2.5 py-2">
-                    <span className="text-[13px] font-bold leading-snug text-dark">{b.name}</span>
-                    <span className="text-xs text-mid">{BODENARTEN[b.art].name}{b.preis ? ` · ${b.preis.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €/m²` : ''}</span>
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-          {auswahlLaedt && !auswahl.length && <p className="text-sm text-mid">Böden werden geladen …</p>}
-          {!auswahlLaedt && !auswahl.length && (
-            <p className="text-sm text-mid">{auswahlSuche.trim().length >= 2 ? `Zu „${auswahlSuche.trim()}" haben wir nichts gefunden. Probier einen anderen Begriff.` : 'Gerade keine Böden verfügbar.'}</p>
+            </>
           )}
           <label className="flex cursor-pointer items-start gap-2.5 text-sm text-mid">
             <input type="checkbox" checked={z.empfehlung} onChange={(e) => set('empfehlung', e.target.checked)} className="mt-0.5 h-5 w-5 flex-shrink-0 accent-[#ed1b24]" />
@@ -928,7 +955,7 @@ export default function VerlegeFunnel() {
               <dt><b className="block text-dark">Aufmaß + Beratung + Angebot</b><span className="text-[13px] text-mid">{plzInfo?.ort}, {plzInfo?.kreis}</span></dt>
               <dd className="font-bold tabular-nums">{aufmassPreis}</dd>
             </div>
-            <div className="flex justify-between gap-3 border-t border-ash py-3 text-sm"><dt>Dein Wunschboden als Original-Dielen</dt><dd>{anzahl}×</dd></div>
+            <div className="flex justify-between gap-3 border-t border-ash py-3 text-sm"><dt>Dein Wunschboden als Großmuster</dt><dd>{anzahl}×</dd></div>
             <div className="flex justify-between gap-3 border-t border-ash py-3 text-sm text-success"><dt>Gutschrift bei Beauftragung</dt><dd>vollständig</dd></div>
             <div className="flex justify-between gap-3 border-t border-ash py-3"><dt>Jetzt zu zahlen <span className="text-sm text-mid">inkl. MwSt.</span></dt><dd className="font-bold tabular-nums">{aufmassPreis}</dd></div>
           </dl>
@@ -946,16 +973,24 @@ export default function VerlegeFunnel() {
                   onChange={(e) => set('strasse', e.target.value)}
                   className={`min-h-[52px] w-full rounded-lg border-2 bg-white px-3.5 text-base outline-none focus:ring-[3px] focus:ring-brand/30 ${fehler.strasse ? 'border-brand' : 'border-ash'}`} />
                 {strassen.length > 0 && (
-                  <div className="grid overflow-hidden rounded-lg border border-ash bg-white">
+                  <div className="grid max-h-[320px] overflow-y-auto overscroll-contain rounded-lg border border-ash bg-white">
                     {strassen.map((s) => (
-                      <button key={s} type="button" onClick={() => setZ({ ...z, strasse: s, strasseGewaehlt: true })}
+                      <button key={s} type="button" onClick={() => strasseUebernehmen(s)}
                         className="flex justify-between gap-3 border-t border-ash px-3.5 py-3 text-left first:border-t-0 hover:bg-pale">
                         <span>{s}</span><span className="text-xs text-mid">{z.plz} {plzInfo?.ort}</span>
                       </button>
                     ))}
                   </div>
                 )}
-                {z.strasse.trim().length >= 3 && strassen.length === 0 && <p className="text-[13px] text-mid">Keine passende Straße in {z.plz} gefunden. Bitte prüfe die Schreibweise.</p>}
+                {strassenStatus === 'laedt' && strassen.length === 0 && <p className="text-[13px] text-mid">Suche Straßen in {z.plz} …</p>}
+                {strassenStatus === 'fertig' && z.strasse.trim().length >= 3 && (
+                  <p className="text-[13px] text-mid">
+                    {strassen.length === 0 ? `Keine passende Straße in ${z.plz} gefunden. Prüf bitte die Schreibweise oder ` : 'Deine Straße ist nicht dabei? '}
+                    <button type="button" onClick={() => strasseUebernehmen(z.strasse.trim())} className="text-dark underline">
+                      „{z.strasse.trim()}“ übernehmen
+                    </button>
+                  </p>
+                )}
               </>
             )}
             {fehler.strasse && <p className="text-sm font-bold text-brand">{fehler.strasse}</p>}

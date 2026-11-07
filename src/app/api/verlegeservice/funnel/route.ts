@@ -5,7 +5,7 @@ import { naechsteLeadId } from '@/lib/leadId'
 import { pruefeServicegebiet } from '@/lib/servicegebiet'
 import { sendeMetaLead } from '@/lib/tracking/meta-capi'
 import { wooCommerceClient } from '@/lib/woocommerce'
-import { strassenVorschlaege } from '@/lib/verlegeservice/adresse'
+import { strasseBekannt } from '@/lib/verlegeservice/adresse'
 import {
   BERATUNG_NAME,
   BESITZ_NAME,
@@ -159,13 +159,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
     return fehler('Die Sicherheitsprüfung ist abgelaufen. Bitte versuche es noch einmal.', undefined, 403)
   }
 
-  // Adresse gegen die Straßenliste der PLZ prüfen (nur wenn der Dienst antwortet)
-  if (a.weg === 'aufmass') {
-    const treffer = await strassenVorschlaege(a.strasse, gebiet.plz, gebiet.ort)
-    if (treffer.length && !treffer.some((t) => t.strasse.toLowerCase() === a.strasse.toLowerCase())) {
-      return fehler('Bitte wähle deine Straße aus den Vorschlägen.', { strasse: 'Bitte wähle deine Straße aus den Vorschlägen.' })
-    }
-  }
+  // Adresse gegen das Straßenverzeichnis der PLZ prüfen. Nicht gefundene
+  // Straßen (z. B. Neubaugebiet) werden angenommen, aber auf der Karte markiert.
+  const strasseGeprueft = a.weg === 'aufmass' ? await strasseBekannt(a.strasse, gebiet.plz, gebiet.ort) : null
 
   // ── Produkt und Preisrahmen ──────────────────────────────────────────────
   let produktPreis: number | null = null
@@ -229,6 +225,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   z.push(`Tel: ${a.telefon ? telefonAnzeige(a.telefon) : '–'} · E-Mail: ${a.email || '–'}`)
   if (a.telefon) z.push(`WhatsApp: https://wa.me/${a.telefon.slice(1)}`)
   z.push(`${gebiet.plz} ${gebiet.ort}${a.weg === 'aufmass' ? `, ${a.strasse} ${a.hausnummer}` : ''} · ca. ${fahrt} km Fahrweg · ${kreis.name}`)
+  if (a.weg === 'aufmass' && strasseGeprueft === false) z.push('⚠️ Straße nicht im Straßenverzeichnis der PLZ gefunden – Adresse beim Anruf prüfen')
   z.push('', `**WEG** ${WEG_NAME[a.weg]} · Lead-Stufe ${stufe}`)
   z.push(`Boden schon? ${BESITZ_NAME[a.besitz]}`)
   if (a.produkt) z.push(`Ausgesuchter Boden: ${produktName}`)
@@ -244,7 +241,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
     z.push(`Beratung: ${BERATUNG_NAME[a.beratung]}${a.beratung === 'telefon' && a.rueckruf ? ` · ${RUECKRUF_NAME[a.rueckruf]}` : ''}${termin ? ` · ${termin}` : ''}`)
   }
   if (a.weg === 'aufmass' && angebot) {
-    z.push(`Wunschböden (Original-Dielen mitnehmen): ${boeden.join(', ')}`)
+    z.push(`Wunschböden (Großmuster mitnehmen): ${boeden.join(', ')}`)
     z.push(`Aufmaß: ${formatEuro(angebot.preis)} (${angebot.kreis.name}, ${angebot.kreis.sku}) · ${a.zahlart ? ZAHLART_NAME[a.zahlart] : ''} · Zahlung offen`)
   }
   if (rahmen) {
@@ -280,7 +277,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<FunnelAnt
   } else if (a.weg === 'beratung') {
     checklisten.push({ name: a.beratung === 'whatsapp' ? 'WhatsApp-Beratung' : 'Telefonat', punkte: [a.beratung === 'whatsapp' ? 'Per WhatsApp melden' : 'Zurückrufen', ...gespraech] })
   } else if (a.weg === 'aufmass') {
-    checklisten.push({ name: 'Aufmaß', punkte: ['Zahlung eingegangen (Karte wandert dann automatisch)', 'Termin vereinbaren', `Dielen einpacken: ${boeden.join(', ')}`, 'Aufmaß durchführen', 'Angebot in SAP erstellen (Aufmaß gutschreiben)'] })
+    checklisten.push({ name: 'Aufmaß', punkte: ['Zahlung eingegangen (Karte wandert dann automatisch)', 'Termin vereinbaren', `Großmuster einpacken: ${boeden.join(', ')}`, 'Aufmaß durchführen', 'Angebot in SAP erstellen (Aufmaß gutschreiben)'] })
   } else {
     checklisten.push({
       name: 'Nachfassen Preisrahmen',

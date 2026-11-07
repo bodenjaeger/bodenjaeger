@@ -160,7 +160,7 @@ export interface AufmassBestellungEingabe {
   ort: string
   zahlart: VsZahlartKey
   tracking: VsTracking
-  /** Böden, die als Original-Dielen mitgebracht werden */
+  /** Böden, die als Großmuster mitgebracht werden */
   boeden?: string[]
 }
 
